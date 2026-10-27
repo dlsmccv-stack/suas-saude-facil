@@ -1,13 +1,17 @@
-from sqlalchemy import Column, Integer, String, DateTime
-from database import Base
-import datetime
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+import database, triagem_schemas, models
 
-class TriagemItem(Base):
-    __tablename__ = "triagem_itens"
+router = APIRouter()
 
-    id = Column(Integer, primary_key=True, index=True)
-    paciente_nome = Column(String, index=True)
-    queixa_principal = Column(String)
-    cor_prioridade = Column(String, index=True)  # "Vermelho", "Laranja", "Amarelo", "Verde", "Azul"
-    tempo_alvo_atendimento = Column(String)  # Ex: "Imediato", "10 minutos", etc.
-    data_triagem = Column(DateTime, default=datetime.datetime.utcnow)
+@router.post("/", response_model=triagem_schemas.TriagemResponse)
+def criar_triagem(triagem: triagem_schemas.TriagemCreate, db: Session = Depends(database.get_db)):
+    db_triagem = models.Triagem(**triagem.dict())
+    db.add(db_triagem)
+    db.commit()
+    db.refresh(db_triagem)
+    return db_triagem
+
+@router.get("/", response_model=list[triagem_schemas.TriagemResponse])
+def listar_triagens(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
+    return db.query(models.Triagem).offset(skip).limit(limit).all()
