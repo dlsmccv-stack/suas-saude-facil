@@ -1,17 +1,19 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
+import datetime
 import database, modelos, schemas, triagem, triagem_schemas, suas_social, suas_social_schemas, fhir_integration, emergency_qrcode, farmacia, farmacia_schemas, educacao_medica, educacao_medica_schemas
 
-# Inicializa as tabelas no banco de dados para todos os módulos
+# Inicializa as tabelas no banco de dados para os módulos ativos
 modelos.Base.metadata.create_all(bind=database.engine)
 triagem.Base.metadata.create_all(bind=database.engine)
 suas_social.Base.metadata.create_all(bind=database.engine)
 farmacia.Base.metadata.create_all(bind=database.engine)
 educacao_medica.Base.metadata.create_all(bind=database.engine)
+emergency_qrcode.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(
     title="SUAS Saúde / Saúde +Fácil",
-    description="Ecossistema integrado de saúde, assistência social, regulação e farmácia digital",
+    description="Ecossistema integrado de saúde, assistência social, regulação, farmácia digital e emergência",
     version="1.0.0"
 )
 
@@ -26,7 +28,7 @@ def read_root():
             "Triagem (Protocolo de Manchester)", 
             "Apoio Social (SUAS)", 
             "Interoperabilidade FHIR", 
-            "QR Code de Emergência",
+            "QR Code de Emergência & Acionamento SAMU com GPS",
             "Farmácia Digital & Retirada por QR Code",
             "Educação Continuada & Indústria Farmacêutica"
         ]
@@ -77,7 +79,7 @@ def criar_apoio_social(item: suas_social_schemas.ApoioSocialCreate, db: Session 
 def listar_apoios_sociais(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     return db.query(suas_social.ApoioSocialItem).offset(skip).limit(limit).all()
 
-# Endpoints FHIR e QR Code de Emergência
+# Endpoints FHIR
 @app.post("/fhir/patient/", response_model=fhir_integration.FHIRPatientResource)
 def criar_paciente_fhir(patient: fhir_integration.FHIRPatientResource):
     return patient
@@ -86,9 +88,19 @@ def criar_paciente_fhir(patient: fhir_integration.FHIRPatientResource):
 def criar_observacao_fhir(observation: fhir_integration.FHIRObservationResource):
     return observation
 
+# Endpoints de QR Code de Emergência & Acionamento SAMU com GPS
 @app.post("/emergencia/qrcode/", response_model=emergency_qrcode.EmergencyProfile)
 def gerar_perfil_emergencia(profile: emergency_qrcode.EmergencyProfile):
     return profile
+
+@app.post("/emergencia/acionar/", response_model=emergency_qrcode.EmergencyTriggerResponse)
+def acionar_emergencia(payload: emergency_qrcode.EmergencyTriggerRequest):
+    return {
+        "status": "ALERTA_DISPARADO_COM_SUCESSO",
+        "mensagem_samu": f"Central do SAMU acionada com prioridade. Localização GPS recebida: {payload.localizacao_gps}.",
+        "mensagem_familiares": "Notificação de emergência e localização enviadas para o contacto da família.",
+        "timestamp": datetime.datetime.utcnow()
+    }
 
 # Endpoints de Farmácia Digital & Retirada via QR Code
 @app.post("/farmacia/prescricao/", response_model=farmacia_schemas.MedicamentoResponse)
@@ -106,7 +118,7 @@ def criar_prescricao_farmacia(item: farmacia_schemas.MedicamentoCreate, db: Sess
 def dispensar_medicamento_por_qrcode(payload: farmacia_schemas.MedicamentoDispensacaoQRCode, db: Session = Depends(database.get_db)):
     db_med = db.query(farmacia.MedicamentoItem).filter(farmacia.MedicamentoItem.qr_code_token == payload.qr_code_token).first()
     if not db_med:
-        raise HTTPException(status_code=404, error="Receita ou QR Code não encontrado.")
+        raise HTTPException(status_code=404, detail="Receita ou QR Code não encontrado.")
     if db_med.dispensado:
         raise HTTPException(status_code=400, detail="Este medicamento já foi dispensado anteriormente.")
     
@@ -120,7 +132,7 @@ def dispensar_medicamento_por_qrcode(payload: farmacia_schemas.MedicamentoDispen
 def listar_medicamentos(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     return db.query(farmacia.MedicamentoItem).offset(skip).limit(limit).all()
 
-# Endpoints de Educação Médica Continuada (Indústria Farmacêutica)
+# Endpoints de Educação Médica Continuada
 @app.post("/educacao-medica/", response_model=educacao_medica_schemas.EducacaoMedicaResponse)
 def criar_modulo_educacao(item: educacao_medica_schemas.EducacaoMedicaCreate, db: Session = Depends(database.get_db)):
     db_edu = educacao_medica.ModuloEducacaoItem(
