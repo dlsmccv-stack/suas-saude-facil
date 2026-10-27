@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-import database, modelos, schemas, triagem
+import database, modelos, schemas, triagem, triagem_schemas
 
 # Inicializa as tabelas no banco de dados para todos os módulos
 modelos.Base.metadata.create_all(bind=database.engine)
@@ -38,26 +38,20 @@ def listar_regulacoes(skip: int = 0, limit: int = 100, db: Session = Depends(dat
     return itens
 
 # Endpoints de Triagem (Protocolo de Manchester)
-@app.post("/triagem/")
-def criar_triagem(
-    paciente_nome: str, 
-    queixa_principal: str, 
-    cor_prioridade: str, 
-    tempo_alvo_atendimento: str, 
-    db: Session = Depends(database.get_db)
-):
+@app.post("/triagem/", response_model=triagem_schemas.TriagemResponse)
+def criar_triagem(item: triagem_schemas.TriagemCreate, db: Session = Depends(database.get_db)):
     db_triagem = triagem.TriagemItem(
-        paciente_nome=paciente_nome,
-        queixa_principal=queixa_principal,
-        cor_prioridade=cor_prioridade,
-        tempo_alvo_atendimento=tempo_alvo_atendimento
+        paciente_nome=item.paciente_nome,
+        queixa_principal=item.queixa_principal,
+        cor_prioridade=item.cor_prioridade,
+        tempo_alvo_atendimento=item.tempo_alvo_atendimento
     )
     db.add(db_triagem)
     db.commit()
     db.refresh(db_triagem)
     return db_triagem
 
-@app.get("/triagem/")
+@app.get("/triagem/", response_model=list[triagem_schemas.TriagemResponse])
 def listar_triagens(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     itens = db.query(triagem.TriagemItem).offset(skip).limit(limit).all()
     return itens
