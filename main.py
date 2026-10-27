@@ -1,10 +1,11 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-import database, modelos, schemas, triagem, triagem_schemas
+import database, modelos, schemas, triagem, triagem_schemas, suas_social, suas_social_schemas
 
 # Inicializa as tabelas no banco de dados para todos os módulos
 modelos.Base.metadata.create_all(bind=database.engine)
 triagem.Base.metadata.create_all(bind=database.engine)
+suas_social.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(
     title="SUAS Saúde / Saúde +Fácil",
@@ -17,7 +18,7 @@ def read_root():
     return {
         "sistema": "SUAS Saúde / Saúde +Fácil",
         "status": "Operacional",
-        "modulos": ["Core API", "Regulação", "Triagem (Protocolo de Manchester)"]
+        "modulos": ["Core API", "Regulação", "Triagem (Protocolo de Manchester)", "Apoio Social (SUAS)"]
     }
 
 # Endpoints de Regulação
@@ -54,4 +55,23 @@ def criar_triagem(item: triagem_schemas.TriagemCreate, db: Session = Depends(dat
 @app.get("/triagem/", response_model=list[triagem_schemas.TriagemResponse])
 def listar_triagens(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     itens = db.query(triagem.TriagemItem).offset(skip).limit(limit).all()
+    return itens
+
+# Endpoints de Apoio Social (SUAS)
+@app.post("/suas-social/", response_model=suas_social_schemas.ApoioSocialResponse)
+def criar_apoio_social(item: suas_social_schemas.ApoioSocialCreate, db: Session = Depends(database.get_db)):
+    db_social = suas_social.ApoioSocialItem(
+        cidadao_nome=item.cidadao_nome,
+        nis=item.nis,
+        situacao_vulnerabilidade=item.situacao_vulnerabilidade,
+        beneficio_ativo=item.beneficio_ativo
+    )
+    db.add(db_social)
+    db.commit()
+    db.refresh(db_social)
+    return db_social
+
+@app.get("/suas-social/", response_model=list[suas_social_schemas.ApoioSocialResponse])
+def listar_apoios_sociais(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
+    itens = db.query(suas_social.ApoioSocialItem).offset(skip).limit(limit).all()
     return itens
