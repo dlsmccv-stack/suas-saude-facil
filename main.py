@@ -9,7 +9,6 @@ triagem.Base.metadata.create_all(bind=database.engine)
 suas_social.Base.metadata.create_all(bind=database.engine)
 farmacia.Base.metadata.create_all(bind=database.engine)
 educacao_medica.Base.metadata.create_all(bind=database.engine)
-emergency_qrcode.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(
     title="SUAS Saúde / Saúde +Fácil",
