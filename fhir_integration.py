@@ -1,17 +1,9 @@
-from pydantic import BaseModel
-from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+import database
 
-class FHIRPatientResource(BaseModel):
-    resourceType: str = "Patient"
-    id: str
-    nome_completo: str
-    genero: str
-    data_nascimento: str
+router = APIRouter()
 
-class FHIRObservationResource(BaseModel):
-    resourceType: str = "Observation"
-    id: str
-    patient_id: str
-    status: str = "final"
-    codigo_exame: str
-    resultado_valor: str
+@router.get("/")
+def listar_fhir():
+    return {"mensagem": "Módulo de Interoperabilidade FHIR R4 Operacional"}
