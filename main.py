@@ -3,9 +3,8 @@ from sqlalchemy.orm import Session
 import datetime
 import database, models, schemas, triagem, triagem_schemas, suas_social, suas_social_schemas, fhir_integration, emergency_qrcode, farmacia, farmacia_schemas, educacao_medica, educacao_medica_schemas
 
-# Inicializa as tabelas no banco de dados para os módulos principais
+# Inicializa as tabelas no banco de dados apenas para os módulos principais do ORM
 models.Base.metadata.create_all(bind=database.engine)
-suas_social.Base.metadata.create_all(bind=database.engine)
 farmacia.Base.metadata.create_all(bind=database.engine)
 educacao_medica.Base.metadata.create_all(bind=database.engine)
 
