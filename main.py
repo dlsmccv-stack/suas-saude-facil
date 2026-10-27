@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-import database, modelos, schemas, triagem, triagem_schemas, suas_social, suas_social_schemas
+import database, modelos, schemas, triagem, triagem_schemas, suas_social, suas_social_schemas, fhir_integration, emergency_qrcode
 
 # Inicializa as tabelas no banco de dados para todos os módulos
 modelos.Base.metadata.create_all(bind=database.engine)
@@ -18,7 +18,14 @@ def read_root():
     return {
         "sistema": "SUAS Saúde / Saúde +Fácil",
         "status": "Operacional",
-        "modulos": ["Core API", "Regulação", "Triagem (Protocolo de Manchester)", "Apoio Social (SUAS)"]
+        "modulos": [
+            "Core API", 
+            "Regulação", 
+            "Triagem (Protocolo de Manchester)", 
+            "Apoio Social (SUAS)", 
+            "Interoperabilidade FHIR", 
+            "QR Code de Emergência"
+        ]
     }
 
 # Endpoints de Regulação
@@ -75,3 +82,17 @@ def criar_apoio_social(item: suas_social_schemas.ApoioSocialCreate, db: Session 
 def listar_apoios_sociais(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     itens = db.query(suas_social.ApoioSocialItem).offset(skip).limit(limit).all()
     return itens
+
+# Endpoints de Interoperabilidade FHIR (Simulação de recurso padronizado)
+@app.post("/fhir/patient/", response_model=fhir_integration.FHIRPatientResource)
+def criar_paciente_fhir(patient: fhir_integration.FHIRPatientResource):
+    return patient
+
+@app.post("/fhir/observation/", response_model=fhir_integration.FHIRObservationResource)
+def criar_observacao_fhir(observation: fhir_integration.FHIRObservationResource):
+    return observation
+
+# Endpoint de QR Code de Emergência
+@app.post("/emergencia/qrcode/", response_model=emergency_qrcode.EmergencyProfile)
+def gerar_perfil_emergencia(profile: emergency_qrcode.EmergencyProfile):
+    return profile
