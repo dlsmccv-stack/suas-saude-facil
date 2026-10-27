@@ -3,16 +3,15 @@ from sqlalchemy.orm import Session
 import datetime
 import database, models, schemas, triagem, triagem_schemas, suas_social, suas_social_schemas, fhir_integration, emergency_qrcode, farmacia, farmacia_schemas, educacao_medica, educacao_medica_schemas
 
-# Inicializa as tabelas no banco de dados para os módulos ativos
+# Inicializa as tabelas no banco de dados para os módulos principais
 models.Base.metadata.create_all(bind=database.engine)
-triagem.Base.metadata.create_all(bind=database.engine)
 suas_social.Base.metadata.create_all(bind=database.engine)
 farmacia.Base.metadata.create_all(bind=database.engine)
 educacao_medica.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(
     title="SUAS Saúde / Saúde +Fácil",
-    description="Ecocossistema integrado de saúde, assistência social e inovação tecnológica",
+    description="Ecossistema integrado de saúde, assistência social e inovação tecnológica",
     version="1.0.0"
 )
 
