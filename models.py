@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from database import Base
 import datetime
@@ -33,7 +33,7 @@ class SuasSocial(Base):
     data_cadastro = Column(DateTime, default=datetime.datetime.utcnow)
 
 # ==========================================
-# NOVAS TABELAS: APP DO CIDADÃO & PREVENÇÃO
+# APP DO CIDADÃO & PREVENÇÃO
 # ==========================================
 
 class CidadaoPerfil(Base):
@@ -63,7 +63,7 @@ class MedicamentoCidadao(Base):
     id = Column(Integer, primary_key=True, index=True)
     cidadao_id = Column(Integer, ForeignKey("cidadaos_perfil.id"))
     nome_medicamento = Column(String)
-    tipo_presricao = Column(String) # "continuo" (para doenças crónicas) ou "temporario_emergencia" (para viroses, infecções, etc.)
+    tipo_presricao = Column(String) # "continuo" ou "temporario_emergencia"
     data_inicio = Column(DateTime, nullable=True)
     data_fim = Column(DateTime, nullable=True)
     horarios_alarme = Column(String, nullable=True) # Ex: "08:00, 20:00"
@@ -80,3 +80,41 @@ class AutomedicacaoLog(Base):
     data_registo = Column(DateTime, default=datetime.datetime.utcnow)
 
     cidadao = relationship("CidadaoPerfil", back_populates="automedicacoes")
+
+
+# ==========================================
+# FARMÁCIA DIGITAL & DISPENSAÇÃO (ATUALIZADO)
+# ==========================================
+
+class MedicamentoItem(Base):
+    __tablename__ = "medicamentos_farmacia"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cidadao_id = Column(Integer, ForeignKey("cidadaos_perfil.id"), nullable=True) # Ligação direta com o App do Cidadão
+    cidadao_nome = Column(String, index=True)
+    medicamento_nome = Column(String, index=True)
+    dosagem = Column(String)
+    posologia = Column(String)
+    quantidade_disponibilizada = Column(Integer)
+    
+    # Novas regras de negócio integradas:
+    fornecido_pelo_sus = Column(Boolean, default=True) # True = Retirada gratuita SUS via QR | False = Compra com desconto particular
+    uso_continuo = Column(Boolean, default=False)       # True = Uso contínuo (crónico) | False = Temporário/Emergência
+    horarios_alarme = Column(String, nullable=True)     # Horários para disparar o alarme/campainha no telemóvel
+    
+    qr_code_token = Column(String, unique=True, index=True)
+    dispensado = Column(Boolean, default=False)
+    data_dispensacao = Column(DateTime, nullable=True)
+
+
+# ==========================================
+# SUPORTE A RECURSOS FHIR GENÉRICOS
+# ==========================================
+
+class FHIRItem(Base):
+    __tablename__ = "fhir_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    resource_type = Column(String, index=True) # Ex: Patient, Observation, Bundle
+    resource_data = Column(Text) # JSON serializado do payload FHIR R4
+    data_criacao = Column(DateTime, default=datetime.datetime.utcnow)
