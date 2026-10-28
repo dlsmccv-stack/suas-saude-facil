@@ -1,15 +1,9 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text
-from database import Base
-import datetime
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+import database
 
-class ModuloEducacaoItem(Base):
-    __tablename__ = "educacao_medica_modulos"
+router = APIRouter()
 
-    id = Column(Integer, primary_key=True, index=True)
-    titulo_curso = Column(String, index=True)
-    especialidade = Column(String, index=True)  # Ex: Cardiologia, Pediatria, Medicina da Família
-    parceiro_industria = Column(String)         # Nome do laboratório/indústria farmacêutica parceira
-    descricao_conteudo = Column(Text)
-    link_material_estudo = Column(String)
-    pontos_credito_cme = Column(Integer, default=10) # Créditos de Educação Médica Continuada
-    data_publicacao = Column(DateTime, default=datetime.datetime.utcnow)
+@router.get("/")
+def listar_educacao():
+    return {"mensagem": "Módulo de Educação Médica & Indústria Farmacêutica Operacional"}
