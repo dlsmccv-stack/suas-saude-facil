@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 import database, models
-import triagem, suas_social, fhir_integration, emergency_qrcode, farmacia, educacao_medica, regulacao
+import triagem, suas_social, fhir_integration, emergency_qrcode, farmacia, educacao_medica, regulacao, cidadao
 
 # Inicializa as tabelas no banco de dados de forma centralizada
 models.Base.metadata.create_all(bind=database.engine)
@@ -12,6 +12,7 @@ app = FastAPI(
     ## Ecossistema Integrado de Saúde, Assistência Social e Inovação Tecnológica
     
     Esta API disponibiliza serviços operacionais para:
+    * **App do Cidadão**: Onboarding, gestão de planos de saúde, alarmes de medicamentos (contínuos e temporários), scanner preventivo e QR Code de emergência/tela de bloqueio.
     * **Regulação**: Gestão centralizada de solicitações, leitos e encaminhamentos médicos.
     * **Triagem de Manchester**: Classificação de risco e priorização de atendimento.
     * **Assistência Social (SUAS)**: Registo e acompanhamento de cidadãos em situação de vulnerabilidade.
@@ -32,6 +33,7 @@ def read_root():
         "status": "Operacional",
         "modulos": [
             "Core API",
+            "App do Cidadão (Plano de Saúde, Medicamentos & Preventivo)",
             "Regulação",
             "Triagem (Protocolo de Manchester)",
             "Apoio Social (SUAS)",
@@ -48,5 +50,6 @@ app.include_router(triagem.router, prefix="/triagem", tags=["Triagem de Manchest
 app.include_router(suas_social.router, prefix="/suas", tags=["Assistência Social (SUAS)"])
 app.include_router(fhir_integration.router, prefix="/fhir", tags=["Interoperabilidade FHIR"])
 app.include_router(emergency_qrcode.router, prefix="/emergencia", tags=["QR Code de Emergência"])
-app.include_router.router(farmacia.router, prefix="/farmacia", tags=["Farmácia Digital"]) if hasattr(app.include_router, 'router') else app.include_router(farmacia.router, prefix="/farmacia", tags=["Farmácia Digital"])
+app.include_router(farmacia.router, prefix="/farmacia", tags=["Farmácia Digital"])
 app.include_router(educacao_medica.router, prefix="/educacao", tags=["Educação Médica"])
+app.include_router(cidadao.router)  # Inclui as rotas do App do Cidadão com prefixo /cidadao
