@@ -1,12 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-import datetime
 import database, models, schemas, triagem, triagem_schemas, suas_social, suas_social_schemas, fhir_integration, emergency_qrcode, farmacia, farmacia_schemas, educacao_medica, educacao_medica_schemas
 
-# Inicializa as tabelas no banco de dados apenas para os módulos principais do ORM
+# Inicializa as tabelas no banco de dados de forma centralizada
 models.Base.metadata.create_all(bind=database.engine)
-farmacia.Base.metadata.create_all(bind=database.engine)
-educacao_medica.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(
     title="SUAS Saúde / Saúde +Fácil",
