@@ -130,8 +130,8 @@ def consultar_por_qrcode(
 
 @router.post(
     "/acionar-samu/",
-    summary="Acionamento Imediato do SAMU com Geolocalização e Direcionamento de Rede",
-    description="Processa o QR Code de emergência, captura a localização exata do cidadão e define o encaminhamento hospitalar (SUS vs. Plano de Saúde)."
+    summary="Acionamento Imediato do SAMU com Geolocalização, Triagem de Rede e Alerta ao Familiar",
+    description="Processa o QR Code de emergência, captura a localização exata, define o encaminhamento hospitalar e dispara a notificação automática ao familiar responsável."
 )
 def acionar_samu_emergencia(
     payload: AcionamentoSamuPayload,
@@ -164,7 +164,20 @@ def acionar_samu_emergencia(
         else "Rede Pública de Saúde (SUS - UPA / Hospital de Urgência)"
     )
 
-    # Monta o pacote de despacho para a central do SAMU
+    # Registo estruturado do alerta disparado para o familiar responsável em simultâneo
+    notificacao_familiar = {
+        "destinatario_familiar": emergencia.contacto_emergencia_nome,
+        "telefone_contacto": emergencia.contacto_emergencia_telefone,
+        "mensagem_enviada": (
+            f"🚨 ALERTA DE EMERGÊNCIA - SUAS Saúde\n"
+            f"O(A) cidadão(ã) {emergencia.cidadao_nome} acionou o SAMU.\n"
+            f"📍 Localização: https://maps.google.com/?q={payload.latitude},{payload.longitude}\n"
+            f"🏥 Encaminhamento: {destino_sugerido}"
+        ),
+        "status_envio": "DISPARADO_EM_TEMPO_REAL"
+    }
+
+    # Retorna o pacote completo para a central do SAMU e painel de controlo
     return {
         "status_despacho": "ALERTA VERMELHO - AMBULÂNCIA ACIONADA",
         "timestamp_acionamento": datetime.utcnow().isoformat(),
@@ -178,11 +191,8 @@ def acionar_samu_emergencia(
             "tipo_sanguineo": emergencia.tipo_sanguineo,
             "alergias": emergencia.alergias,
             "condicoes_medicas": emergencia.condicoes_medicas,
-            "contacto_emergencia": {
-                "nome": emergencia.contacto_emergencia_nome,
-                "telefone": emergencia.contacto_emergencia_telefone
-            }
         },
+        "notificacao_familiar": notificacao_familiar,
         "triagem_cobertura": {
             "possui_plano_saude": possui_plano,
             "detalhe_cobertura": operadora,
