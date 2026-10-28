@@ -18,7 +18,7 @@ def criar_triagem(triagem: triagem_schemas.TriagemCreate, db: Session = Depends(
     return db_triagem
 
 @router.get(
-    ", 
+    "/", 
     response_model=list[triagem_schemas.TriagemResponse],
     summary="Listar triagens registadas",
     description="Retorna a lista paginada de todas as triagens realizadas no sistema."
