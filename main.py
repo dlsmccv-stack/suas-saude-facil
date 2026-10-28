@@ -7,11 +7,24 @@ models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(
     title="SUAS Saúde / Saúde +Fácil",
-    description="Ecossistema integrado de saúde, assistência social e inovação tecnológica",
-    version="1.0.0"
+    description="""
+    ## Ecossistema Integrado de Saúde, Assistência Social e Inovação Tecnológica
+    
+    Esta API disponibiliza serviços operacionais para:
+    * **Regulação**: Gestão centralizada de solicitações e itens regulados.
+    * **Triagem de Manchester**: Classificação de risco e priorização de atendimento.
+    * **Assistência Social (SUAS)**: Registo e acompanhamento de cidadãos em situação de vulnerabilidade.
+    * **Interoperabilidade FHIR**: Troca padronizada de dados de saúde.
+    * **QR Code de Emergência**: Acionamento rápido e suporte com geolocalização.
+    * **Farmácia Digital**: Gestão e retirada de medicamentos por QR Code.
+    * **Educação Médica**: Módulos de capacitação e formação continuada.
+    """,
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
-@app.get("/")
+@app.get("/", tags=["Início"])
 def read_root():
     return {
         "sistema": "SUAS Saúde / Saúde +Fácil",
@@ -29,7 +42,12 @@ def read_root():
     }
 
 # Endpoints de Regulação
-@app.post("/regulacao/", response_model=schemas.RegulacaoResponse)
+@app.post(
+    "/regulacao/", 
+    response_model=schemas.RegulacaoResponse,
+    summary="Criar registo de regulação",
+    description="Regista um novo pedido de regulação no sistema."
+)
 def criar_regulacao(regulacao: schemas.RegulacaoCreate, db: Session = Depends(database.get_db)):
     db_regulacao = models.RegulacaoItem(**regulacao.model_dump())
     db.add(db_regulacao)
@@ -37,11 +55,16 @@ def criar_regulacao(regulacao: schemas.RegulacaoCreate, db: Session = Depends(da
     db.refresh(db_regulacao)
     return db_regulacao
 
-@app.get("/regulacao/", response_model=list[schemas.RegulacaoResponse])
+@app.get(
+    "/regulacao/", 
+    response_model=list[schemas.RegulacaoResponse],
+    summary="Listar registos de regulação",
+    description="Retorna a lista de todos os pedidos de regulação cadastrados."
+)
 def listar_regulacoes(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     return db.query(models.RegulacaoItem).offset(skip).limit(limit).all()
 
-# Rotas dos demais módulos
+# Rotas dos demais módulos com tags organizadas
 app.include_router(triagem.router, prefix="/triagem", tags=["Triagem de Manchester"])
 app.include_router(suas_social.router, prefix="/suas", tags=["Assistência Social (SUAS)"])
 app.include_router(fhir_integration.router, prefix="/fhir", tags=["Interoperabilidade FHIR"])
