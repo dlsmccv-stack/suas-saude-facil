@@ -9,6 +9,7 @@ from datetime import datetime
 router = APIRouter()
 
 class EmergencyProfileCreate(BaseModel):
+    cidadao_id: Optional[int] = Field(None, description="ID do cidadão associado no ecossistema", example=1)
     cidadao_nome: str = Field(..., description="Nome completo do cidadão", example="Maria da Silva")
     tipo_sanguineo: str = Field(..., description="Tipo sanguíneo e fator RH", example="O+")
     alergias: str = Field(..., description="Alergias conhecidas a medicamentos ou substâncias", example="Penicilina, Dipirona")
@@ -19,6 +20,7 @@ class EmergencyProfileCreate(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
+                "cidadao_id": 1,
                 "cidadao_nome": "Maria da Silva",
                 "tipo_sanguineo": "O+",
                 "alergias": "Penicilina, Dipirona",
@@ -40,6 +42,7 @@ class EmergencyValidateToken(BaseModel):
 
 class EmergencyProfileResponse(BaseModel):
     id: int = Field(..., description="Identificador único do registo", example=1)
+    cidadao_id: Optional[int] = Field(None, description="ID do cidadão associado", example=1)
     cidadao_nome: str = Field(..., description="Nome completo", example="Maria da Silva")
     tipo_sanguineo: str = Field(..., description="Tipo sanguíneo", example="O+")
     alergias: str = Field(..., description="Alergias", example="Penicilina, Dipirona")
@@ -54,6 +57,7 @@ class EmergencyProfileResponse(BaseModel):
         json_schema_extra = {
             "example": {
                 "id": 1,
+                "cidadao_id": 1,
                 "cidadao_nome": "Maria da Silva",
                 "tipo_sanguineo": "O+",
                 "alergias": "Penicilina, Dipirona",
@@ -77,6 +81,10 @@ def criar_perfil_emergencia(
 ):
     qr_token = f"QR-EMERG-{uuid.uuid4().hex[:8].upper()}"
     
+    # Valida se o modelo na base de dados possui a tabela EmergencyItem
+    if not hasattr(models, "EmergencyItem"):
+        raise HTTPException(status_code=500, detail="Tabela de emergência não configurada no models.py.")
+
     db_emergencia = models.EmergencyItem(
         **payload.model_dump(),
         qr_code_token=qr_token,
