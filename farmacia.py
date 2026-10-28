@@ -79,7 +79,7 @@ def dispensar_medicamento(
     if hasattr(models, "MedicamentoCidadao") and db_medicamento.cidadao_id:
         novo_alarme_cidadao = models.MedicamentoCidadao(
             cidadao_id=db_medicamento.cidadao_id,
-            nome_medicamento=db_medicamento.nome_medicamento,
+            nome_medicamento=db_medicamento.medicamento_nome,
             tipo_presricao="Contínuo (Adquirido/Retirado)" if getattr(db_medicamento, "uso_continuo", False) else "Temporário / Emergência",
             horarios_alarme=getattr(db_medicamento, "horarios_alarme", "08:00, 20:00")
         )
@@ -91,7 +91,50 @@ def dispensar_medicamento(
     return {
         "status": "Sucesso",
         "mensagem": f"Dispensação/Aquisição confirmada via {origem_atendimento}.",
-        "medicamento": db_medicamento.nome_medicamento,
+        "medicamento": db_medicamento.medicamento_nome,
         "posologia_ativa": getattr(db_medicamento, "posologia", "Conforme orientação médica"),
         "alarme_configurado_no_app": "Ativado com sucesso! O despertador/campainha do telemóvel foi programado."
+    }
+
+@router.post(
+    "/comprar-com-desconto/",
+    summary="Comprar Medicamento Particular com Desconto e Ativar Alarme",
+    description="Processa a compra subsidiada de medicamentos que não são fornecidos pelo SUS, gerando o token de desconto e ativando os alarmes no App do Cidadão."
+)
+def comprar_medicamento_com_desconto(
+    medicamento: farmacia_schemas.MedicamentoCreate,
+    db: Session = Depends(database.get_db)
+):
+    # Força a flag fornecido_pelo_sus para False e gera o token exclusivo de desconto da rede parceira
+    qr_token = f"QR-DESC-PARCEIRO-{uuid.uuid4().hex[:8].upper()}"
+    
+    db_medicamento = models.MedicamentoItem(
+        **medicamento.model_dump(),
+        fornecido_pelo_sus=False,
+        qr_code_token=qr_token,
+        dispensado=True,  # Marca como adquirido no ato da compra
+        data_dispensacao=datetime.utcnow()
+    )
+    db.add(db_medicamento)
+    db.commit()
+    db.refresh(db_medicamento)
+
+    # Injeta automaticamente os alarmes no perfil do cidadão
+    if hasattr(models, "MedicamentoCidadao") and db_medicamento.cidadao_id:
+        novo_alarme = models.MedicamentoCidadao(
+            cidadao_id=db_medicamento.cidadao_id,
+            nome_medicamento=db_medicamento.medicamento_nome,
+            tipo_presricao="Contínuo (Compra com Desconto)" if getattr(db_medicamento, "uso_continuo", False) else "Temporário / Emergência",
+            horarios_alarme=getattr(db_medicamento, "horarios_alarme", "08:00, 20:00")
+        )
+        db.add(novo_alarme)
+        db.commit()
+
+    return {
+        "status": "Sucesso",
+        "mensagem": "Compra com desconto subsidiado efetuada com sucesso na rede parceira!",
+        "medicamento": db_medicamento.medicamento_nome,
+        "token_desconto": qr_token,
+        "posologia_ativa": db_medicamento.posologia,
+        "alarme_configurado_no_app": "Ativado! O despertador/campainha do telemóvel foi programado com base na receita médica."
     }
