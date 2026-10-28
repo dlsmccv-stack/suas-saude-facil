@@ -56,6 +56,7 @@ class CidadaoPerfil(Base):
 
     medicamentos = relationship("MedicamentoCidadao", back_populates="cidadao")
     automedicacoes = relationship("AutomedicacaoLog", back_populates="cidadao")
+    emergencias = relationship("EmergencyItem", back_populates="cidadao")
 
 class MedicamentoCidadao(Base):
     __tablename__ = "medicamentos_cidadao"
@@ -83,7 +84,7 @@ class AutomedicacaoLog(Base):
 
 
 # ==========================================
-# FARMÁCIA DIGITAL & DISPENSAÇÃO (ATUALIZADO)
+# FARMÁCIA DIGITAL & DISPENSAÇÃO
 # ==========================================
 
 class MedicamentoItem(Base):
@@ -97,7 +98,7 @@ class MedicamentoItem(Base):
     posologia = Column(String)
     quantidade_disponibilizada = Column(Integer)
     
-    # Novas regras de negócio integradas:
+    # Regras de negócio integradas:
     fornecido_pelo_sus = Column(Boolean, default=True) # True = Retirada gratuita SUS via QR | False = Compra com desconto particular
     uso_continuo = Column(Boolean, default=False)       # True = Uso contínuo (crónico) | False = Temporário/Emergência
     horarios_alarme = Column(String, nullable=True)     # Horários para disparar o alarme/campainha no telemóvel
@@ -105,6 +106,27 @@ class MedicamentoItem(Base):
     qr_code_token = Column(String, unique=True, index=True)
     dispensado = Column(Boolean, default=False)
     data_dispensacao = Column(DateTime, nullable=True)
+
+
+# ==========================================
+# QR CODE DE EMERGÊNCIA (INTEGRADO)
+# ==========================================
+
+class EmergencyItem(Base):
+    __tablename__ = "emergency_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cidadao_id = Column(Integer, ForeignKey("cidadaos_perfil.id"), nullable=True)
+    cidadao_nome = Column(String, index=True)
+    tipo_sanguineo = Column(String)
+    alergias = Column(String, nullable=True)
+    condicoes_medicas = Column(String, nullable=True)
+    contacto_emergencia_nome = Column(String)
+    contacto_emergencia_telefone = Column(String)
+    qr_code_token = Column(String, unique=True, index=True)
+    data_registo = Column(DateTime, default=datetime.datetime.utcnow)
+
+    cidadao = relationship("CidadaoPerfil", back_populates="emergencias")
 
 
 # ==========================================
