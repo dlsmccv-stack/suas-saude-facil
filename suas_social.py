@@ -6,7 +6,7 @@ router = APIRouter()
 
 @router.post("/", response_model=suas_social_schemas.ApoioSocialResponse)
 def criar_atendimento_suas(atendimento: suas_social_schemas.ApoioSocialCreate, db: Session = Depends(database.get_db)):
-    db_atendimento = models.SuasSocial(**atendimento.dict())
+    db_atendimento = models.SuasSocial(**atendimento.model_dump())
     db.add(db_atendimento)
     db.commit()
     db.refresh(db_atendimento)
