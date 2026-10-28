@@ -40,6 +40,22 @@ class EmergencyValidateToken(BaseModel):
             }
         }
 
+class AcionamentoSamuPayload(BaseModel):
+    qr_code_token: str = Field(..., description="Token do QR Code de emergência do paciente", example="QR-EMERG-ABC123XYZ")
+    latitude: float = Field(..., description="Latitude da localização do incidente", example=-5.08921)
+    longitude: float = Field(..., description="Longitude da localização do incidente", example=-42.80194)
+    local_descricao: Optional[str] = Field("Endereço não especificado", description="Ponto de referência ou descrição do local", example="Próximo à Av. Frei Serafim")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "qr_code_token": "QR-EMERG-ABC123XYZ",
+                "latitude": -5.08921,
+                "longitude": -42.80194,
+                "local_descricao": "Próximo à Av. Frei Serafim"
+            }
+        }
+
 class EmergencyProfileResponse(BaseModel):
     id: int = Field(..., description="Identificador único do registo", example=1)
     cidadao_id: Optional[int] = Field(None, description="ID do cidadão associado", example=1)
@@ -54,20 +70,6 @@ class EmergencyProfileResponse(BaseModel):
 
     class Config:
         from_attributes = True
-        json_schema_extra = {
-            "example": {
-                "id": 1,
-                "cidadao_id": 1,
-                "cidadao_nome": "Maria da Silva",
-                "tipo_sanguineo": "O+",
-                "alergias": "Penicilina, Dipirona",
-                "condicoes_medicas": "Hipertensão, Diabetes Tipo 1",
-                "contacto_emergencia_nome": "João Silva",
-                "contacto_emergencia_telefone": "(86) 99999-9999",
-                "qr_code_token": "QR-EMERG-ABC123XYZ",
-                "data_registo": "2026-10-28T14:30:00"
-            }
-        }
 
 @router.post(
     "/",
@@ -81,7 +83,6 @@ def criar_perfil_emergencia(
 ):
     qr_token = f"QR-EMERG-{uuid.uuid4().hex[:8].upper()}"
     
-    # Valida se o modelo na base de dados possui a tabela EmergencyItem
     if not hasattr(models, "EmergencyItem"):
         raise HTTPException(status_code=500, detail="Tabela de emergência não configurada no models.py.")
 
@@ -126,3 +127,65 @@ def consultar_por_qrcode(
         raise HTTPException(status_code=404, detail="Perfil de emergência não encontrado para o token fornecido.")
     
     return db_emergencia
+
+@router.post(
+    "/acionar-samu/",
+    summary="Acionamento Imediato do SAMU com Geolocalização e Direcionamento de Rede",
+    description="Processa o QR Code de emergência, captura a localização exata do cidadão e define o encaminhamento hospitalar (SUS vs. Plano de Saúde)."
+)
+def acionar_samu_emergencia(
+    payload: AcionamentoSamuPayload,
+    db: Session = Depends(database.get_db)
+):
+    # Procura o perfil de emergência pelo token do QR Code
+    emergencia = db.query(models.EmergencyItem).filter(
+        models.EmergencyItem.qr_code_token == payload.qr_code_token
+    ).first()
+
+    if not emergencia:
+        raise HTTPException(
+            status_code=404, 
+            detail="Perfil de emergência não encontrado para o token fornecido."
+        )
+
+    # Verifica os dados do cidadão associado para checar plano de saúde ou cobertura (se houver registo)
+    cidadao = None
+    if emergencia.cidadao_id and hasattr(models, "CidadaoPerfil"):
+        cidadao = db.query(models.CidadaoPerfil).filter(
+            models.CidadaoPerfil.id == emergencia.cidadao_id
+        ).first()
+
+    possui_plano = cidadao and getattr(cidadao, "possui_plano_saude", False)
+    operadora = getattr(cidadao, "operadora_plano_saude", "Nenhum (Rede Pública)") if (cidadao and possui_plano) else "Nenhum (Rede Pública)"
+
+    destino_sugerido = (
+        f"Rede Particular / Hospital Credenciado ({operadora})" 
+        if possui_plano 
+        else "Rede Pública de Saúde (SUS - UPA / Hospital de Urgência)"
+    )
+
+    # Monta o pacote de despacho para a central do SAMU
+    return {
+        "status_despacho": "ALERTA VERMELHO - AMBULÂNCIA ACIONADA",
+        "timestamp_acionamento": datetime.utcnow().isoformat(),
+        "localizacao_exata": {
+            "latitude": payload.latitude,
+            "longitude": payload.longitude,
+            "referencia": payload.local_descricao
+        },
+        "dados_paciente": {
+            "nome": emergencia.cidadao_nome,
+            "tipo_sanguineo": emergencia.tipo_sanguineo,
+            "alergias": emergencia.alergias,
+            "condicoes_medicas": emergencia.condicoes_medicas,
+            "contacto_emergencia": {
+                "nome": emergencia.contacto_emergencia_nome,
+                "telefone": emergencia.contacto_emergencia_telefone
+            }
+        },
+        "triagem_cobertura": {
+            "possui_plano_saude": possui_plano,
+            "detalhe_cobertura": operadora,
+            "direcionamento_hospitalar": destino_sugerido
+        }
+    }
