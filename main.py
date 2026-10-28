@@ -31,7 +31,7 @@ def read_root():
 # Endpoints de Regulação
 @app.post("/regulacao/", response_model=schemas.RegulacaoResponse)
 def criar_regulacao(regulacao: schemas.RegulacaoCreate, db: Session = Depends(database.get_db)):
-    db_regulacao = models.Regulacao(**regulacao.dict())
+    db_regulacao = models.RegulacaoItem(**regulacao.model_dump())
     db.add(db_regulacao)
     db.commit()
     db.refresh(db_regulacao)
@@ -39,7 +39,7 @@ def criar_regulacao(regulacao: schemas.RegulacaoCreate, db: Session = Depends(da
 
 @app.get("/regulacao/", response_model=list[schemas.RegulacaoResponse])
 def listar_regulacoes(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
-    return db.query(models.Regulacao).offset(skip).limit(limit).all()
+    return db.query(models.RegulacaoItem).offset(skip).limit(limit).all()
 
 # Rotas dos demais módulos
 app.include_router(triagem.router, prefix="/triagem", tags=["Triagem de Manchester"])
