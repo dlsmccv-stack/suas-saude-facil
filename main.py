@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 import database, models
-import triagem, suas_social, fhir_integration, emergency_qrcode, farmacia, educacao_medica, regulacao, cidadao
+import triagem, suas_social, fhir_integration, emergency_qrcode, farmacia, educacao_medica, regulacao, cidadao, medico
 
 # Inicializa as tabelas no banco de dados de forma centralizada
 models.Base.metadata.create_all(bind=database.engine)
@@ -14,6 +14,7 @@ app = FastAPI(
     Esta API disponibiliza serviços operacionais para:
     * **App do Cidadão**: Onboarding, gestão de planos de saúde, alarmes de medicamentos (contínuos e temporários), scanner preventivo e QR Code de emergência/tela de bloqueio.
     * **Regulação**: Gestão centralizada de solicitações, leitos e encaminhamentos médicos.
+    * **Painel do Médico**: Prescrições clínicas, geração de QR Code de farmácia e pedidos de regulação.
     * **Triagem de Manchester**: Classificação de risco e priorização de atendimento.
     * **Assistência Social (SUAS)**: Registo e acompanhamento de cidadãos em situação de vulnerabilidade.
     * **Interoperabilidade FHIR**: Troca padronizada de dados de saúde (R4).
@@ -34,6 +35,7 @@ def read_root():
         "modulos": [
             "Core API",
             "App do Cidadão (Plano de Saúde, Medicamentos & Preventivo)",
+            "Painel do Médico (Prescrições & Regulação)",
             "Regulação",
             "Triagem (Protocolo de Manchester)",
             "Apoio Social (SUAS)",
@@ -46,6 +48,7 @@ def read_root():
 
 # Registo de todos os routers modulares do ecossistema
 app.include_router(regulacao.router, prefix="/regulacao", tags=["Regulação"])
+app.include_router(medico.router)  # Inclui o Painel do Médico com prefixo /medico definido no router
 app.include_router(triagem.router, prefix="/triagem", tags=["Triagem de Manchester"])
 app.include_router(suas_social.router, prefix="/suas", tags=["Assistência Social (SUAS)"])
 app.include_router(fhir_integration.router, prefix="/fhir", tags=["Interoperabilidade FHIR"])
