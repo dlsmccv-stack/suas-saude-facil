@@ -6,7 +6,7 @@ router = APIRouter()
 
 @router.post("/", response_model=triagem_schemas.TriagemResponse)
 def criar_triagem(triagem: triagem_schemas.TriagemCreate, db: Session = Depends(database.get_db)):
-    db_triagem = models.Triagem(**triagem.dict())
+    db_triagen = models.Triagen(**triagem.model_dump())
     db.add(db_triagem)
     db.commit()
     db.refresh(db_triagem)
