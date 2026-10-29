@@ -186,7 +186,7 @@
           </table>
         </div>
 
-        <!-- NOVO MÓDULO: Gestão de Exames & Retornos Automáticos -->
+        <!-- MÓDULO: Gestão de Exames & Retornos Automáticos -->
         <div class="card">
           <div class="card-title">🔬 Laboratório & Retornos Automáticos</div>
           <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 12px;">Integração de resultados, notificação médica e agendamento automático de retorno.</p>
@@ -228,6 +228,29 @@
     </div>
 
   </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const botoesAcao = document.querySelectorAll('.btn-action');
+      
+      botoesAcao.forEach(btn => {
+        if (btn.textContent.includes('Emitir Alerta Geral')) {
+          btn.addEventListener('click', () => {
+            const msg = prompt('Digite o comunicado de alerta geral para a rede UBS/UPA:', 'Aviso operacional: Atenção ao fluxo de triagem e urgências.');
+            if (msg) {
+              alert('📢 Alerta transmitido com sucesso para toda a rede operacional!\n\nConteúdo: ' + msg);
+            }
+          });
+        }
+        
+        if (btn.textContent.includes('Gerar Relatório Diário')) {
+          btn.addEventListener('click', () => {
+            alert('📊 Relatório Diário de Operacionalidade gerado com sucesso!\n\n• Status da Rede: 100% Operacional\n• Sincronização FHIR R4: Ativa\n• Logs SHA-256: Verificados.');
+          });
+        }
+      });
+    });
+  </script>
 
 </body>
 </html>
