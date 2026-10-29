@@ -5,37 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SUAS Saúde - App do Cidadão</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1e293b">
+  <meta name="theme-color" content="#ffffff">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background-color: #0f172a; color: #f8fafc; display: flex; flex-direction: column; min-height: 100vh; padding-bottom: 75px; }
-    header { background-color: #1e293b; padding: 16px; text-align: center; border-bottom: 1px solid #334155; }
-    header h1 { font-size: 1.2rem; color: #38bdf8; }
-    header p { font-size: 0.8rem; color: #94a3b8; }
+    body { background-color: #f8fafc; color: #1e293b; display: flex; flex-direction: column; min-height: 100vh; padding-bottom: 75px; }
+    header { background-color: #ffffff; padding: 16px; text-align: center; border-bottom: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    header h1 { font-size: 1.2rem; color: #0284c7; }
+    header p { font-size: 0.8rem; color: #64748b; }
     .container { padding: 16px; max-width: 500px; margin: 0 auto; width: 100%; }
-    .card { background-color: #1e293b; border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid #334155; }
-    .card-title { font-size: 1rem; font-weight: bold; color: #f1f5f9; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-    .btn-emergency { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 12px; padding: 18px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; }
+    .card { background-color: #ffffff; border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .card-title { font-size: 1rem; font-weight: bold; color: #0f172a; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .btn-emergency { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 12px; padding: 18px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3); display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; }
     .btn-emergency:active { transform: scale(0.98); }
     .btn-primary { background-color: #0284c7; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .btn-primary:active { background-color: #0369a1; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
-    nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: #1e293b; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #334155; z-index: 100; }
-    .nav-btn { background: none; border: none; color: #94a3b8; font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
-    .nav-btn.active { color: #38bdf8; font-weight: bold; }
+    nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: #ffffff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #e2e8f0; z-index: 100; box-shadow: 0 -2px 6px rgba(0,0,0,0.03); }
+    .nav-btn { background: none; border: none; color: #64748b; font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+    .nav-btn.active { color: #0284c7; font-weight: bold; }
     .form-group { margin-bottom: 12px; }
-    label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 4px; }
-    input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background-color: #0f172a; color: white; font-size: 0.95rem; }
-    .badge { background-color: #0369a1; color: #e0f2fe; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; }
-    .alert-box { background-color: #0284c722; border: 1px solid #0284c7; padding: 10px; border-radius: 8px; font-size: 0.85rem; color: #38bdf8; margin-top: 10px; }
+    label { display: block; font-size: 0.85rem; color: #334155; margin-bottom: 4px; font-weight: 500; }
+    input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; background-color: #ffffff; color: #1e293b; font-size: 0.95rem; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #0284c7; box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15); }
+    .badge { background-color: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .alert-box { background-color: #e0f2fe; border: 1px solid #bae6fd; padding: 10px; border-radius: 8px; font-size: 0.85rem; color: #0369a1; margin-top: 10px; }
     
     /* Estilos específicos da Companhia de Medicamentos */
-    .med-item { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    .med-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
     .status-badge { font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: bold; display: inline-block; }
-    .status-green { background: #064e3b; color: #34d399; }
-    .status-yellow { background: #78350f; color: #fbbf24; }
-    .alert-card { background: #451a03; border: 1px solid #b45309; padding: 12px; border-radius: 10px; margin-bottom: 12px; font-size: 0.85rem; color: #fde68a; }
-    .offline-banner { background-color: #065f46; color: #a7f3d0; padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; margin-bottom: 12px; text-align: center; }
+    .status-green { background: #d1fae5; color: #065f46; }
+    .status-yellow { background: #fef3c7; color: #92400e; }
+    .alert-card { background: #fffbeb; border: 1px solid #fde68a; padding: 12px; border-radius: 10px; margin-bottom: 12px; font-size: 0.85rem; color: #92400e; }
+    .offline-banner { background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; margin-bottom: 12px; text-align: center; font-weight: 500; }
   </style>
 </head>
 <body>
@@ -55,11 +57,11 @@
 
       <div class="card">
         <div class="card-title">🪪 Cartão Vital de Emergência</div>
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Apresente este código em caso de socorro ou consulta rápida.</p>
-        <div style="text-align: center; padding: 16px; background-color: white; border-radius: 8px; margin-bottom: 12px;">
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px;">Apresente este código em caso de socorro ou consulta rápida.</p>
+        <div style="text-align: center; padding: 16px; background-color: #f1f5f9; border-radius: 8px; margin-bottom: 12px; border: 1px solid #e2e8f0;">
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=QR-EMERG-CITIZEN123" alt="QR Code Emergência" style="max-width: 150px;">
         </div>
-        <div style="font-size: 0.85rem; line-height: 1.6;">
+        <div style="font-size: 0.85rem; line-height: 1.6; color: #334155;">
           <p><strong>Cidadão:</strong> Maria Izabely</p>
           <p><strong>Tipo Sanguíneo:</strong> O+</p>
           <p><strong>Contato Responsável:</strong> (86) 99999-9999</p>
@@ -73,185 +75,9 @@
     <div id="tab-triagem" class="tab-content">
       <div class="card">
         <div class="card-title">🩺 Pré-Triagem de Atendimento</div>
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Selecione o local de atendimento e informe os seus sintomas.</p>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px;">Selecione o local de atendimento e informe os seus sintomas.</p>
         
         <form id="form-triagem" onsubmit="enviarTriagem(event)">
           <div class="form-group">
             <label>Tipo de Unidade Destino:</label>
-            <select id="tipo_unidade" required>
-              <option value="UBS">UBS - Unidade Básica (Atendimento de Rotina)</option>
-              <option value="UPA">UPA - Pronto Atendimento (Urgência)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Sintomas Principais:</label>
-            <textarea id="sintomas" rows="3" placeholder="Ex: Febre alta, dor de cabeça, falta de ar..." required></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Intensidade / Gravidade Percebida:</label>
-            <select id="gravidade">
-              <option value="LEVE">Leve / Desconforto Pouco Urgente</option>
-              <option value="MODERADO">Moderado / Dor Recorrente</option>
-              <option value="GRAVE">Grave / Necessita Atendimento Rápido</option>
-            </select>
-          </div>
-
-          <button type="submit" class="btn-primary">Enviar Pré-Triagem</button>
-        </form>
-      </div>
-
-      <div id="status-triagem" class="alert-box" style="display: none;"></div>
-    </div>
-
-    <!-- ABA 3: COMPANHIA DE MEDICAMENTOS -->
-    <div id="tab-meds" class="tab-content">
-      
-      <!-- Indicador Offline-First -->
-      <div class="offline-banner">
-        ⚡ <strong>Modo Offline-First Ativo:</strong> Sincronizado com FastAPI.
-      </div>
-
-      <!-- Prescrições e QR Code de Retirada -->
-      <div class="card">
-        <div class="card-title">💊 Meus Medicamentos & Receitas</div>
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Histórico de prescrições e retirada na Farmácia Popular / UBS.</p>
-        <div style="border-left: 3px solid #38bdf8; padding-left: 10px; margin-bottom: 12px;">
-          <strong style="font-size: 0.9rem;">Dipirona Sódica 500mg</strong><br>
-          <span style="font-size: 0.75rem; color: #94a3b8;">1 comprimido de 6h em 6h (Tomar com água)</span>
-        </div>
-
-        <!-- 2. QR Code de Retirada Rápida para o Balcão -->
-        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #334155;">
-          <div style="font-size: 0.9rem; font-weight: bold; color: #38bdf8; margin-bottom: 6px;">📱 QR Code de Retirada (Dispensa Rápida)</div>
-          <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">Apresente este código no balcão para baixar o stock automaticamente.</p>
-          <div style="text-align: center; padding: 10px; background-color: white; border-radius: 8px;">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=REC-DIGITAL-FARMA-88492" alt="QR Code Receita Digital" style="max-width: 130px;">
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. Alertas de Reposição e Uso Contínuo -->
-      <div class="card">
-        <div class="card-title">⏰ Alertas de Reposição</div>
-        <div class="alert-card">
-          ⚠️ <strong>Aviso de Stock Pessoal:</strong> Seu medicamento <strong>Losartana 50mg</strong> resta para apenas 3 dias.
-        </div>
-        <div style="font-size: 0.8rem; color: #cbd5e1;">
-          🔔 <strong>Lembrete:</strong> Insulina NPH — Próxima dose hoje às 22:00.
-        </div>
-      </div>
-
-      <!-- 1. Consulta de Stock em Tempo Real & Filtro GPS -->
-      <div class="card">
-        <div class="card-title">📍 Consulta de Stock na Rede Pública</div>
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Pesquise por insulina, hipertensos, antibióticos e unidades próximas.</p>
-        
-        <div class="form-group">
-          <input type="text" id="filtroMedicamento" placeholder="Digite o medicamento (ex: Insulina, Losartana)..." onkeyup="filtrarMedicamentos()">
-        </div>
-
-        <div id="listaEstoqueMedicamentos">
-          <div class="med-item" data-nome="losartana potassica 50mg">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <strong style="font-size: 0.95rem; color: #f1f5f9;">Losartana Potássica 50mg</strong>
-              <span class="status-badge status-green">🟢 Em Stock</span>
-            </div>
-            <p style="font-size: 0.8rem; color: #94a3b8;">📍 UBS Centro • 1.2 km • Tel: (86) 3222-0001</p>
-            <p style="font-size: 0.75rem; color: #64748b;">Atendimento: 07:00 às 17:00</p>
-          </div>
-
-          <div class="med-item" data-nome="insulina nph 100 ui">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <strong style="font-size: 0.95rem; color: #f1f5f9;">Insulina NPH 100 UI/ml</strong>
-              <span class="status-badge status-yellow">🟡 Stock Baixo</span>
-            </div>
-            <p style="font-size: 0.8rem; color: #94a3b8;">📍 Farmácia Central • 2.5 km • Tel: (86) 3222-0002</p>
-            <p style="font-size: 0.75rem; color: #64748b;">Atendimento: 08:00 às 18:00</p>
-          </div>
-
-          <div class="med-item" data-nome="amoxicilina 500mg antibiotico">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <strong style="font-size: 0.95rem; color: #f1f5f9;">Amoxicilina 500mg (Antibiótico)</strong>
-              <span class="status-badge status-green">🟢 Em Stock</span>
-            </div>
-            <p style="font-size: 0.8rem; color: #94a3b8;">📍 UBS Saci • 0.8 km • Tel: (86) 3222-0003</p>
-            <p style="font-size: 0.75rem; color: #64748b;">Atendimento: 07:00 às 19:00</p>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-  </div>
-
-  <!-- BARRA DE NAVEGAÇÃO INFERIOR -->
-  <nav>
-    <button class="nav-btn active" onclick="mudarAba('emergencia', this)">
-      <span>🚨</span> Emergência
-    </button>
-    <button class="nav-btn" onclick="mudarAba('triagem', this)">
-      <span>🩺</span> Pré-Triagem
-    </button>
-    <button class="nav-btn" onclick="mudarAba('meds', this)">
-      <span>💊</span> Medicamentos
-    </button>
-  </nav>
-
-  <script>
-    function mudarAba(nomeAba, elementoBtn) {
-      const abas = document.querySelectorAll('.tab-content');
-      abas.forEach(aba => aba.classList.remove('active'));
-
-      const botoes = document.querySelectorAll('.nav-btn');
-      botoes.forEach(btn => btn.classList.remove('active'));
-
-      document.getElementById('tab-' + nomeAba).classList.add('active');
-      elementoBtn.classList.add('active');
-    }
-
-    function acionarSAMU() {
-      const statusBox = document.getElementById('status-samu');
-      statusBox.style.display = 'block';
-      
-      if (navigator.geolocation) {
-        statusBox.innerHTML = "🛰️ A obter localização GPS precisa...";
-        navigator.geolocation.getCurrentPosition(position => {
-          const lat = position.coords.latitude.toFixed(4);
-          const lon = position.coords.longitude.toFixed(4);
-          statusBox.innerHTML = `🚨 <strong>SAMU Acionado com Sucesso!</strong><br>Localização GPS enviada: Lat ${lat}, Lon ${lon}. Uma ambulância foi direcionada para a sua coordenada.`;
-        }, error => {
-          statusBox.innerHTML = `🚨 <strong>SAMU Acionado!</strong><br>Aviso: Não foi possível obter o sinal GPS exato. A central usará a sua morada cadastrada.`;
-        });
-      } else {
-        statusBox.innerHTML = "🚨 <strong>SAMU Acionado!</strong> O seu pedido de socorro foi enviado à central.";
-      }
-    }
-
-    function enviarTriagem(event) {
-      event.preventDefault();
-      const unidade = document.getElementById('tipo_unidade').value;
-      const gravidade = document.getElementById('gravidade').value;
-      const statusTriagem = document.getElementById('status-triagem');
-      
-      statusTriagem.style.display = 'block';
-      statusTriagem.innerHTML = `✅ <strong>Pré-Triagem Registada (${unidade})!</strong><br>Classificação sugerida: <strong>${gravidade}</strong>. Dirija-se à unidade de saúde mais próxima com o seu documento de identificação.`;
-    }
-
-    function filtrarMedicamentos() {
-      const input = document.getElementById('filtroMedicamento').value.toLowerCase();
-      const itens = document.querySelectorAll('.med-item');
-
-      itens.forEach(item => {
-        const nomeMed = item.getAttribute('data-nome');
-        if (nomeMed.includes(input)) {
-          item.style.display = 'block';
-        } else {
-          item.style.display = 'none';
-        }
-      });
-    }
-  </script>
-</body>
-</html>
+            <select id="tipo_
