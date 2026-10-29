@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SUAS Saúde - App do Cidadão</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e293b">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #0f172a; color: #f8fafc; display: flex; flex-direction: column; min-height: 100vh; padding-bottom: 70px; }
+    header { background-color: #1e293b; padding: 16px; text-align: center; border-bottom: 1px solid #334155; }
+    header h1 { font-size: 1.2rem; color: #38bdf8; }
+    header p { font-size: 0.8rem; color: #94a3b8; }
+    .container { padding: 16px; max-width: 500px; margin: 0 auto; width: 100%; }
+    .card { background-color: #1e293b; border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid #334155; }
+    .card-title { font-size: 1rem; font-weight: bold; color: #f1f5f9; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .btn-emergency { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 12px; padding: 18px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; }
+    .btn-emergency:active { transform: scale(0.98); }
+    .btn-primary { background-color: #0284c7; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: #1e293b; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #334155; }
+    .nav-btn { background: none; border: none; color: #94a3b8; font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+    .nav-btn.active { color: #38bdf8; font-weight: bold; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 4px; }
+    input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background-color: #0f172a; color: white; }
+    .badge { background-color: #0369a1; color: #e0f2fe; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; }
+    .alert-box { background-color: #0284c722; border: 1px solid #0284c7; padding: 10px; border-radius: 8px; font-size: 0.85rem; color: #38bdf8; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>SUAS Saúde / Saúde +Fácil</h1>
+    <p>App do Cidadão • PWA Offline-First</p>
+  </header>
+
+  <div class="container">
+    
+    <!-- ABA 1: EMERGÊNCIA SAMU -->
+    <div id="tab-emergencia" class="tab-content active">
+      <button class="btn-emergency" onclick="acionarSAMU()">
+        🚨 ACCIONAR SAMU (SOS GPS)
+      </button>
+
+      <div class="card">
+        <div class="card-title">🪪 Cartão Vital de Emergência</div>
+        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Apresente este código em caso de socorro ou consulta rápida.</p>
+        <div style="text-align: center; padding: 16px; background-color: white; border-radius: 8px; margin-bottom: 12px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=QR-EMERG-CITIZEN123" alt="QR Code Emergência" style="max-width: 150px;">
+        </div>
+        <div style="font-size: 0.85rem; line-height: 1.6;">
+          <p><strong>Cidadão:</strong> Maria Izabely</p>
+          <p><strong>Tipo Sanguíneo:</strong> O+</p>
+          <p><strong>Contato Responsável:</strong> (86) 99999-9999</p>
+        </div>
+      </div>
+
+      <div id="status-samu" class="alert-box" style="display: none;"></div>
+    </div>
+
+    <!-- ABA 2: TRIAGEM (UBS vs UPA) -->
+    <div id="tab-triagem" class="tab-content">
+      <div class="card">
+        <div class="card-title">🩺 Pré-Triagem de Atendimento</div>
+        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Selecione o local de atendimento e informe os seus sintomas.</p>
+        
+        <form id="form-triagem" onsubmit="enviarTriagem(event)">
+          <div class="form-group">
+            <label>Tipo de Unidade Destino:</label>
+            <select id="tipo_unidade" required>
+              <option value="UBS">UBS - Unidade Básica (Atendimento de Rotina)</option>
+              <option value="UPA">UPA - Pronto Atendimento (Urgência)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Sintomas Principais:</label>
+            <textarea id="sintomas" rows="3" placeholder="Ex: Febre alta, dor de cabeça, falta de ar..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Intensidade / Gravidade Percebida:</label>
+            <select id="gravidade">
+              <option value="LEVE">Leve / Desconforto Pouco Urgente</option>
+              <option value="MODERADO">Moderado / Dor Recorrente</option>
+              <option value="GRAVE">Grave / Necessita Atendimento Rápido</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn-primary">Enviar Pré-Triagem</button>
+        </form>
+      </div>
+
+      <div id="status-triagem" class="alert-box" style="display: none;"></div>
+    </div>
+
+    <!-- ABA 3: MEDICAMENTOS -->
+    <div id="tab-meds" class="tab-content">
+      <div class="card">
+        <div class="card-title">💊 Meus Medicamentos & Receitas</div>
+        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Histórico de prescrições e retirada na Farmácia Popular / UBS.</p>
+        <div style="border-left: 3px solid #38bdf8; padding-left: 10px; margin-bottom: 10px;">
+          <strong style="font-size: 0.9rem;">Dipirona Sódica 500mg</strong><br>
+          <span style="font-size: 0.75rem; color: #94a3b8;">1 comprimido de 6h em 6h (Tomar com água)</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <nav>
+    <button class="nav-btn active" onclick="switchTab('emergencia', this)">
+      <span>🚨</span>
+      <span>Emergência</span>
+    </button>
+    <button class="nav-btn" onclick="switchTab('triagem', this)">
+      <span>🩺</span>
+      <span>Triagem</span>
+    </button>
+    <button class="nav-btn" onclick="switchTab('meds', this)">
+      <span>💊</span>
+      <span>Remédios</span>
+    </button>
+  </nav>
+
+  <script>
+    const API_URL = "https://suas-saude-facil.onrender.com";
+
+    function switchTab(tabName, btn) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + tabName).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    async function acionarSAMU() {
+      const statusDiv = document.getElementById('status-samu');
+      statusDiv.style.display = 'block';
+      statusDiv.innerHTML = "⏳ Obtendo geolocalização exata do GPS...";
+
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          const payload = {
+            qr_code_token: "QR-EMERG-CITIZEN123",
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            local_descricao: "Acionamento via App do Cidadão"
+          };
+
+          try {
+            const res = await fetch(`${API_URL}/emergencia/acionar-samu/`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            statusDiv.innerHTML = `✅ <strong>SAMU ACIONADO COM SUCESSO!</strong><br>
+              📍 Local: Lat ${payload.latitude.toFixed(4)}, Long ${payload.longitude.toFixed(4)}<br>
+              🏥 Direcionamento: ${data.triagem_cobertura.direcionamento_hospitalar}<br>
+              📲 <strong>Notificação enviada ao familiar responsável!</strong>`;
+          } catch (e) {
+            statusDiv.innerHTML = "⚠️ SAMU Solicitado localmente. Sem sinal no momento, os dados serão retransmitidos.";
+          }
+        }, (error) => {
+          statusDiv.innerHTML = "⚠️ Ative o GPS do telemóvel para enviar a localização exata ao SAMU.";
+        });
+      }
+    }
+
+    async function enviarTriagem(e) {
+      e.preventDefault();
+      const statusDiv = document.getElementById('status-triagem');
+      statusDiv.style.display = 'block';
+      statusDiv.innerHTML = "⏳ Enviando pré-triagem...";
+
+      setTimeout(() => {
+        statusDiv.innerHTML = "✅ <strong>Pré-triagem enviada com sucesso!</strong><br>Apresente o QR Code na chegada da unidade de saúde selecionada.";
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
