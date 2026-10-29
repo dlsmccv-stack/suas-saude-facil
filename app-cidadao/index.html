@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#1e293b">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background-color: #0f172a; color: #f8fafc; display: flex; flex-direction: column; min-height: 100vh; padding-bottom: 70px; }
+    body { background-color: #0f172a; color: #f8fafc; display: flex; flex-direction: column; min-height: 100vh; padding-bottom: 75px; }
     header { background-color: #1e293b; padding: 16px; text-align: center; border-bottom: 1px solid #334155; }
     header h1 { font-size: 1.2rem; color: #38bdf8; }
     header p { font-size: 0.8rem; color: #94a3b8; }
@@ -20,14 +20,22 @@
     .btn-primary { background-color: #0284c7; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
-    nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: #1e293b; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #334155; }
+    nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: #1e293b; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #334155; z-index: 100; }
     .nav-btn { background: none; border: none; color: #94a3b8; font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
     .nav-btn.active { color: #38bdf8; font-weight: bold; }
     .form-group { margin-bottom: 12px; }
     label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 4px; }
-    input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background-color: #0f172a; color: white; }
+    input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background-color: #0f172a; color: white; font-size: 0.95rem; }
     .badge { background-color: #0369a1; color: #e0f2fe; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; }
     .alert-box { background-color: #0284c722; border: 1px solid #0284c7; padding: 10px; border-radius: 8px; font-size: 0.85rem; color: #38bdf8; margin-top: 10px; }
+    
+    /* Estilos específicos da Companhia de Medicamentos */
+    .med-item { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    .status-badge { font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: bold; display: inline-block; }
+    .status-green { background: #064e3b; color: #34d399; }
+    .status-yellow { background: #78350f; color: #fbbf24; }
+    .alert-card { background: #451a03; border: 1px solid #b45309; padding: 12px; border-radius: 10px; margin-bottom: 12px; font-size: 0.85rem; color: #fde68a; }
+    .offline-banner { background-color: #065f46; color: #a7f3d0; padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; margin-bottom: 12px; text-align: center; }
   </style>
 </head>
 <body>
@@ -97,11 +105,48 @@
       <div id="status-triagem" class="alert-box" style="display: none;"></div>
     </div>
 
-    <!-- ABA 3: MEDICAMENTOS -->
+    <!-- ABA 3: COMPANHIA DE MEDICAMENTOS -->
     <div id="tab-meds" class="tab-content">
+      
+      <!-- Indicador Offline-First -->
+      <div class="offline-banner">
+        ⚡ <strong>Modo Offline-First Ativo:</strong> Sincronizado com FastAPI.
+      </div>
+
+      <!-- Prescrições e QR Code de Retirada -->
       <div class="card">
         <div class="card-title">💊 Meus Medicamentos & Receitas</div>
         <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Histórico de prescrições e retirada na Farmácia Popular / UBS.</p>
-        <div style="border-left: 3px solid #38bdf8; padding-left: 10px; margin-bottom: 10px;">
+        <div style="border-left: 3px solid #38bdf8; padding-left: 10px; margin-bottom: 12px;">
           <strong style="font-size: 0.9rem;">Dipirona Sódica 500mg</strong><br>
           <span style="font-size: 0.75rem; color: #94a3b8;">1 comprimido de 6h em 6h (Tomar com água)</span>
+        </div>
+
+        <!-- 2. QR Code de Retirada Rápida para o Balcão -->
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #334155;">
+          <div style="font-size: 0.9rem; font-weight: bold; color: #38bdf8; margin-bottom: 6px;">📱 QR Code de Retirada (Dispensa Rápida)</div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">Apresente este código no balcão para baixar o stock automaticamente.</p>
+          <div style="text-align: center; padding: 10px; background-color: white; border-radius: 8px;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=REC-DIGITAL-FARMA-88492" alt="QR Code Receita Digital" style="max-width: 130px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Alertas de Reposição e Uso Contínuo -->
+      <div class="card">
+        <div class="card-title">⏰ Alertas de Reposição</div>
+        <div class="alert-card">
+          ⚠️ <strong>Aviso de Stock Pessoal:</strong> Seu medicamento <strong>Losartana 50mg</strong> resta para apenas 3 dias.
+        </div>
+        <div style="font-size: 0.8rem; color: #cbd5e1;">
+          🔔 <strong>Lembrete:</strong> Insulina NPH — Próxima dose hoje às 22:00.
+        </div>
+      </div>
+
+      <!-- 1. Consulta de Stock em Tempo Real & Filtro GPS -->
+      <div class="card">
+        <div class="card-title">📍 Consulta de Stock na Rede Pública</div>
+        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Pesquise por insulina, hipertensos, antibióticos e unidades próximas.</p>
+        
+        <div class="form-group">
+          <input type="text" id="filtroMedicamento
