@@ -1,7 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException
+from ai_engine import ai_predictor  # Importa o motor preditivo isolado
+from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
-import database, models
-import triagem, suas_social, fhir_integration, emergency_qrcode, farmacia, educacao_medica, regulacao, cidadao, medico, laboratorio
+import cidadao, database, educacao_medica, emergency_qrcode, farmacia, fhir_integration, laboratorio, medico, models, regulacao, suas_social, triagem
 
 # Inicializa as tabelas no banco de dados de forma centralizada
 models.Base.metadata.create_all(bind=database.engine)
@@ -25,37 +25,76 @@ app = FastAPI(
     """,
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
+
 
 @app.get("/", tags=["Início"])
 def read_root():
-    return {
-        "sistema": "SUAS Saúde / Saúde +Fácil",
-        "status": "Operacional",
-        "modulos": [
-            "Core API",
-            "App do Cidadão (Plano de Saúde, Medicamentos & Preventivo)",
-            "Painel do Médico (Prescrições & Regulação)",
-            "Laboratório e Retornos Automáticos",
-            "Regulação",
-            "Triagem (Protocolo de Manchester)",
-            "Apoio Social (SUAS)",
-            "Interoperabilidade FHIR",
-            "QR Code de Emergência & Acionamento SAMU",
-            "Farmácia Digital & Retirada por QR Code",
-            "Educação Continuada & Indústria Farmacêutica"
-        ]
-    }
+  return {
+      "sistema": "SUAS Saúde / Saúde +Fácil",
+      "status": "Operacional",
+      "modulos": [
+          "Core API",
+          "App do Cidadão (Plano de Saúde, Medicamentos & Preventivo)",
+          "Painel do Médico (Prescrições & Regulação)",
+          "Laboratório e Retornos Automáticos",
+          "Regulação",
+          "Triagem (Protocolo de Manchester)",
+          "Apoio Social (SUAS)",
+          "Interoperabilidade FHIR",
+          "QR Code de Emergência & Acionamento SAMU",
+          "Farmácia Digital & Retirada por QR Code",
+          "Educação Continuada & Indústria Farmacêutica",
+          "Motor de IA Preditiva de Eventos Adversos",
+      ],
+  }
+
 
 # Registo de todos os routers modulares do ecossistema
 app.include_router(regulacao.router, prefix="/regulacao", tags=["Regulação"])
-app.include_router(medico.router)  # Inclui o Painel do Médico com prefixo /medico definido no router
-app.include_router(laboratorio.router)  # Inclui as rotas de laboratório e agendamento automático de retorno
-app.include_router(triagem.router, prefix="/triagem", tags=["Triagem de Manchester"])
-app.include_router(suas_social.router, prefix="/suas", tags=["Assistência Social (SUAS)"])
-app.include_router(fhir_integration.router, prefix="/fhir", tags=["Interoperabilidade FHIR"])
-app.include_router(emergency_qrcode.router, prefix="/emergencia", tags=["QR Code de Emergência"])
+app.include_router(
+    medico.router
+)  # Inclui o Painel do Médico com prefixo /medico definido no router
+app.include_router(
+    laboratorio.router
+)  # Inclui as rotas de laboratório e agendamento automático de retorno
+app.include_router(
+    triagem.router, prefix="/triagem", tags=["Triagem de Manchester"]
+)
+app.include_router(
+    suas_social.router, prefix="/suas", tags=["Assistência Social (SUAS)"]
+)
+app.include_router(
+    fhir_integration.router, prefix="/fhir", tags=["Interoperabilidade FHIR"]
+)
+app.include_router(
+    emergency_qrcode.router, prefix="/emergencia", tags=["QR Code de Emergência"]
+)
 app.include_router(farmacia.router, prefix="/farmacia", tags=["Farmácia Digital"])
-app.include_router(educacao_medica.router, prefix="/educacao", tags=["Educação Médica"])
-app.include_router(cidadao.router)  # Inclui as rotas do App do Cidadão com prefixo /cidadao
+app.include_router(
+    educacao_medica.router, prefix="/educacao", tags=["Educação Médica"]
+)
+app.include_router(
+    cidadao.router
+)  # Inclui as rotas do App do Cidadão com prefixo /cidadao
+
+
+# --- MÓDULO DE IA: Preditiva de Eventos Adversos ---
+@app.post(
+    "/api/v1/predict-adverse-event",
+    tags=["Inteligência Preditiva (IA)"],
+    summary="Avalia o risco de evento adverso no prontuário",
+)
+def predict_adverse_event(patient_data: dict):
+  try:
+    resultado = ai_predictor.predict_risk(patient_data)
+    return {
+        "status": "sucesso",
+        "dados_analisados": patient_data,
+        "predicao": resultado,
+    }
+  except Exception as e:
+    raise HTTPException(
+        status_code=500, detail=f"Erro ao processar predição de IA: {str(e)}"
+    )
