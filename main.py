@@ -1,6 +1,7 @@
 from ai_engine import PatientDataSchema, ai_predictor  # Importa o motor preditivo e o esquema de IA
 import cco_cpo_external  # Importa o módulo isolado do CCO / CPO (Setor Externo)
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware  # <-- IMPORTAÇÃO DO CORS
 from sqlalchemy.orm import Session
 import cidadao, database, educacao_medica, emergency_qrcode, farmacia, fhir_integration, laboratorio, medico, models, regulacao, suas_social, triagem
 
@@ -28,6 +29,15 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
+)
+
+# --- CONFIGURAÇÃO DE CORS PARA LIBERAR O GITHUB PAGES ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.get("/", tags=["Início"])
