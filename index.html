@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel CCO / CPO - Setor Externo</title>
+    <!-- Tailwind CSS CDN para estilização rápida -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+
+    <!-- BARRA SUPERIOR / CABEÇALHO DE REDE -->
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-indigo-600 rounded-lg">
+                <i data-lucide="shield-alert" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide">CCO / CPO - Setor Externo</h1>
+                <p class="text-xs text-slate-400">Ecossistema de Saúde & Monitorização Operacional</p>
+            </div>
+        </div>
+
+        <!-- Indicador de Status da API -->
+        <div id="status-badge" class="flex items-center gap-2 bg-slate-950 px-4 py-2 rounded-full border border-slate-800">
+            <span class="w-3 h-3 rounded-full bg-amber-500 animate-pulse" id="status-dot"></span>
+            <span class="text-xs font-semibold text-slate-300" id="status-text">A Conectar...</span>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+
+        <!-- NAVEGAÇÃO ENTRE VISÕES (ABAS) -->
+        <div class="flex border-b border-slate-800 gap-2">
+            <button id="tab-dashboard-btn" onclick="switchTab('dashboard')" class="px-5 py-3 font-semibold text-sm border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Central CCO/CPO
+            </button>
+            <button id="tab-campo-btn" onclick="switchTab('campo')" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                <i data-lucide="radio" class="w-4 h-4"></i> Reportar de Campo (PWA)
+            </button>
+        </div>
+
+        <!-- VISÃO 1: DASHBOARD CENTRAL CCO/CPO -->
+        <section id="view-dashboard" class="space-y-6">
+            
+            <!-- CARDS DE MÉTRICAS (KPIs) -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+                    <span class="text-xs text-slate-400 uppercase font-bold">Total Ocorrências</span>
+                    <div class="text-3xl font-extrabold mt-2 text-white" id="kpi-total">0</div>
+                </div>
+                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+                    <span class="text-xs text-amber-400 uppercase font-bold">Pendentes</span>
+                    <div class="text-3xl font-extrabold mt-2 text-amber-400" id="kpi-pendentes">0</div>
+                </div>
+                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+                    <span class="text-xs text-rose-400 uppercase font-bold">Urgência Alta</span>
+                    <div class="text-3xl font-extrabold mt-2 text-rose-400" id="kpi-altas">0</div>
+                </div>
+                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+                    <span class="text-xs text-emerald-400 uppercase font-bold">Atendidas</span>
+                    <div class="text-3xl font-extrabold mt-2 text-emerald-400" id="kpi-atendidas">0</div>
+                </div>
+            </div>
+
+            <!-- CONTROLO E TABELA DE OCORRÊNCIAS -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                <div class="p-4 bg-slate-800/80 border-b border-slate-700 flex flex-wrap justify-between items-center gap-3">
+                    <h2 class="font-bold text-slate-200 flex items-center gap-2">
+                        <i data-lucide="list-filter" class="w-5 h-5 text-indigo-400"></i> Feed de Ocorrências em Tempo Real
+                    </h2>
+                    <div class="flex gap-2">
+                        <select id="filtro-status" onchange="carregarOcorrencias()" class="bg-slate-900 border border-slate-700 rounded-lg text-xs px-3 py-2 text-slate-300">
+                            <option value="">Todos os Status</option>
+                            <option value="Pendente">Apenas Pendentes</option>
+                            <option value="Em Atendimento">Em Atendimento</option>
+                        </select>
+                        <button onclick="carregarOcorrencias()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Atualizar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-900/50 text-slate-400 text-xs uppercase border-b border-slate-700">
+                            <tr>
+                                <th class="p-4">Protocolo</th>
+                                <th class="p-4">Data/Hora</th>
+                                <th class="p-4">Origem</th>
+                                <th class="p-4">Tipo</th>
+                                <th class="p-4">Urgência</th>
+                                <th class="p-4">Descrição</th>
+                                <th class="p-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-ocorrencias" class="divide-y divide-slate-700/50">
+                            <tr>
+                                <td colspan="7" class="p-6 text-center text-slate-500">A carregar dados do CCO/CPO...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- VISÃO 2: TERMINAL DE CAMPO / PWA (ENVIO) -->
+        <section id="view-campo" class="hidden max-w-xl mx-auto">
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4">
+                <div class="border-b border-slate-700 pb-3">
+                    <h2 class="text-lg font-bold text-slate-100">Registo Rápido de Ocorrência</h2>
+                    <p class="text-xs text-slate-400">Canal direto com o Centro de Operações (CCO/CPO)</p>
+                </div>
+
+                <form id="form-reportar" onsubmit="enviarOcorrencia(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Setor de Origem</label>
+                        <select id="field-setor" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-100">
+                            <option value="Unidade Operacional Alfa">Unidade Operacional Alfa</option>
+                            <option value="Posto Beira Rio">Posto Beira Rio</option>
+                            <option value="Unidade Móvel SAMU">Unidade Móvel SAMU</option>
+                            <option value="Ponto de Apoio Central">Ponto de Apoio Central</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Tipo de Ocorrência</label>
+                        <input type="text" id="field-tipo" required placeholder="Ex: Risco Operacional, Falha de Energia, Triagem Lotação" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-100">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Nível de Urgência</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="cursor-pointer border border-slate-700 rounded-lg p-3 text-center bg-slate-900 hover:border-emerald-500">
+                                <input type="radio" name="urgencia" value="Baixo" class="sr-only">
+                                <span class="text-xs font-bold text-emerald-400 block">🟢 Baixo</span>
+                            </label>
+                            <label class="cursor-pointer border border-slate-700 rounded-lg p-3 text-center bg-slate-900 hover:border-amber-500">
+                                <input type="radio" name="urgencia" value="Moderado" checked class="sr-only">
+                                <span class="text-xs font-bold text-amber-400 block">🟡 Moderado</span>
+                            </label>
+                            <label class="cursor-pointer border border-slate-700 rounded-lg p-3 text-center bg-slate-900 hover:border-rose-500">
+                                <input type="radio" name="urgencia" value="Alto" class="sr-only">
+                                <span class="text-xs font-bold text-rose-400 block">🔴 Alto</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Descrição do Evento</label>
+                        <textarea id="field-descricao" rows="3" required placeholder="Detalhe a ocorrência para a central..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-100"></textarea>
+                    </div>
+
+                    <button type="submit" id="btn-submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-lg transition-all flex justify-center items-center gap-2">
+                        <i data-lucide="send" class="w-4 h-4"></i> Transmitir Alerta ao CCO/CPO
+                    </button>
+                </form>
+
+                <div id="feedback-message" class="hidden p-4 rounded-lg text-sm text-center"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- JS DE INTEGRAÇÃO COM A API FASTAPI -->
+    <script>
+        const API_BASE = "https://suas-saude-facil.onrender.com/cco-cpo/externo";
+
+        // Inicialização
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            verificarStatusAPI();
+            carregarOcorrencias();
+            setInterval(carregarOcorrencias, 10000); // Polling a cada 10s
+        });
+
+        // Alternância de Abas
+        function switchTab(tab) {
+            const viewDash = document.getElementById("view-dashboard");
+            const viewCampo = document.getElementById("view-campo");
+            const btnDash = document.getElementById("tab-dashboard-btn");
+            const btnCampo = document.getElementById("tab-campo-btn");
+
+            if (tab === 'dashboard') {
+                viewDash.classList.remove("hidden");
+                viewCampo.classList.add("hidden");
+                btnDash.className = "px-5 py-3 font-semibold text-sm border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2";
+                btnCampo.className = "px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2";
+                carregarOcorrencias();
+            } else {
+                viewDash.classList.add("hidden");
+                viewCampo.classList.remove("hidden");
+                btnCampo.className = "px-5 py-3 font-semibold text-sm border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2";
+                btnDash.className = "px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2";
+            }
+        }
+
+        // GET /status
+        async function verificarStatusAPI() {
+            try {
+                const res = await fetch(`${API_BASE}/status`);
+                const data = await res.json();
+                if (res.ok && data.estado === "Operacional") {
+                    document.getElementById("status-dot").className = "w-3 h-3 rounded-full bg-emerald-500 animate-pulse";
+                    document.getElementById("status-text").innerText = "Rede Isolada CCO/CPO: Ativa";
+                }
+            } catch (e) {
+                document.getElementById("status-dot").className = "w-3 h-3 rounded-full bg-rose-500";
+                document.getElementById("status-text").innerText = "Offline / Erro de Conexão";
+            }
+        }
+
+        // GET /ocorrencias
+        async function carregarOcorrencias() {
+            const filtro = document.getElementById("filtro-status").value;
+            const url = filtro ? `${API_BASE}/ocorrencias?status_filtro=${encodeURIComponent(filtro)}` : `${API_BASE}/ocorrencias`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (res.ok) {
+                    renderizarTabela(data.ocorrencias || []);
+                    atualizarKPIs(data.ocorrencias || []);
+                }
+            } catch (e) {
+                console.error("Erro ao carregar feed:", e);
+            }
+        }
+
+        function renderizarTabela(lista) {
+            const tbody = document.getElementById("tabela-ocorrencias");
+            if (lista.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500">Nenhuma ocorrência encontrada.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = lista.map(o => {
+                const dataFormatada = new Date(o.data_hora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const badgeUrgencia = o.nivel_urgencia === 'Alto' 
+                    ? '<span class="px-2 py-1 text-xs font-bold bg-rose-500/20 text-rose-400 rounded-md">Alto</span>'
+                    : o.nivel_urgencia === 'Moderado'
+                    ? '<span class="px-2 py-1 text-xs font-bold bg-amber-500/20 text-amber-400 rounded-md">Moderado</span>'
+                    : '<span class="px-2 py-1 text-xs font-bold bg-emerald-500/20 text-emerald-400 rounded-md">Baixo</span>';
+
+                const badgeStatus = o.status === 'Pendente'
+                    ? '<span class="px-2 py-1 text-xs font-semibold bg-amber-500/10 text-amber-300 rounded-full border border-amber-500/30">Pendente</span>'
+                    : '<span class="px-2 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-300 rounded-full border border-emerald-500/30">Em Atendimento</span>';
+
+                return `
+                    <tr class="hover:bg-slate-800/50 transition-colors">
+                        <td class="p-4 font-mono text-indigo-400 font-bold">${o.protocolo}</td>
+                        <td class="p-4 text-slate-400">${dataFormatada}</td>
+                        <td class="p-4 font-medium text-slate-200">${o.setor_origem}</td>
+                        <td class="p-4 text-slate-300">${o.tipo_ocorrencia}</td>
+                        <td class="p-4">${badgeUrgencia}</td>
+                        <td class="p-4 text-slate-400 max-w-xs truncate">${o.descricao}</td>
+                        <td class="p-4">${badgeStatus}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function atualizarKPIs(lista) {
+            document.getElementById("kpi-total").innerText = lista.length;
+            document.getElementById("kpi-pendentes").innerText = lista.filter(o => o.status === 'Pendente').length;
+            document.getElementById("kpi-altas").innerText = lista.filter(o => o.nivel_urgencia === 'Alto').length;
+            document.getElementById("kpi-atendidas").innerText = lista.filter(o => o.status === 'Em Atendimento').length;
+        }
+
+        // POST /reportar
+        async function enviarOcorrencia(e) {
+            e.preventDefault();
+            const btn = document.getElementById("btn-submit");
+            const msg = document.getElementById("feedback-message");
+            
+            const payload = {
+                setor_origem: document.getElementById("field-setor").value,
+                tipo_ocorrencia: document.getElementById("field-tipo").value,
+                nivel_urgencia: document.querySelector('input[name="urgencia"]:checked').value,
+                descricao: document.getElementById("field-descricao").value
+            };
+
+            btn.disabled = true;
+            btn.innerText = "A transmitir...";
+
+            try {
+                const res = await fetch(`${API_BASE}/reportar`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    msg.className = "p-4 rounded-lg text-sm text-center bg-emerald-500/20 border border-emerald-500/40 text-emerald-300";
+                    msg.innerText = `Ocorrência registada! Protocolo: ${data.protocolo_gerado}`;
+                    document.getElementById("form-reportar").reset();
+                } else {
+                    throw new Error(data.detail || "Erro ao transmitir.");
+                }
+            } catch (err) {
+                msg.className = "p-4 rounded-lg text-sm text-center bg-rose-500/20 border border-rose-500/40 text-rose-300";
+                msg.innerText = `Falha no envio: ${err.message}`;
+            } finally {
+                msg.classList.remove("hidden");
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> Transmitir Alerta ao CCO/CPO`;
+                lucide.createIcons();
+            }
+        }
+    </script>
+</body>
+</html>
