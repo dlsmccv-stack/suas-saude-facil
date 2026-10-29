@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CCO / CPO • SUAS Saúde +Fácil</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f1f5f9; color: #1e293b; display: flex; flex-direction: column; min-height: 100vh; padding-bottom: 40px; }
+    header { background-color: #ffffff; padding: 16px 24px; border-bottom: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1.25rem; color: #0284c7; font-weight: 700; }
+    header p { font-size: 0.8rem; color: #64748b; }
+    .container { padding: 20px; max-width: 1200px; margin: 0 auto; width: 100%; }
+    
+    /* Grelha de Métricas / KPI Cards */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .kpi-card { background: #ffffff; border-radius: 12px; padding: 16px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .kpi-title { font-size: 0.8rem; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 6px; }
+    .kpi-value { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+    .kpi-sub { font-size: 0.75rem; color: #059669; margin-top: 4px; font-weight: 500; }
+
+    /* Secções Principais */
+    .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media(max-width: 900px) { .section-grid { grid-template-columns: 1fr; } }
+    
+    .card { background-color: #ffffff; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .card-title { font-size: 1.05rem; font-weight: bold; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
+    
+    /* Tabelas e Listas Operacionais */
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { color: #475569; font-weight: 600; background-color: #f8fafc; }
+    td { color: #334155; }
+    
+    .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; display: inline-block; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-yellow { background: #fef3c7; color: #92400e; }
+    .badge-green { background: #d1fae5; color: #065f46; }
+
+    .btn-action { background-color: #0284c7; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+    .btn-action:hover { background-color: #0369a1; }
+    
+    .radar-box { background: #0f172a; color: #38bdf8; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; margin-bottom: 12px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>CCO / CPO • Centro de Controle & Operação</h1>
+      <p>SUAS Saúde / Saúde +Fácil • Monitorização em Tempo Real</p>
+    </div>
+    <div>
+      <span class="badge badge-green">● Sistema Operacional Online</span>
+    </div>
+  </header>
+
+  <div class="container">
+    
+    <!-- Grelha de KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-title">Chamadas SOS SAMU (Hoje)</div>
+        <div class="kpi-value">14</div>
+        <div class="kpi-sub">⚡ Tempo médio resposta: 6.2 min</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Fila Regulação C1/C2/C3</div>
+        <div class="kpi-value">38</div>
+        <div class="kpi-sub">📋 5 pendentes de alta urgência</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Retiradas Balcão (Farmácia)</div>
+        <div class="kpi-value">142</div>
+        <div class="kpi-sub">🏷️ QR codes validados hoje</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Stock Crítico (CPO)</div>
+        <div class="kpi-value" style="color: #d97706;">3 Itens</div>
+        <div class="kpi-sub">⚠️ Losartana / Insulina NPH</div>
+      </div>
+    </div>
+
+    <!-- Secção Principaldividida -->
+    <div class="section-grid">
+      
+      <!-- COLUNA 1: Radar de Emergência SOS GPS & Regulação -->
+      <div>
+        <div class="card">
+          <div class="card-title">🚨 Radar de Emergências & SOS GPS (SAMU)</div>
+          <div class="radar-box">
+            [08:42:15] 🛰️ GPS Alerta: Lat -5.0892, Lon -42.8019<br>
+            Cidadão: Maria Izabely • Urgência: Cardiovascular<br>
+            Status: <span style="color: #4ade80;">Ambulância Alfa-03 em rota</span>
+          </div>
+          <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 12px;">Últimas ocorrências de socorro geolocalizadas na rede:</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Cidadão</th>
+                <th>Coordenadas GPS</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>23:08</td>
+                <td>João Victor</td>
+                <td>-5.0910, -42.8120</td>
+                <td><span class="badge badge-green">Concluído</span></td>
+              </tr>
+              <tr>
+                <td>22:40</td>
+                <td>Ana Cláudia</td>
+                <td>-5.0820, -42.7950</td>
+                <td><span class="badge badge-red">Em Despacho</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📋 Fila de Autotriagem (UBS vs UPA)</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Paciente</th>
+                <th>Gravidade</th>
+                <th>Destino</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Carlos Alberto</td>
+                <td><span class="badge badge-red">GRAVE</span></td>
+                <td>UPA Sul</td>
+                <td><button class="btn-action">Regular</button></td>
+              </tr>
+              <tr>
+                <td>Juliana Dias</td>
+                <td><span class="badge badge-yellow">MODERADO</span></td>
+                <td>UBS Saci</td>
+                <td><button class="btn-action">Regular</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- COLUNA 2: Centro Produtivo (CPO) & Farmácia -->
+      <div>
+        <div class="card">
+          <div class="card-title">💊 CPO • Controlo de Stock & Retirada QR</div>
+          <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 12px;">Validação de QR codes no balcão e monitorização de stock produtivo nas unidades.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Medicamento</th>
+                <th>Unidade</th>
+                <th>Stock</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Losartana 50mg</td>
+                <td>UBS Centro</td>
+                <td>42 caixas</td>
+                <td><span class="badge badge-green">Normal</span></td>
+              </tr>
+              <tr>
+                <td>Insulina NPH</td>
+                <td>Farmácia Central</td>
+                <td>08 frascos</td>
+                <td><span class="badge badge-yellow">Baixo</span></td>
+              </tr>
+              <tr>
+                <td>Amoxicilina 500mg</td>
+                <td>UBS Saci</td>
+                <td>85 caixas</td>
+                <td><span class="badge badge-green">Normal</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-title">⚡ Ações Rápidas do Operador CCO</div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn-action" style="padding: 12px; text-align: center;">📢 Emitir Alerta Geral para a Rede de UBS / UPA</button>
+            <button class="btn-action" style="padding: 12px; text-align: center; background-color: #0f172a;">📊 Gerar Relatório Diário de Operacionalidade</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>
