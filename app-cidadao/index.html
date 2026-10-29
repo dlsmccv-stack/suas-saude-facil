@@ -29,7 +29,7 @@
     input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; background-color: #ffffff; color: #1e293b; font-size: 0.95rem; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #0284c7; box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15); }
     .badge { background-color: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-    .alert-box { background-color: #e0f2fe; border: 1px solid #bae6fd; padding: 10px; border-radius: 8px; font-size: 0.85rem; color: #0369a1; margin-top: 10px; }
+    .alert-box { background-color: #e0f2fe; border: 1px solid #bae6fd; padding: 14px; border-radius: 8px; font-size: 0.9rem; color: #0369a1; margin-top: 10px; line-height: 1.5; }
     
     /* Estilos específicos da Companhia de Medicamentos */
     .med-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
@@ -74,10 +74,232 @@
     <!-- ABA 2: TRIAGEM (UBS vs UPA) -->
     <div id="tab-triagem" class="tab-content">
       <div class="card">
-        <div class="card-title">🩺 Pré-Triagem de Atendimento</div>
-        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px;">Selecione o local de atendimento e informe os seus sintomas.</p>
+        <div class="card-title">🩺 Autotriagem & Pré-Atendimento</div>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px;">Informe os seus sintomas para receber o direcionamento inteligente (UBS ou UPA) e o QR Code de atendimento na chegada.</p>
         
         <form id="form-triagem" onsubmit="enviarTriagem(event)">
           <div class="form-group">
-            <label>Tipo de Unidade Destino:</label>
-            <select id="tipo_
+            <label>Sintomas Principais:</label>
+            <textarea id="sintomas" rows="3" placeholder="Ex: Febre alta, falta de ar, dor no peito..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Intensidade / Gravidade Percebida:</label>
+            <select id="gravidade">
+              <option value="LEVE">Leve / Desconforto Pouco Urgente (Indicado para UBS)</option>
+              <option value="MODERADO">Moderado / Dor Recorrente (Avaliação UPA/UBS)</option>
+              <option value="GRAVE">Grave / Urgência Imediata (Indicado para UPA / SAMU)</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn-primary">Gerar Triagem & QR Code</button>
+        </form>
+      </div>
+
+      <div id="resultado-triagem" style="display: none;">
+        <div class="card" style="border-color: #0284c7; background-color: #f0fdf4;">
+          <div class="card-title" style="color: #065f46;">📱 QR Code de Chegada na Unidade</div>
+          <p style="font-size: 0.85rem; color: #047857; margin-bottom: 12px;">Apresente este QR Code na recepção para agilizar o atendimento e eliminar filas burocráticas.</p>
+          <div style="text-align: center; padding: 12px; background-color: white; border-radius: 8px; margin-bottom: 12px; border: 1px solid #a7f3d0;">
+            <img id="qr-triagem-img" src="" alt="QR Code Triagem" style="max-width: 140px;">
+          </div>
+          <div id="status-triagem" style="font-size: 0.9rem; color: #065f46; line-height: 1.5;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 3: COMPANHIA DE MEDICAMENTOS -->
+    <div id="tab-meds" class="tab-content">
+      
+      <!-- Indicador Offline-First -->
+      <div class="offline-banner">
+        ⚡ <strong>Modo Offline-First Ativo:</strong> Sincronizado com FastAPI.
+      </div>
+
+      <!-- Gerador de QR Code de Desconto / Retirada na Farmácia -->
+      <div class="card" style="border-color: #0284c7;">
+        <div class="card-title">🏷️ Gerar QR Code de Desconto na Farmácia</div>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px;">Selecione o medicamento para gerar o cupom digital de desconto / retirada na rede parceira.</p>
+        
+        <div class="form-group">
+          <label>Medicamento Desejado:</label>
+          <select id="med_desconto">
+            <option value="LOSARTANA-50MG">Losartana Potássica 50mg (Hipertensão)</option>
+            <option value="INSULINA-NPH">Insulina NPH 100 UI/ml (Diabetes)</option>
+            <option value="AMOXICILINA-500MG">Amoxicilina 500mg (Antibiótico)</option>
+            <option value="DIPIRONA-500MG">Dipirona Sódica 500mg</option>
+          </select>
+        </div>
+
+        <button type="button" class="btn-primary" onclick="gerarQrDesconto()">Gerar QR Code de Desconto</button>
+
+        <div id="resultado-desconto" style="display: none; margin-top: 14px; text-align: center; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+          <p style="font-size: 0.85rem; color: #0284c7; font-weight: bold; margin-bottom: 8px;">Apresente este código no balcão da farmácia:</p>
+          <div style="display: inline-block; padding: 10px; background-color: white; border-radius: 8px; border: 1px solid #cbd5e1;">
+            <img id="qr-desconto-img" src="" alt="QR Code Desconto Farmácia" style="max-width: 130px;">
+          </div>
+          <p id="txt-desconto-status" style="font-size: 0.75rem; color: #059669; margin-top: 6px; font-weight: 600;"></p>
+        </div>
+      </div>
+
+      <!-- Prescrições e Histórico -->
+      <div class="card">
+        <div class="card-title">💊 Meus Medicamentos & Receitas</div>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px;">Histórico de prescrições e retirada na Farmácia Popular / UBS.</p>
+        <div style="border-left: 3px solid #0284c7; padding-left: 10px; margin-bottom: 12px;">
+          <strong style="font-size: 0.9rem; color: #1e293b;">Dipirona Sódica 500mg</strong><br>
+          <span style="font-size: 0.75rem; color: #64748b;">1 comprimido de 6h em 6h (Tomar com água)</span>
+        </div>
+      </div>
+
+      <!-- Alertas de Reposição -->
+      <div class="card">
+        <div class="card-title">⏰ Alertas de Reposição</div>
+        <div class="alert-card">
+          ⚠️ <strong>Aviso de Stock Pessoal:</strong> Seu medicamento <strong>Losartana 50mg</strong> resta para apenas 3 dias.
+        </div>
+        <div style="font-size: 0.8rem; color: #475569;">
+          🔔 <strong>Lembrete:</strong> Insulina NPH — Próxima dose hoje às 22:00.
+        </div>
+      </div>
+
+      <!-- Consulta de Stock em Tempo Real & Filtro -->
+      <div class="card">
+        <div class="card-title">📍 Consulta de Stock na Rede Pública</div>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px;">Pesquise por insulina, hipertensos, antibióticos e unidades próximas.</p>
+        
+        <div class="form-group">
+          <input type="text" id="filtroMedicamento" placeholder="Digite o medicamento (ex: Insulina, Losartana)..." onkeyup="filtrarMedicamentos()">
+        </div>
+
+        <div id="listaEstoqueMedicamentos">
+          <div class="med-item" data-nome="losartana potassica 50mg">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <strong style="font-size: 0.95rem; color: #0f172a;">Losartana Potássica 50mg</strong>
+              <span class="status-badge status-green">🟢 Em Stock</span>
+            </div>
+            <p style="font-size: 0.8rem; color: #64748b;">📍 UBS Centro • 1.2 km • Tel: (86) 3222-0001</p>
+            <p style="font-size: 0.75rem; color: #94a3b8;">Atendimento: 07:00 às 17:00</p>
+          </div>
+
+          <div class="med-item" data-nome="insulina nph 100 ui">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <strong style="font-size: 0.95rem; color: #0f172a;">Insulina NPH 100 UI/ml</strong>
+              <span class="status-badge status-yellow">🟡 Stock Baixo</span>
+            </div>
+            <p style="font-size: 0.8rem; color: #64748b;">📍 Farmácia Central • 2.5 km • Tel: (86) 3222-0002</p>
+            <p style="font-size: 0.75rem; color: #94a3b8;">Atendimento: 08:00 às 18:00</p>
+          </div>
+
+          <div class="med-item" data-nome="amoxicilina 500mg antibiotico">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <strong style="font-size: 0.95rem; color: #0f172a;">Amoxicilina 500mg (Antibiótico)</strong>
+              <span class="status-badge status-green">🟢 Em Stock</span>
+            </div>
+            <p style="font-size: 0.8rem; color: #64748b;">📍 UBS Saci • 0.8 km • Tel: (86) 3222-0003</p>
+            <p style="font-size: 0.75rem; color: #94a3b8;">Atendimento: 07:00 às 19:00</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- BARRA DE NAVEGAÇÃO INFERIOR -->
+  <nav>
+    <button class="nav-btn active" onclick="mudarAba('emergencia', this)">
+      <span>🚨</span> Emergência
+    </button>
+    <button class="nav-btn" onclick="mudarAba('triagem', this)">
+      <span>🩺</span> Pré-Triagem
+    </button>
+    <button class="nav-btn" onclick="mudarAba('meds', this)">
+      <span>💊</span> Medicamentos
+    </button>
+  </nav>
+
+  <script>
+    function mudarAba(nomeAba, elementoBtn) {
+      const abas = document.querySelectorAll('.tab-content');
+      abas.forEach(aba => aba.classList.remove('active'));
+
+      const botoes = document.querySelectorAll('.nav-btn');
+      botoes.forEach(btn => btn.classList.remove('active'));
+
+      document.getElementById('tab-' + nomeAba).classList.add('active');
+      elementoBtn.classList.add('active');
+    }
+
+    function acionarSAMU() {
+      const statusBox = document.getElementById('status-samu');
+      statusBox.style.display = 'block';
+      
+      if (navigator.geolocation) {
+        statusBox.innerHTML = "🛰️ A obter localização GPS precisa...";
+        navigator.geolocation.getCurrentPosition(position => {
+          const lat = position.coords.latitude.toFixed(4);
+          const lon = position.coords.longitude.toFixed(4);
+          statusBox.innerHTML = `🚨 <strong>SAMU Acionado com Sucesso!</strong><br>Localização GPS enviada: Lat ${lat}, Lon ${lon}. Uma ambulância foi direcionada para a sua coordenada.`;
+        }, error => {
+          statusBox.innerHTML = `🚨 <strong>SAMU Acionado!</strong><br>Aviso: Não foi possível obter o sinal GPS exato. A central usará a sua morada cadastrada.`;
+        });
+      } else {
+        statusBox.innerHTML = "🚨 <strong>SAMU Acionado!</strong> O seu pedido de socorro foi enviado à central.";
+      }
+    }
+
+    function enviarTriagem(event) {
+      event.preventDefault();
+      const gravidade = document.getElementById('gravidade').value;
+      const resultadoDiv = document.getElementById('resultado-triagem');
+      const statusTriagem = document.getElementById('status-triagem');
+      const qrImg = document.getElementById('qr-triagem-img');
+
+      resultadoDiv.style.display = 'block';
+
+      let destino = "";
+      let acaoRecomendada = "";
+
+      if (gravidade === "GRAVE") {
+        destino = "UPA / Urgência Médica";
+        acaoRecomendada = "Caso de urgência detetado. Recomendamos acionar o SAMU imediatamente ou deslocar-se à UPA mais próxima.";
+      } else if (gravidade === "MODERADO") {
+        destino = "UPA ou UBS de Referência";
+        acaoRecomendada = "Sintomas moderados. Pode dirigir-se à UPA para atendimento rápido ou agendar na UBS do bairro.";
+      } else {
+        destino = "UBS (Unidade Básica de Saúde do Bairro)";
+        acaoRecomendada = "Caso indicado para consulta agendada na UBS do seu bairro.";
+      }
+
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=TRIAGEM-${gravidade}-CIDADAO123`;
+      statusTriagem.innerHTML = `🏥 <strong>Direcionamento Inteligente:</strong> ${destino}<br>📋 <strong>Avaliação:</strong> ${acaoRecomendada}`;
+    }
+
+    function gerarQrDesconto() {
+      const medicamento = document.getElementById('med_desconto').value;
+      const resultadoDiv = document.getElementById('resultado-desconto');
+      const qrImg = document.getElementById('qr-desconto-img');
+      const statusTxt = document.getElementById('txt-desconto-status');
+
+      resultadoDiv.style.display = 'block';
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=DESC-FARMA-${medicamento}-USER123`;
+      statusTxt.innerHTML = `✅ Cupom de Desconto / Retirada gerado com sucesso para: ${medicamento}`;
+    }
+
+    function filtrarMedicamentos() {
+      const input = document.getElementById('filtroMedicamento').value.toLowerCase();
+      const itens = document.querySelectorAll('.med-item');
+
+      itens.forEach(item => {
+        const nomeMed = item.getAttribute('data-nome');
+        if (nomeMed.includes(input)) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>
