@@ -1,19 +1,35 @@
 import numpy as np
 import pandas as pd
+from pydantic import BaseModel, Field
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
+
+
+# Modelo Pydantic para estruturar e validar os dados no Swagger (sem additionalProp1)
+class PatientDataSchema(BaseModel):
+  idade: int = Field(..., example=68, description="Idade do paciente")
+  comorbidades_score: int = Field(
+      ..., example=3, description="Pontuação de comorbidades"
+  )
+  qtd_medicamentos: int = Field(
+      ..., example=5, description="Quantidade de medicamentos em uso"
+  )
+  historico_alergia: int = Field(
+      ..., example=1, description="Histórico de alergia (0 ou 1)"
+  )
+  sinal_vital_critico: int = Field(
+      ..., example=1, description="Presença de sinal vital crítico (0 ou 1)"
+  )
 
 
 class AdverseEventPredictor:
 
   def __init__(self):
-    # Modelo inicial baseado em Random Forest para predição de riscos
     self.model = RandomForestClassifier(n_estimators=100, random_state=42)
     self.is_trained = False
     self._treinar_modelo_inicial()
 
   def _treinar_modelo_inicial(self):
-    """Treina o modelo com um dataset simulado de base para garantir resposta imediata."""
     np.random.seed(42)
     n_samples = 200
 
@@ -45,7 +61,6 @@ class AdverseEventPredictor:
     self.is_trained = True
 
   def predict_risk(self, patient_data: dict) -> dict:
-    """Avalia em tempo real o risco de evento adverso para um novo atendimento."""
     if not self.is_trained:
       raise ValueError("O modelo não está treinado.")
 
