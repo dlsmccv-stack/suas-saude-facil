@@ -3,3 +3,6 @@ uvicorn
 pydantic
 sqlalchemy
 requests
+scikit-learn
+pandas
+numpy
