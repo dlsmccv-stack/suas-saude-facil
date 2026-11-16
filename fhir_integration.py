@@ -14,12 +14,11 @@ router = APIRouter()
 # ==========================================
 # 0. CONFIGURAÇÕES DA RNDS (HOMOLOGAÇÃO)
 # ==========================================
-# Endereços oficiais da RNDS para ambiente de testes (Homologação)
 AUTH_URL = "https://ehr-auth-hmg.saude.gov.br/oauth/token"
 EHR_BASE_URL = "https://ehr-services.hmg.saude.gov.br/api/fhir/r4"
 
 # ==========================================
-# 1. SCHEMAS ORIGINAIS (Mantidos do seu código)
+# 1. SCHEMAS ORIGINAIS
 # ==========================================
 
 class FHIRResourceCreate(BaseModel):
@@ -63,7 +62,7 @@ class FHIRResourceResponse(BaseModel):
 
 
 # ==========================================
-# 2. ENDPOINTS GENÉRICOS (O seu código original)
+# 2. ENDPOINTS GENÉRICOS
 # ==========================================
 
 @router.post(
@@ -86,7 +85,7 @@ def criar_recurso_fhir(
     return db_fhir
 
 @router.get(
-    ",",
+    "/",
     response_model=List[FHIRResourceResponse],
     summary="Listar Recursos FHIR",
     description="Retorna a lista de todos os recursos clínicos interoperáveis armazenados no formato FHIR R4."
@@ -159,11 +158,9 @@ def exportar_fhir_bundle_completo(cidadao_id: int, db: Session = Depends(databas
         "entry": []
     }
 
-    # Adiciona Recurso Patient
     patient_data = exportar_fhir_patient(cidadao_id, db)
     fhir_bundle["entry"].append({"resource": patient_data})
 
-    # Adiciona Medicamentos Registados
     for med in medicamentos:
         fhir_bundle["entry"].append({
             "resource": {
@@ -176,7 +173,6 @@ def exportar_fhir_bundle_completo(cidadao_id: int, db: Session = Depends(databas
             }
         })
 
-    # Adiciona Logs de Automedicação Preventiva
     for auto in automedicacoes:
         fhir_bundle["entry"].append({
             "resource": {
@@ -194,14 +190,10 @@ def exportar_fhir_bundle_completo(cidadao_id: int, db: Session = Depends(databas
 
 
 # ==========================================
-# 4. NOVOS MÓDULOS DE CONEXÃO COM O SUS (RNDS)
+# 4. MÓDULOS DE CONEXÃO COM O SUS (RNDS)
 # ==========================================
 
 def obter_token_rnds() -> str:
-    """
-    Autentica no serviço Auth da RNDS usando o certificado digital (.pfx) da empresa.
-    Se a senha não estiver no ambiente, solicita no terminal de forma segura.
-    """
     cert_path = os.getenv("RNDS_CERT_PATH", "certificado.pfx")
     cert_password = os.getenv("RNDS_CERT_PASSWORD")
 
@@ -233,26 +225,18 @@ def obter_token_rnds() -> str:
 
 @router.post("/enviar-sus/{cidadao_id}", summary="Enviar Prontuário do Cidadão para o SUS (RNDS)")
 def enviar_dados_para_sus(cidadao_id: int, profissional_cns: str, db: Session = Depends(database.get_db)):
-    """
-    Gera o Bundle FHIR do cidadão, obtém o token via certificado digital e submete para a RNDS.
-    """
-    # 1. Gera o Bundle FHIR utilizando a função que você já criou
     bundle_data = exportar_fhir_bundle_completo(cidadao_id, db)
-
-    # 2. Obtém o token de acesso na RNDS (fazendo a leitura do certificado e solicitando a senha se necessário)
     access_token = obter_token_rnds()
 
     if not access_token:
         raise HTTPException(status_code=500, detail="Não foi possível obter o token de acesso da RNDS.")
 
-    # 3. Configura os headers de segurança exigidos pela RNDS
     headers = {
         "Content-Type": "application/json",
         "X-Authorization-Server": f"Bearer {access_token}",
-        "Authorization": profissional_cns  # CNS do profissional de saúde lotado no estabelecimento
+        "Authorization": profissional_cns
     }
 
-    # 4. Envia o Bundle via POST para o endpoint EHR da RNDS
     try:
         response = requests.post(
             f"{EHR_BASE_URL}/Bundle",
