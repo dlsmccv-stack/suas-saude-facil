@@ -194,7 +194,8 @@ def exportar_fhir_bundle_completo(cidadao_id: int, db: Session = Depends(databas
 # ==========================================
 
 def obter_token_rnds() -> str:
-    cert_path = os.getenv("RNDS_CERT_PATH", "certificado.pfx")
+    # Caminho exato do certificado digital configurado diretamente no código
+    cert_path = os.getenv("RNDS_CERT_PATH", r"C:\Users\USUARIO\Desktop\SUAS TECNOLOGIA EM SAUDE LTDA_70113982000103.pfx")
     cert_password = os.getenv("RNDS_CERT_PASSWORD")
 
     if not cert_password:
