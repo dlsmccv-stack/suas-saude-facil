@@ -177,9 +177,16 @@ class AdverseEventPredictor:
             "sinal_vital_critico": sinal_vital_critico,
         })
 
+        # 6. Sincroniza severidade clínica com o nível de risco integrado
         nivel_final = predicao_ml["nivel_alerta"]
-        if any(a["severidade"] == "Alta" for a in alertas_clinicos):
+        severidades = [a["severidade"] for a in alertas_clinicos]
+
+        if "Alta" in severidades:
             nivel_final = "Alto"
+        elif "Moderada a Alta" in severidades and nivel_final == "Baixo":
+            nivel_final = "Moderado"
+        elif "Moderada" in severidades and nivel_final == "Baixo":
+            nivel_final = "Moderado"
 
         manchester_sugerido = (
             "Laranja (Muito Urgente - 10 min)"
