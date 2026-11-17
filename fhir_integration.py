@@ -14,8 +14,8 @@ router = APIRouter()
 # ==========================================
 # 0. CONFIGURAÇÕES DA RNDS (HOMOLOGAÇÃO)
 # ==========================================
-AUTH_URL = "https://ehr-auth-hmg.saude.gov.br/oauth/token"
-EHR_BASE_URL = "https://ehr-services.hmg.saude.gov.br/api/fhir/r4"
+AUTH_URL = "https://ehr-auth-hmg.saude.gov.br/api/token"
+EHR_BASE_URL = "https://ehr-services.hmg.saude.gov.br/fhir/r4"
 
 # ==========================================
 # 1. SCHEMAS ORIGINAIS
@@ -194,18 +194,19 @@ def exportar_fhir_bundle_completo(cidadao_id: int, db: Session = Depends(databas
 # ==========================================
 
 def obter_token_rnds() -> str:
-    # Caminho exato do certificado digital configurado diretamente no código
-    cert_path = os.getenv("RNDS_CERT_PATH", r"C:\Users\USUARIO\Desktop\SUAS TECNOLOGIA EM SAUDE LTDA_70113982000103.pfx")
-    cert_password = os.getenv("RNDS_CERT_PASSWORD")
+    # Aponta para o arquivo .pem configurado no ambiente
+    cert_path = os.getenv("RNDS_CERT_PATH", "certificado.pem")
 
-    if not cert_password:
-        cert_password = getpass.getpass(prompt="🔒 Digite a senha do Certificado Digital e-CNPJ da empresa: ")
+    if not os.path.exists(cert_path):
+        raise HTTPException(
+            status_code=500,
+            detail=f"Arquivo de certificado não encontrado em: {cert_path}"
+        )
 
     try:
-        response = requests.post(
+        response = requests.get(
             AUTH_URL,
-            cert=(cert_path, cert_password),
-            data={"grant_type": "client_credentials"},
+            cert=cert_path,
             timeout=30
         )
 
@@ -262,4 +263,37 @@ def enviar_dados_para_sus(cidadao_id: int, profissional_cns: str, db: Session = 
         raise HTTPException(
             status_code=502,
             detail=f"Erro de comunicação ao enviar os dados para os serviços EHR da RNDS: {str(e)}"
+        )
+
+
+@router.get("/consultar-sus/paciente/{cpf}", summary="Consultar Paciente na Base Nacional do SUS (RNDS)")
+def consultar_paciente_sus(cpf: str, profissional_cns: str):
+    access_token = obter_token_rnds()
+
+    headers = {
+        "Accept": "application/json",
+        "X-Authorization-Server": f"Bearer {access_token}",
+        "Authorization": profissional_cns
+    }
+
+    try:
+        response = requests.get(
+            f"{EHR_BASE_URL}/Patient",
+            params={"identifier": f"http://www.saude.gov.br/fhir/r4/StructureDefinition/BRCPF|{cpf}"},
+            headers=headers,
+            timeout=30
+        )
+        try:
+            dados = response.json() if response.text else None
+        except ValueError:
+            dados = response.text
+
+        return {
+            "status_http_rnds": response.status_code,
+            "resposta_rnds": dados
+        }
+    except RequestException as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Erro ao consultar paciente na RNDS: {str(e)}"
         )
