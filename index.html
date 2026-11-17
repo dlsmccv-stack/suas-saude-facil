@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel CCO / CPO - Setor Externo</title>
-    <!-- Tailwind CSS CDN para estilização rápida -->
+    <title>SUAS Saúde / Saúde +Fácil — Painel Integrado</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -18,34 +18,46 @@
                 <i data-lucide="shield-alert" class="w-6 h-6 text-white"></i>
             </div>
             <div>
-                <h1 class="text-xl font-bold tracking-wide">CCO / CPO - Setor Externo</h1>
-                <p class="text-xs text-slate-400">Ecossistema de Saúde & Monitorização Operacional</p>
+                <h1 class="text-xl font-bold tracking-wide">SUAS Saúde / Saúde +Fácil</h1>
+                <p class="text-xs text-slate-400">CCO/CPO • Regulação Intersetorial SUAS • Farmacovigilância IA</p>
             </div>
         </div>
 
-        <!-- Indicador de Status da API -->
-        <div id="status-badge" class="flex items-center gap-2 bg-slate-950 px-4 py-2 rounded-full border border-slate-800">
-            <span class="w-3 h-3 rounded-full bg-amber-500 animate-pulse" id="status-dot"></span>
-            <span class="text-xs font-semibold text-slate-300" id="status-text">A Conectar...</span>
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Seletor de Servidor API (Local vs Render) -->
+            <select id="api-env-select" onchange="trocarAmbienteAPI()" class="bg-slate-950 border border-slate-700 rounded-full text-xs px-3 py-2 text-slate-300 font-medium">
+                <option value="http://127.0.0.1:8000">Servidor Local (127.0.0.1:8000)</option>
+                <option value="https://suas-saude-facil.onrender.com">Servidor Nuvem (Render)</option>
+            </select>
+
+            <!-- Indicador de Status da API -->
+            <div id="status-badge" class="flex items-center gap-2 bg-slate-950 px-4 py-2 rounded-full border border-slate-800">
+                <span class="w-3 h-3 rounded-full bg-amber-500 animate-pulse" id="status-dot"></span>
+                <span class="text-xs font-semibold text-slate-300" id="status-text">A Conectar...</span>
+            </div>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
 
         <!-- NAVEGAÇÃO ENTRE VISÕES (ABAS) -->
-        <div class="flex border-b border-slate-800 gap-2">
+        <div class="flex flex-wrap border-b border-slate-800 gap-2">
             <button id="tab-dashboard-btn" onclick="switchTab('dashboard')" class="px-5 py-3 font-semibold text-sm border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2">
                 <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Central CCO/CPO
             </button>
             <button id="tab-campo-btn" onclick="switchTab('campo')" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
                 <i data-lucide="radio" class="w-4 h-4"></i> Reportar de Campo (PWA)
             </button>
+            <button id="tab-regulacao-btn" onclick="switchTab('regulacao')" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                <i data-lucide="heart-handshake" class="w-4 h-4"></i> Regulação × SUAS
+            </button>
+            <button id="tab-ia-btn" onclick="switchTab('ia')" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                <i data-lucide="brain-circuit" class="w-4 h-4"></i> Farmacovigilância IA
+            </button>
         </div>
 
         <!-- VISÃO 1: DASHBOARD CENTRAL CCO/CPO -->
         <section id="view-dashboard" class="space-y-6">
-            
-            <!-- CARDS DE MÉTRICAS (KPIs) -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
                     <span class="text-xs text-slate-400 uppercase font-bold">Total Ocorrências</span>
@@ -65,7 +77,6 @@
                 </div>
             </div>
 
-            <!-- CONTROLO E TABELA DE OCORRÊNCIAS -->
             <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
                 <div class="p-4 bg-slate-800/80 border-b border-slate-700 flex flex-wrap justify-between items-center gap-3">
                     <h2 class="font-bold text-slate-200 flex items-center gap-2">
@@ -162,49 +173,126 @@
             </div>
         </section>
 
+        <!-- VISÃO 3: REGULAÇÃO × SUAS (PRIORIZAÇÃO INTERSETORIAL) -->
+        <section id="view-regulacao" class="hidden space-y-6">
+            <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                <div class="p-4 bg-slate-800/80 border-b border-slate-700 flex flex-wrap justify-between items-center gap-3">
+                    <div>
+                        <h2 class="font-bold text-slate-100 flex items-center gap-2">
+                            <i data-lucide="heart-handshake" class="w-5 h-5 text-emerald-400"></i> Fila de Regulação Priorizada (Saúde + SUAS)
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Ordenada automaticamente pelo Score Intersetorial (Risco Clínico + Vulnerabilidade Social / NIS)</p>
+                    </div>
+                    <button onclick="carregarFilaRegulacao()" class="bg-indigo-600 hover:bg-indigo-500 px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Recalcular Fila SUAS
+                    </button>
+                </div>
+
+                <div id="feedback-suas" class="hidden mx-4 mt-4 p-3 rounded-lg text-xs font-medium bg-emerald-500/20 border border-emerald-500/40 text-emerald-300"></div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-900/50 text-slate-400 text-xs uppercase border-b border-slate-700">
+                            <tr>
+                                <th class="p-4">Score</th>
+                                <th class="p-4">Paciente</th>
+                                <th class="p-4">Especialidade / Insumo</th>
+                                <th class="p-4">Vínculo SUAS & NIS</th>
+                                <th class="p-4">Critérios Somados</th>
+                                <th class="p-4">Contrarreferência SUAS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-regulacao-suas" class="divide-y divide-slate-700/50">
+                            <tr>
+                                <td colspan="6" class="p-6 text-center text-slate-500">Clique em "Recalcular Fila SUAS" para carregar.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- VISÃO 4: FARMACOVIGILÂNCIA IA (APP DO CIDADÃO) -->
+        <section id="view-ia" class="hidden space-y-6">
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-5">
+                <div class="flex flex-wrap justify-between items-end gap-4 border-b border-slate-700 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                            <i data-lucide="brain-circuit" class="w-5 h-5 text-indigo-400"></i> Motor Preditivo de Farmacovigilância (RandomForest + Regras Clínicas)
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">Cruza medicamentos prescritos, automedicação do scanner, alergias e triagem de Manchester.</p>
+                    </div>
+
+                    <div class="flex items-end gap-2">
+                        <div>
+                            <label class="block text-[11px] uppercase font-bold text-slate-400 mb-1">ID Cidadão</label>
+                            <input type="number" id="ia-cidadao-id" value="1" min="1" class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] uppercase font-bold text-slate-400 mb-1">Idade</label>
+                            <input type="number" id="ia-cidadao-idade" value="68" min="1" max="120" class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
+                        </div>
+                        <button onclick="executarFarmacovigilanciaIA()" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i> Analisar Prontuário
+                        </button>
+                    </div>
+                </div>
+
+                <div id="resultado-ia-container" class="text-sm text-slate-400 text-center py-8">
+                    Informe o ID do cidadão (ex: <strong>1</strong> para Maria Aparecida da Silva) e clique em <strong>Analisar Prontuário</strong>.
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- JS DE INTEGRAÇÃO COM A API FASTAPI -->
     <script>
-        const API_BASE = "https://suas-saude-facil.onrender.com/cco-cpo/externo";
+        // Detecta automaticamente ambiente local vs produção
+        const isLocal = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
+        let ROOT_API = isLocal ? "http://127.0.0.1:8000" : "https://suas-saude-facil.onrender.com";
 
-        // Inicialização
         document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("api-env-select").value = ROOT_API;
             lucide.createIcons();
             verificarStatusAPI();
             carregarOcorrencias();
-            setInterval(carregarOcorrencias, 10000); // Polling a cada 10s
+            setInterval(carregarOcorrencias, 15000);
         });
+
+        function trocarAmbienteAPI() {
+            ROOT_API = document.getElementById("api-env-select").value;
+            verificarStatusAPI();
+            carregarOcorrencias();
+        }
 
         // Alternância de Abas
         function switchTab(tab) {
-            const viewDash = document.getElementById("view-dashboard");
-            const viewCampo = document.getElementById("view-campo");
-            const btnDash = document.getElementById("tab-dashboard-btn");
-            const btnCampo = document.getElementById("tab-campo-btn");
+            const tabs = ["dashboard", "campo", "regulacao", "ia"];
+            tabs.forEach(t => {
+                const view = document.getElementById(`view-${t}`);
+                const btn = document.getElementById(`tab-${t}-btn`);
+                if (t === tab) {
+                    view.classList.remove("hidden");
+                    btn.className = "px-5 py-3 font-semibold text-sm border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2";
+                } else {
+                    view.classList.add("hidden");
+                    btn.className = "px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2";
+                }
+            });
 
-            if (tab === 'dashboard') {
-                viewDash.classList.remove("hidden");
-                viewCampo.classList.add("hidden");
-                btnDash.className = "px-5 py-3 font-semibold text-sm border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2";
-                btnCampo.className = "px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2";
-                carregarOcorrencias();
-            } else {
-                viewDash.classList.add("hidden");
-                viewCampo.classList.remove("hidden");
-                btnCampo.className = "px-5 py-3 font-semibold text-sm border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2";
-                btnDash.className = "px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2";
-            }
+            if (tab === "dashboard") carregarOcorrencias();
+            if (tab === "regulacao") carregarFilaRegulacao();
+            if (tab === "ia") executarFarmacovigilanciaIA();
         }
 
-        // GET /status
+        // Status da API
         async function verificarStatusAPI() {
             try {
-                const res = await fetch(`${API_BASE}/status`);
-                const data = await res.json();
-                if (res.ok && data.estado === "Operacional") {
+                const res = await fetch(`${ROOT_API}/`);
+                if (res.ok) {
                     document.getElementById("status-dot").className = "w-3 h-3 rounded-full bg-emerald-500 animate-pulse";
-                    document.getElementById("status-text").innerText = "Rede Isolada CCO/CPO: Ativa";
+                    document.getElementById("status-text").innerText = isLocal ? "API Local Conectada" : "Ecossistema Online";
                 }
             } catch (e) {
                 document.getElementById("status-dot").className = "w-3 h-3 rounded-full bg-rose-500";
@@ -212,15 +300,15 @@
             }
         }
 
-        // GET /ocorrencias
+        // --- MÓDULO CCO/CPO ---
         async function carregarOcorrencias() {
             const filtro = document.getElementById("filtro-status").value;
-            const url = filtro ? `${API_BASE}/ocorrencias?status_filtro=${encodeURIComponent(filtro)}` : `${API_BASE}/ocorrencias`;
+            const baseCCO = `${ROOT_API}/cco-cpo/externo`;
+            const url = filtro ? `${baseCCO}/ocorrencias?status_filtro=${encodeURIComponent(filtro)}` : `${baseCCO}/ocorrencias`;
 
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                
                 if (res.ok) {
                     renderizarTabela(data.ocorrencias || []);
                     atualizarKPIs(data.ocorrencias || []);
@@ -236,10 +324,9 @@
                 tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500">Nenhuma ocorrência encontrada.</td></tr>`;
                 return;
             }
-
             tbody.innerHTML = lista.map(o => {
                 const dataFormatada = new Date(o.data_hora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const badgeUrgencia = o.nivel_urgencia === 'Alto' 
+                const badgeUrgencia = o.nivel_urgencia === 'Alto'
                     ? '<span class="px-2 py-1 text-xs font-bold bg-rose-500/20 text-rose-400 rounded-md">Alto</span>'
                     : o.nivel_urgencia === 'Moderado'
                     ? '<span class="px-2 py-1 text-xs font-bold bg-amber-500/20 text-amber-400 rounded-md">Moderado</span>'
@@ -270,12 +357,10 @@
             document.getElementById("kpi-atendidas").innerText = lista.filter(o => o.status === 'Em Atendimento').length;
         }
 
-        // POST /reportar
         async function enviarOcorrencia(e) {
             e.preventDefault();
             const btn = document.getElementById("btn-submit");
             const msg = document.getElementById("feedback-message");
-            
             const payload = {
                 setor_origem: document.getElementById("field-setor").value,
                 tipo_ocorrencia: document.getElementById("field-tipo").value,
@@ -287,13 +372,12 @@
             btn.innerText = "A transmitir...";
 
             try {
-                const res = await fetch(`${API_BASE}/reportar`, {
+                const res = await fetch(`${ROOT_API}/cco-cpo/externo/reportar`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-
                 if (res.ok) {
                     msg.className = "p-4 rounded-lg text-sm text-center bg-emerald-500/20 border border-emerald-500/40 text-emerald-300";
                     msg.innerText = `Ocorrência registada! Protocolo: ${data.protocolo_gerado}`;
@@ -309,6 +393,127 @@
                 btn.disabled = false;
                 btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> Transmitir Alerta ao CCO/CPO`;
                 lucide.createIcons();
+            }
+        }
+
+        // --- MÓDULO 3: REGULAÇÃO × SUAS ---
+        async function carregarFilaRegulacao() {
+            const tbody = document.getElementById("tabela-regulacao-suas");
+            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">A calcular scores intersetoriais...</td></tr>`;
+
+            try {
+                const res = await fetch(`${ROOT_API}/regulacao/fila-priorizada-suas`);
+                const lista = await res.json();
+
+                if (!res.ok || lista.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-500">Nenhuma solicitação na fila de regulação.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = lista.map(item => {
+                    const score = item.score_prioridade_intersetorial || 0;
+                    const corScore = score >= 60 ? "bg-rose-500/20 text-rose-400 border-rose-500/40"
+                                   : score >= 40 ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                                   : "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
+
+                    const acaoHtml = item.acao_suas_vinculada
+                        ? `<span class="text-xs text-emerald-400 font-semibold">✅ ${item.acao_suas_vinculada}</span>`
+                        : `<button onclick="acionarCras(${item.id}, '${(item.paciente_nome || '').replace(/'/g, "\\'")}')" class="bg-emerald-600/80 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg">Acionar CRAS / Transporte</button>`;
+
+                    return `
+                        <tr class="hover:bg-slate-800/50">
+                            <td class="p-4"><span class="px-2.5 py-1 rounded-lg border font-extrabold text-xs ${corScore}">${score} pts</span></td>
+                            <td class="p-4 font-semibold text-slate-100">${item.paciente_nome || "-"}</td>
+                            <td class="p-4 text-slate-300">${item.especialidade_solicitada || "-"}<br><span class="text-xs text-slate-500">${item.unidade_origem} → ${item.unidade_destino}</span></td>
+                            <td class="p-4 text-xs"><span class="text-indigo-300 font-semibold">${item.vulnerabilidade_suas || "Sem vínculo"}</span><br><span class="text-slate-400">NIS: ${item.nis_vinculado || "N/A"}</span></td>
+                            <td class="p-4 text-xs text-slate-400 max-w-xs">${item.justificativa_priorizacao || "-"}</td>
+                            <td class="p-4">${acaoHtml}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-rose-400">Erro ao conectar na API de Regulação.</td></tr>`;
+            }
+        }
+
+        async function acionarCras(solicitacaoId, pacienteNome) {
+            const feedback = document.getElementById("feedback-suas");
+            try {
+                const res = await fetch(`${ROOT_API}/regulacao/${solicitacaoId}/acionar-suas`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        tipo_apoio_social: "Transporte Sanitário Social + Cesta Nutricional",
+                        equipamento_destino: "CRAS Referência Territorial",
+                        observacao_social: `Acionado pelo Painel Integrado para ${pacienteNome}.`
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    feedback.classList.remove("hidden");
+                    feedback.innerText = `Contrarreferência enviada ao CRAS para ${data.paciente_nome}: ${data.acao_suas_vinculada}`;
+                    carregarFilaRegulacao();
+                }
+            } catch (e) {
+                alert("Erro ao acionar o CRAS.");
+            }
+        }
+
+        // --- MÓDULO 2: FARMACOVIGILÂNCIA IA ---
+        async function executarFarmacovigilanciaIA() {
+            const id = document.getElementById("ia-cidadao-id").value || 1;
+            const idade = document.getElementById("ia-cidadao-idade").value || 68;
+            const container = document.getElementById("resultado-ia-container");
+            container.innerHTML = `<p class="text-indigo-400 animate-pulse">Executando RandomForest & cruzamento farmacológico...</p>`;
+
+            try {
+                const res = await fetch(`${ROOT_API}/api/v1/predict-adverse-event/cidadao/${id}?idade=${idade}`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Cidadão não encontrado");
+
+                const riscoCor = data.nivel_risco_integrado === "Alto" ? "border-rose-500 bg-rose-500/10 text-rose-300"
+                               : data.nivel_risco_integrado === "Moderado" ? "border-amber-500 bg-amber-500/10 text-amber-300"
+                               : "border-emerald-500 bg-emerald-500/10 text-emerald-300";
+
+                const alertasHtml = (data.alertas_farmacovigilancia || []).length === 0
+                    ? `<div class="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">Nenhuma interação medicamentosa ou alergia crítica detectada.</div>`
+                    : data.alertas_farmacovigilancia.map(a => `
+                        <div class="p-4 rounded-lg bg-slate-900 border border-amber-500/40 text-left space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-bold text-amber-400">${a.tipo}</span>
+                                <span class="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Severidade: ${a.severidade}</span>
+                            </div>
+                            <p class="text-xs text-slate-300">${a.descricao}</p>
+                        </div>
+                    `).join('');
+
+                container.innerHTML = `
+                    <div class="text-left space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="p-4 rounded-xl border ${riscoCor}">
+                                <span class="text-xs uppercase font-bold opacity-80">Risco Integrado</span>
+                                <div class="text-2xl font-extrabold mt-1">${data.nivel_risco_integrado} (${(data.score_ia_random_forest * 100).toFixed(1)}%)</div>
+                                <div class="text-xs mt-1">Paciente: <strong>${data.cidadao_nome}</strong></div>
+                            </div>
+                            <div class="p-4 rounded-xl bg-slate-900 border border-slate-700">
+                                <span class="text-xs uppercase font-bold text-slate-400">Prioridade Manchester</span>
+                                <div class="text-lg font-bold text-slate-100 mt-1">${data.prioridade_manchester_sugerida}</div>
+                                <div class="text-xs text-slate-400 mt-1">Alergias: ${data.resumo_clinico_analisado.alergias}</div>
+                            </div>
+                            <div class="p-4 rounded-xl bg-slate-900 border border-slate-700">
+                                <span class="text-xs uppercase font-bold text-slate-400">Fármacos Ativos (${data.resumo_clinico_analisado.total_farmacos_unicos})</span>
+                                <div class="text-xs text-slate-300 mt-1">Prescritos: ${data.resumo_clinico_analisado.medicamentos_prescritos_ou_app.join(", ") || "Nenhum"}</div>
+                                <div class="text-xs text-amber-300 mt-1">Scanner: ${data.resumo_clinico_analisado.automedicacoes_scanner.join(", ") || "Nenhum"}</div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <h3 class="text-xs font-bold uppercase text-slate-400">Alertas Clínicos & Interações Detectadas</h3>
+                            ${alertasHtml}
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                container.innerHTML = `<p class="text-rose-400">Erro: ${err.message}</p>`;
             }
         }
     </script>
