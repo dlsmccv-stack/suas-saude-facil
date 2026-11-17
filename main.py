@@ -2,11 +2,35 @@ from ai_engine import PatientDataSchema, ai_predictor  # Importa o motor prediti
 import cco_cpo_external  # Importa o módulo isolado do CCO / CPO (Setor Externo)
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware  # <-- IMPORTAÇÃO DO CORS
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 import cidadao, database, educacao_medica, emergency_qrcode, farmacia, fhir_integration, laboratorio, medico, models, regulacao, suas_social, triagem
 
 # Inicializa as tabelas no banco de dados de forma centralizada
 models.Base.metadata.create_all(bind=database.engine)
+
+# Migração automática segura para adicionar colunas da Integração SUAS x Regulação no SQLite existente
+with database.engine.begin() as conn:
+    colunas_novas = [
+        ("paciente_nome", "VARCHAR"),
+        ("unidade_origem", "VARCHAR"),
+        ("unidade_destino", "VARCHAR"),
+        ("especialidade_solicitada", "VARCHAR"),
+        ("prioridade_clinica", "VARCHAR DEFAULT 'Média'"),
+        ("status_solicitacao", "VARCHAR DEFAULT 'Pendente'"),
+        ("observacoes_medicas", "TEXT"),
+        ("nis_vinculado", "VARCHAR"),
+        ("vulnerabilidade_suas", "VARCHAR"),
+        ("beneficio_social_ativo", "VARCHAR"),
+        ("score_prioridade_intersetorial", "INTEGER DEFAULT 0"),
+        ("justificativa_priorizacao", "TEXT"),
+        ("acao_suas_vinculada", "VARCHAR"),
+    ]
+    for col_nome, col_tipo in colunas_novas:
+        try:
+            conn.execute(text(f"ALTER TABLE regulacao_itens ADD COLUMN {col_nome} {col_tipo}"))
+        except Exception:
+            pass  # Coluna já existe
 
 app = FastAPI(
     title="SUAS Saúde / Saúde +Fácil",
@@ -15,7 +39,7 @@ app = FastAPI(
     
     Esta API disponibiliza serviços operacionais para:
     * **App do Cidadão**: Onboarding, gestão de planos de saúde, alarmes de medicamentos (contínuos e temporários), scanner preventivo e QR Code de emergência/tela de bloqueio.
-    * **Regulação**: Gestão centralizada de solicitações, leitos e encaminhamentos médicos.
+    * **Regulação**: Gestão centralizada de solicitações, leitos e encaminhamentos médicos com priorização intersetorial via SUAS.
     * **Painel do Médico**: Prescrições clínicas, geração de QR Code de farmácia e pedidos de regulação.
     * **Laboratório e Retornos**: Gestão de resultados de exames, notificações e agendamento automático de retorno.
     * **Triagem de Manchester**: Classificação de risco e priorização de atendimento.
@@ -50,7 +74,7 @@ def read_root():
             "App do Cidadão (Plano de Saúde, Medicamentos & Preventivo)",
             "Painel do Médico (Prescrições & Regulação)",
             "Laboratório e Retornos Automáticos",
-            "Regulação",
+            "Regulação & Priorização Intersetorial SUAS",
             "Triagem (Protocolo de Manchester)",
             "Apoio Social (SUAS)",
             "Interoperabilidade FHIR",
