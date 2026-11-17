@@ -1,4 +1,5 @@
 import os
+import json
 import getpass
 import requests
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -77,12 +78,16 @@ def criar_recurso_fhir(
 ):
     db_fhir = models.FHIRItem(
         resource_type=payload.resource_type,
-        resource_data=payload.resource_data
+        resource_data=json.dumps(payload.resource_data, ensure_ascii=False)
     )
     db.add(db_fhir)
     db.commit()
     db.refresh(db_fhir)
-    return db_fhir
+    return {
+        "id": db_fhir.id,
+        "resource_type": db_fhir.resource_type,
+        "resource_data": payload.resource_data
+    }
 
 @router.get(
     "/",
@@ -95,7 +100,16 @@ def listar_recursos_fhir(
     limit: int = 100,
     db: Session = Depends(database.get_db)
 ):
-    return db.query(models.FHIRItem).offset(skip).limit(limit).all()
+    itens = db.query(models.FHIRItem).offset(skip).limit(limit).all()
+    resultado = []
+    for item in itens:
+        dados = json.loads(item.resource_data) if isinstance(item.resource_data, str) else item.resource_data
+        resultado.append({
+            "id": item.id,
+            "resource_type": item.resource_type,
+            "resource_data": dados
+        })
+    return resultado
 
 
 # ==========================================
@@ -124,14 +138,16 @@ def exportar_fhir_patient(cidadao_id: int, db: Session = Depends(database.get_db
                 "text": cidadao.nome_completo
             }
         ],
+        "contact": [
+            {
+                "relationship": [{"text": "Contato de Emergência"}],
+                "name": {"text": cidadao.contacto_responsavel}
+            }
+        ] if cidadao.contacto_responsavel else [],
         "extension": [
             {
                 "url": "http://hl7.org/fhir/StructureDefinition/patient-bloodType",
                 "valueString": cidadao.tipo_sanguineo
-            },
-            {
-                "url": "http://saude-facil.gov.br/fhir/StructureDefinition/emergency-contact",
-                "valueString": cidadao.contacto_responsavel
             },
             {
                 "url": "http://saude-facil.gov.br/fhir/StructureDefinition/health-insurance",
@@ -142,7 +158,192 @@ def exportar_fhir_patient(cidadao_id: int, db: Session = Depends(database.get_db
     return fhir_patient
 
 
-@router.get("/bundle/{cidadao_id}", summary="Exportar Pacote Clínico FHIR Bundle (Prontuário Unificado do Cidadão)")
+@router.get("/prescricoes/{cidadao_id}", summary="Exportar Prescrições Médicas em Formato FHIR MedicationRequest R4")
+def exportar_fhir_prescricoes(cidadao_id: int, db: Session = Depends(database.get_db)):
+    cidadao = db.query(models.CidadaoPerfil).filter(models.CidadaoPerfil.id == cidadao_id).first()
+    if not cidadao:
+        raise HTTPException(status_code=404, detail="Cidadão não encontrado.")
+
+    prescricoes = db.query(models.MedicamentoItem).filter(models.MedicamentoItem.cidadao_id == cidadao_id).all()
+    recursos_fhir = []
+
+    for p in prescricoes:
+        recursos_fhir.append({
+            "resourceType": "MedicationRequest",
+            "id": f"rx-{p.id}",
+            "identifier": [
+                {
+                    "system": "http://saude-facil.gov.br/fhir/qr-token",
+                    "value": p.qr_code_token
+                }
+            ],
+            "status": "completed" if p.dispensado else "active",
+            "intent": "order",
+            "category": [
+                {
+                    "text": "Uso Contínuo" if p.uso_continuo else "Temporário / Emergência"
+                }
+            ],
+            "medicationCodeableConcept": {
+                "text": f"{p.medicamento_nome} {p.dosagem}".strip()
+            },
+            "subject": {
+                "reference": f"Patient/{cidadao.id}",
+                "display": cidadao.nome_completo
+            },
+            "dosageInstruction": [
+                {
+                    "text": p.posologia,
+                    "timing": {
+                        "code": {"text": f"Alarmes: {p.horarios_alarme or 'Conforme prescrição'}"}
+                    }
+                }
+            ],
+            "dispenseRequest": {
+                "quantity": {
+                    "value": p.quantidade_disponibilizada,
+                    "unit": "unidade(s)"
+                }
+            }
+        })
+
+    return {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "total": len(recursos_fhir),
+        "entry": [{"resource": r} for r in recursos_fhir]
+    }
+
+
+@router.get("/dispensacoes/{cidadao_id}", summary="Exportar Dispensações da Farmácia em Formato FHIR MedicationDispense R4")
+def exportar_fhir_dispensacoes(cidadao_id: int, db: Session = Depends(database.get_db)):
+    cidadao = db.query(models.CidadaoPerfil).filter(models.CidadaoPerfil.id == cidadao_id).first()
+    if not cidadao:
+        raise HTTPException(status_code=404, detail="Cidadão não encontrado.")
+
+    dispensados = db.query(models.MedicamentoItem).filter(
+        models.MedicamentoItem.cidadao_id == cidadao_id,
+        models.MedicamentoItem.dispensado == True
+    ).all()
+
+    recursos_fhir = []
+    for d in dispensados:
+        recursos_fhir.append({
+            "resourceType": "MedicationDispense",
+            "id": f"disp-{d.id}",
+            "identifier": [
+                {
+                    "system": "http://saude-facil.gov.br/fhir/qr-token",
+                    "value": d.qr_code_token
+                }
+            ],
+            "status": "completed",
+            "category": {
+                "text": "SUS - Farmácia Pública" if d.fornecido_pelo_sus else "Rede Privada com Desconto"
+            },
+            "medicationCodeableConcept": {
+                "text": f"{d.medicamento_nome} {d.dosagem}".strip()
+            },
+            "subject": {
+                "reference": f"Patient/{cidadao.id}",
+                "display": cidadao.nome_completo
+            },
+            "authorizingPrescription": [
+                {"reference": f"MedicationRequest/rx-{d.id}"}
+            ],
+            "quantity": {
+                "value": d.quantidade_disponibilizada,
+                "unit": "unidade(s)"
+            },
+            "whenHandedOver": d.data_dispensacao.isoformat() if d.data_dispensacao else datetime.utcnow().isoformat(),
+            "dosageInstruction": [{"text": d.posologia}]
+        })
+
+    return {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "total": len(recursos_fhir),
+        "entry": [{"resource": r} for r in recursos_fhir]
+    }
+
+
+@router.get("/emergencia/{qr_token}", summary="Exportar Resumo Clínico de Emergência (QR Code) em FHIR Bundle Document R4")
+def exportar_fhir_emergencia_qrcode(qr_token: str, db: Session = Depends(database.get_db)):
+    emergencia = db.query(models.EmergencyItem).filter(models.EmergencyItem.qr_code_token == qr_token).first()
+    if not emergencia:
+        raise HTTPException(status_code=404, detail="Token de QR Code de emergência não encontrado.")
+
+    entries = []
+
+    if emergencia.cidadao_id:
+        patient_resource = exportar_fhir_patient(emergencia.cidadao_id, db)
+    else:
+        patient_resource = {
+            "resourceType": "Patient",
+            "id": f"emerg-{emergencia.id}",
+            "name": [{"use": "official", "text": emergencia.cidadao_nome}],
+            "contact": [{
+                "name": {"text": emergencia.contacto_emergencia_nome},
+                "telecom": [{"system": "phone", "value": emergencia.contacto_emergencia_telefone}]
+            }],
+            "extension": [{
+                "url": "http://hl7.org/fhir/StructureDefinition/patient-bloodType",
+                "valueString": emergencia.tipo_sanguineo
+            }]
+        }
+    entries.append({"resource": patient_resource})
+
+    if emergencia.alergias:
+        entries.append({
+            "resource": {
+                "resourceType": "AllergyIntolerance",
+                "id": f"allergy-emerg-{emergencia.id}",
+                "clinicalStatus": {"coding": [{"code": "active"}]},
+                "criticality": "high",
+                "code": {"text": emergencia.alergias},
+                "patient": {"reference": f"Patient/{patient_resource['id']}"}
+            }
+        })
+
+    if emergencia.condicoes_medicas:
+        entries.append({
+            "resource": {
+                "resourceType": "Condition",
+                "id": f"cond-emerg-{emergencia.id}",
+                "clinicalStatus": {"coding": [{"code": "active"}]},
+                "code": {"text": emergencia.condicoes_medicas},
+                "subject": {"reference": f"Patient/{patient_resource['id']}"}
+            }
+        })
+
+    if emergencia.cidadao_id:
+        meds = db.query(models.MedicamentoCidadao).filter(
+            models.MedicamentoCidadao.cidadao_id == emergencia.cidadao_id
+        ).all()
+        for m in meds:
+            entries.append({
+                "resource": {
+                    "resourceType": "MedicationStatement",
+                    "id": f"med-emerg-{m.id}",
+                    "status": "active",
+                    "medicationCodeableConcept": {"text": m.nome_medicamento},
+                    "subject": {"reference": f"Patient/{emergencia.cidadao_id}"}
+                }
+            })
+
+    return {
+        "resourceType": "Bundle",
+        "identifier": {
+            "system": "http://saude-facil.gov.br/fhir/emergency-qr",
+            "value": qr_token
+        },
+        "type": "document",
+        "timestamp": datetime.utcnow().isoformat(),
+        "entry": entries
+    }
+
+
+@router.get("/bundle/{cidadao_id}", summary="Exportar Pacote Clínico FHIR Bundle (Prontuário Unificado Completo)")
 def exportar_fhir_bundle_completo(cidadao_id: int, db: Session = Depends(database.get_db)):
     cidadao = db.query(models.CidadaoPerfil).filter(models.CidadaoPerfil.id == cidadao_id).first()
     if not cidadao:
@@ -161,6 +362,28 @@ def exportar_fhir_bundle_completo(cidadao_id: int, db: Session = Depends(databas
     patient_data = exportar_fhir_patient(cidadao_id, db)
     fhir_bundle["entry"].append({"resource": patient_data})
 
+    if cidadao.alergias:
+        fhir_bundle["entry"].append({
+            "resource": {
+                "resourceType": "AllergyIntolerance",
+                "id": f"allergy-{cidadao_id}",
+                "clinicalStatus": {"coding": [{"code": "active"}]},
+                "code": {"text": cidadao.alergias},
+                "patient": {"reference": f"Patient/{cidadao_id}"}
+            }
+        })
+
+    if cidadao.condicoes_cronicas:
+        fhir_bundle["entry"].append({
+            "resource": {
+                "resourceType": "Condition",
+                "id": f"condition-{cidadao_id}",
+                "clinicalStatus": {"coding": [{"code": "active"}]},
+                "code": {"text": cidadao.condicoes_cronicas},
+                "subject": {"reference": f"Patient/{cidadao_id}"}
+            }
+        })
+
     for med in medicamentos:
         fhir_bundle["entry"].append({
             "resource": {
@@ -172,6 +395,12 @@ def exportar_fhir_bundle_completo(cidadao_id: int, db: Session = Depends(databas
                 "note": [{"text": f"Tipo de Prescrição: {med.tipo_presricao} | Alarme configurado: {med.horarios_alarme or 'N/A'}"}]
             }
         })
+
+    prescricoes_bundle = exportar_fhir_prescricoes(cidadao_id, db)
+    fhir_bundle["entry"].extend(prescricoes_bundle["entry"])
+
+    dispensacoes_bundle = exportar_fhir_dispensacoes(cidadao_id, db)
+    fhir_bundle["entry"].extend(dispensacoes_bundle["entry"])
 
     for auto in automedicacoes:
         fhir_bundle["entry"].append({
@@ -194,7 +423,6 @@ def exportar_fhir_bundle_completo(cidadao_id: int, db: Session = Depends(databas
 # ==========================================
 
 def obter_token_rnds() -> str:
-    # Aponta para o arquivo .pem configurado no ambiente
     cert_path = os.getenv("RNDS_CERT_PATH", "certificado.pem")
 
     if not os.path.exists(cert_path):
