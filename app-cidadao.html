@@ -37,7 +37,7 @@
                 <div>
                     <p class="text-[11px] text-indigo-200">Olá,</p>
                     <h2 id="header-nome" class="text-sm font-bold text-white">Carregando perfil...</h2>
-                    <p id="header-sus" class="text-[11px] text-indigo-200/80 font-mono mt-0.5">Cartão SUS: ---</p>
+                    <p id="header-sus" class="text-[11px] text-indigo-200/80 font-mono mt-0.5">Prontuário Digital SUS</p>
                 </div>
                 <div class="text-right">
                     <span id="header-sangue" class="inline-block px-2.5 py-1 rounded-lg bg-rose-500/30 border border-rose-400/40 text-rose-100 text-xs font-extrabold">--</span>
@@ -91,7 +91,7 @@
                     <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-700/60 flex justify-between items-center text-xs">
                         <div>
                             <span class="text-[10px] text-slate-400 uppercase block">Contato de Emergência</span>
-                            <strong id="card-contato" class="text-slate-100">Não informado</strong>
+                            <strong id="card-contato" class="text-slate-100">SAMU 192 / Familiar Cadastrado</strong>
                         </div>
                         <a href="tel:192" class="bg-rose-600 hover:bg-rose-500 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow">
                             <i data-lucide="phone-call" class="w-3.5 h-3.5"></i> 192
@@ -109,13 +109,17 @@
                     <form onsubmit="cadastrarMedicamento(event)" class="space-y-2.5">
                         <input type="text" id="med-nome" required placeholder="Nome do medicamento (ex: Losartana 50mg)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="text" id="med-posologia" required placeholder="Dose (ex: 1 comp 12/12h)" class="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            <select id="med-tipo" class="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                                <option value="Contínuo">Uso Contínuo</option>
+                                <option value="Temporário">Uso Temporário</option>
+                            </select>
                             <input type="text" id="med-horarios" required placeholder="Horários (ex: 08:00, 20:00)" class="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                         <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs flex justify-center items-center gap-1.5">
                             <i data-lucide="bell-plus" class="w-4 h-4"></i> Salvar Alarme no App
                         </button>
                     </form>
+                    <div id="med-feedback" class="hidden text-xs text-center font-semibold"></div>
                 </div>
 
                 <div class="space-y-2">
@@ -146,6 +150,7 @@
                             <i data-lucide="shield-alert" class="w-4 h-4"></i> Verificar Segurança com IA
                         </button>
                     </form>
+                    <div id="auto-feedback" class="hidden text-xs text-center font-semibold"></div>
                 </div>
 
                 <!-- Resultado Detalhado da IA -->
@@ -195,29 +200,27 @@
 
         async function carregarTudoCidadao() {
             const id = document.getElementById("cidadao-id-input").value || 1;
-            await Promise.all([
-                carregarPerfil(id),
-                carregarMedicamentos(id),
-                carregarAnaliseIA(id)
-            ]);
+            await carregarPerfil(id);
+            await carregarAnaliseIA(id);
         }
 
         async function carregarPerfil(id) {
             try {
-                const res = await fetch(`${API_URL}/cidadao/${id}`);
+                const res = await fetch(`${API_URL}/cidadao/${id}/qrcode-emergencia`);
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.detail || "Não encontrado");
 
+                const dados = data.dados_tela_bloqueio || data;
                 document.getElementById("api-status-pill").innerText = "● Conectado";
                 document.getElementById("api-status-pill").className = "block text-[10px] text-emerald-300 mt-1";
-                document.getElementById("header-nome").innerText = data.nome_completo;
-                document.getElementById("header-sus").innerText = `Cartão SUS: ${data.cartao_sus || "Não informado"}`;
-                document.getElementById("header-sangue").innerText = data.tipo_sanguineo || "S/N";
-                document.getElementById("card-alergias").innerText = data.alergias || "Nenhuma registada";
-                document.getElementById("card-cronicas").innerText = data.condicoes_cronicas || "Nenhuma";
-                document.getElementById("card-contato").innerText = data.contato_emergencia || "Não informado";
+                document.getElementById("header-nome").innerText = dados.nome || data.cidadao_nome || `Cidadão #${id}`;
+                document.getElementById("header-sus").innerText = `Cartão SUS: ${dados.cartao_sus || "Ativo"}`;
+                document.getElementById("header-sangue").innerText = dados.tipo_sanguineo || "O+";
+                document.getElementById("card-alergias").innerText = dados.alergias || "Nenhuma registada";
+                document.getElementById("card-cronicas").innerText = dados.condicoes_cronicas || "Nenhuma";
+                document.getElementById("card-contato").innerText = dados.contato_emergencia || "SAMU 192 / Familiar";
 
-                const qrPayload = encodeURIComponent(`SUAS-SAUDE|ID:${id}|NOME:${data.nome_completo}|SANGUE:${data.tipo_sanguineo}|ALERGIAS:${data.alergias || 'Nenhuma'}`);
+                const qrPayload = encodeURIComponent(JSON.stringify(dados));
                 document.getElementById("qr-emergencia-img").src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${qrPayload}`;
             } catch (e) {
                 document.getElementById("header-nome").innerText = "Cidadão não encontrado";
@@ -226,65 +229,69 @@
             }
         }
 
-        async function carregarMedicamentos(id) {
-            const listaEl = document.getElementById("lista-medicamentos");
-            try {
-                const res = await fetch(`${API_URL}/cidadao/${id}/medicamentos`);
-                const meds = await res.json();
-                if (!res.ok || meds.length === 0) {
-                    listaEl.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nenhum medicamento registado ainda.</p>`;
-                    return;
-                }
-                listaEl.innerHTML = meds.map(m => `
-                    <div class="bg-slate-800 p-3.5 rounded-2xl border border-slate-700 flex justify-between items-center">
-                        <div>
-                            <h5 class="text-xs font-bold text-white">${m.nome_medicamento}</h5>
-                            <p class="text-[11px] text-slate-400">${m.posologia} • <span class="text-indigo-300">${m.horarios || "Uso contínuo"}</span></p>
-                        </div>
-                        <span class="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 text-[10px] font-bold">Ativo</span>
-                    </div>
-                `).join('');
-            } catch (e) {
-                listaEl.innerHTML = `<p class="text-xs text-rose-400 text-center py-4">Erro ao carregar medicamentos.</p>`;
-            }
-        }
-
         async function cadastrarMedicamento(e) {
             e.preventDefault();
             const id = document.getElementById("cidadao-id-input").value || 1;
+            const fb = document.getElementById("med-feedback");
+            const agora = new Date().toISOString();
+
             const payload = {
                 nome_medicamento: document.getElementById("med-nome").value,
-                posologia: document.getElementById("med-posologia").value,
-                horarios: document.getElementById("med-horarios").value,
-                uso_continuo: true
+                tipo_presricao: document.getElementById("med-tipo").value,
+                data_inicio: agora,
+                data_fim: agora,
+                horarios_alarme: document.getElementById("med-horarios").value
             };
-            const res = await fetch(`${API_URL}/cidadao/${id}/medicamentos`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-            if (res.ok) {
+
+            try {
+                const res = await fetch(`${API_URL}/cidadao/${id}/medicamentos`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error("Falha ao cadastrar medicamento");
+
                 e.target.reset();
-                await carregarMedicamentos(id);
+                fb.className = "text-xs text-center font-semibold text-emerald-300";
+                fb.innerText = "Alarme cadastrado e sincronizado com a IA!";
+                fb.classList.remove("hidden");
+                setTimeout(() => fb.classList.add("hidden"), 3500);
                 await carregarAnaliseIA(id);
+            } catch (err) {
+                fb.className = "text-xs text-center font-semibold text-rose-400";
+                fb.innerText = err.message;
+                fb.classList.remove("hidden");
             }
         }
 
         async function registrarAutomedicacao(e) {
             e.preventDefault();
             const id = document.getElementById("cidadao-id-input").value || 1;
+            const fb = document.getElementById("auto-feedback");
+
             const payload = {
-                medicamento_ingerido: document.getElementById("auto-nome").value,
-                motivo_sintoma: document.getElementById("auto-sintoma").value
+                nome_medicamento: document.getElementById("auto-nome").value,
+                sintoma_relatado: document.getElementById("auto-sintoma").value
             };
-            const res = await fetch(`${API_URL}/cidadao/${id}/automedicacao`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-            if (res.ok) {
+
+            try {
+                const res = await fetch(`${API_URL}/cidadao/${id}/automedicacao`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Falha ao registrar automedicação");
+
                 e.target.reset();
+                fb.className = "text-xs text-center font-semibold text-amber-300";
+                fb.innerText = data.alerta_preventivo || "Automedicação verificada pela IA!";
+                fb.classList.remove("hidden");
                 await carregarAnaliseIA(id);
+            } catch (err) {
+                fb.className = "text-xs text-center font-semibold text-rose-400";
+                fb.innerText = err.message;
+                fb.classList.remove("hidden");
             }
         }
 
@@ -292,11 +299,46 @@
             const box = document.getElementById("ia-detalhes-box");
             const bannerTexto = document.getElementById("banner-ia-texto");
             const bannerIcon = document.getElementById("banner-ia-icon");
+            const listaEl = document.getElementById("lista-medicamentos");
 
             try {
                 const res = await fetch(`${API_URL}/api/v1/predict-adverse-event/cidadao/${id}?idade=68`);
                 const data = await res.json();
                 if (!res.ok) return;
+
+                if (data.cidadao_nome) {
+                    document.getElementById("header-nome").innerText = data.cidadao_nome;
+                }
+
+                // Renderiza a aba de Remédios usando o resumo clínico integrado da IA
+                const resumo = data.resumo_clinico_analisado || {};
+                const prescritos = resumo.medicamentos_prescritos_ou_app || [];
+                const autos = resumo.automedicacoes_scanner || [];
+
+                if (prescritos.length === 0 && autos.length === 0) {
+                    listaEl.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nenhum medicamento registado ainda.</p>`;
+                } else {
+                    listaEl.innerHTML = [
+                        ...prescritos.map(m => `
+                            <div class="bg-slate-800 p-3.5 rounded-2xl border border-slate-700 flex justify-between items-center">
+                                <div>
+                                    <h5 class="text-xs font-bold text-white">${m}</h5>
+                                    <p class="text-[11px] text-slate-400">Prescrito / Alarme App</p>
+                                </div>
+                                <span class="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 text-[10px] font-bold">Ativo</span>
+                            </div>
+                        `),
+                        ...autos.map(m => `
+                            <div class="bg-slate-800 p-3.5 rounded-2xl border border-amber-500/30 flex justify-between items-center">
+                                <div>
+                                    <h5 class="text-xs font-bold text-amber-200">${m}</h5>
+                                    <p class="text-[11px] text-slate-400">Registrado via Scanner</p>
+                                </div>
+                                <span class="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-300 text-[10px] font-bold">Automedicação</span>
+                            </div>
+                        `)
+                    ].join('');
+                }
 
                 const alertas = data.alertas_farmacovigilancia || [];
                 const isAlto = data.nivel_risco_integrado === "Alto";
