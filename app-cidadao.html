@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Saúde +Fácil — App do Cidadão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex justify-center">
+
+    <!-- CONTAINER MOBILE-FIRST (MAX 480PX NO DESKTOP) -->
+    <div class="w-full max-w-md bg-slate-900 min-h-screen flex flex-col border-x border-slate-800 shadow-2xl relative pb-24">
+
+        <!-- CABEÇALHO DO APP -->
+        <header class="bg-gradient-to-r from-indigo-700 to-blue-700 px-5 pt-5 pb-6 rounded-b-3xl shadow-lg">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-2">
+                    <div class="bg-white/15 p-2 rounded-xl backdrop-blur-sm">
+                        <i data-lucide="heart-pulse" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div>
+                        <span class="text-[11px] uppercase tracking-wider text-indigo-200 font-bold block">SUAS Saúde</span>
+                        <h1 class="text-base font-extrabold text-white leading-tight">Saúde +Fácil</h1>
+                    </div>
+                </div>
+
+                <!-- Seletor rápido de ID do Cidadão -->
+                <div class="flex items-center gap-1.5 bg-slate-950/40 px-2.5 py-1.5 rounded-xl border border-white/10">
+                    <span class="text-[10px] text-indigo-200 font-semibold">ID:</span>
+                    <input type="number" id="cidadao-id-input" value="1" min="1" onchange="carregarTudoCidadao()" class="w-10 bg-transparent text-xs font-bold text-white text-center focus:outline-none">
+                </div>
+            </div>
+
+            <!-- Resumo Rápido do Cidadão -->
+            <div class="bg-slate-950/30 backdrop-blur-md rounded-2xl p-3.5 border border-white/10 flex justify-between items-center">
+                <div>
+                    <p class="text-[11px] text-indigo-200">Olá,</p>
+                    <h2 id="header-nome" class="text-sm font-bold text-white">Carregando perfil...</h2>
+                    <p id="header-sus" class="text-[11px] text-indigo-200/80 font-mono mt-0.5">Cartão SUS: ---</p>
+                </div>
+                <div class="text-right">
+                    <span id="header-sangue" class="inline-block px-2.5 py-1 rounded-lg bg-rose-500/30 border border-rose-400/40 text-rose-100 text-xs font-extrabold">--</span>
+                    <span id="api-status-pill" class="block text-[10px] text-emerald-300 mt-1">● Conectado</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTEÚDO PRINCIPAL (ABAS MOBILE) -->
+        <main class="flex-1 px-4 pt-5 space-y-5">
+
+            <!-- ABA 1: EMERGÊNCIA & CARTÃO VITAL -->
+            <section id="tab-emergencia" class="space-y-4">
+                <!-- Alerta IA de Topo -->
+                <div id="banner-ia-resumo" onclick="mudarAba('scanner')" class="cursor-pointer p-4 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-between gap-3 active:scale-[0.99] transition">
+                    <div class="flex items-center gap-3">
+                        <div id="banner-ia-icon" class="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
+                            <i data-lucide="shield-check" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-slate-400">Farmacovigilância IA</span>
+                            <p id="banner-ia-texto" class="text-xs font-bold text-slate-100">Analisando interações...</p>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+                </div>
+
+                <!-- Cartão de Tela de Bloqueio / QR Code de Emergência -->
+                <div class="bg-gradient-to-br from-rose-950/80 to-slate-800 border border-rose-500/40 rounded-3xl p-5 shadow-lg space-y-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-extrabold uppercase tracking-wider">Tela de Bloqueio • SAMU 192</span>
+                            <h3 class="text-base font-extrabold text-white mt-2">Passaporte Clínico de Emergência</h3>
+                        </div>
+                        <div class="bg-white p-2 rounded-xl shadow">
+                            <img id="qr-emergencia-img" src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=SUAS-SAUDE-EMERGENCIA-1" alt="QR Code Emergência" class="w-16 h-16">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5 text-xs">
+                        <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-700/60">
+                            <span class="text-[10px] text-slate-400 uppercase block">Alergias Críticas</span>
+                            <strong id="card-alergias" class="text-rose-300 font-bold mt-0.5 block">Nenhuma registada</strong>
+                        </div>
+                        <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-700/60">
+                            <span class="text-[10px] text-slate-400 uppercase block">Condições Crônicas</span>
+                            <strong id="card-cronicas" class="text-amber-300 font-bold mt-0.5 block">Nenhuma</strong>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-700/60 flex justify-between items-center text-xs">
+                        <div>
+                            <span class="text-[10px] text-slate-400 uppercase block">Contato de Emergência</span>
+                            <strong id="card-contato" class="text-slate-100">Não informado</strong>
+                        </div>
+                        <a href="tel:192" class="bg-rose-600 hover:bg-rose-500 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow">
+                            <i data-lucide="phone-call" class="w-3.5 h-3.5"></i> 192
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABA 2: MEUS MEDICAMENTOS & ALARMES -->
+            <section id="tab-medicamentos" class="hidden space-y-4">
+                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 space-y-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="pill" class="w-4 h-4 text-indigo-400"></i> Adicionar Medicamento / Alarme
+                    </h3>
+                    <form onsubmit="cadastrarMedicamento(event)" class="space-y-2.5">
+                        <input type="text" id="med-nome" required placeholder="Nome do medicamento (ex: Losartana 50mg)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="med-posologia" required placeholder="Dose (ex: 1 comp 12/12h)" class="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            <input type="text" id="med-horarios" required placeholder="Horários (ex: 08:00, 20:00)" class="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs flex justify-center items-center gap-1.5">
+                            <i data-lucide="bell-plus" class="w-4 h-4"></i> Salvar Alarme no App
+                        </button>
+                    </form>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold uppercase text-slate-400 px-1">Tratamentos Ativos</h4>
+                    <div id="lista-medicamentos" class="space-y-2">
+                        <p class="text-xs text-slate-500 text-center py-4">Carregando medicamentos...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABA 3: SCANNER PREVENTIVO & IA -->
+            <section id="tab-scanner" class="hidden space-y-4">
+                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 space-y-3">
+                    <div class="flex items-center gap-2">
+                        <div class="p-2 rounded-xl bg-amber-500/20 text-amber-400">
+                            <i data-lucide="scan-line" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Scanner de Automedicação</h3>
+                            <p class="text-[11px] text-slate-400">Verifique riscos antes de tomar um remédio sem receita</p>
+                        </div>
+                    </div>
+
+                    <form onsubmit="registrarAutomedicacao(event)" class="space-y-2.5">
+                        <input type="text" id="auto-nome" required placeholder="Qual medicamento pretende tomar? (ex: Ibuprofeno 600mg)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        <input type="text" id="auto-sintoma" required placeholder="Motivo / Sintoma (ex: Dor de cabeça / Dor muscular)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl text-xs flex justify-center items-center gap-1.5">
+                            <i data-lucide="shield-alert" class="w-4 h-4"></i> Verificar Segurança com IA
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Resultado Detalhado da IA -->
+                <div id="ia-detalhes-box" class="space-y-2.5">
+                    <p class="text-xs text-slate-500 text-center py-4">Aguardando análise...</p>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- BARRA DE NAVEGAÇÃO INFERIOR FIXA (ESTILO APP NATIVO) -->
+        <nav class="fixed bottom-0 w-full max-w-md bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-6 py-2.5 flex justify-around items-center z-50">
+            <button id="nav-emergencia" onclick="mudarAba('emergencia')" class="flex flex-col items-center gap-1 text-indigo-400">
+                <i data-lucide="qr-code" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold">Emergência</span>
+            </button>
+            <button id="nav-medicamentos" onclick="mudarAba('medicamentos')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200">
+                <i data-lucide="pill" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold">Remédios</span>
+            </button>
+            <button id="nav-scanner" onclick="mudarAba('scanner')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200">
+                <i data-lucide="scan-line" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold">Scanner IA</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <script>
+        const isLocal = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
+        const API_URL = isLocal ? "http://127.0.0.1:8000" : "https://suas-saude-facil.onrender.com";
+
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            carregarTudoCidadao();
+        });
+
+        function mudarAba(aba) {
+            ["emergencia", "medicamentos", "scanner"].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.toggle("hidden", t !== aba);
+                const navBtn = document.getElementById(`nav-${t}`);
+                navBtn.className = t === aba
+                    ? "flex flex-col items-center gap-1 text-indigo-400"
+                    : "flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200";
+            });
+        }
+
+        async function carregarTudoCidadao() {
+            const id = document.getElementById("cidadao-id-input").value || 1;
+            await Promise.all([
+                carregarPerfil(id),
+                carregarMedicamentos(id),
+                carregarAnaliseIA(id)
+            ]);
+        }
+
+        async function carregarPerfil(id) {
+            try {
+                const res = await fetch(`${API_URL}/cidadao/${id}`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Não encontrado");
+
+                document.getElementById("api-status-pill").innerText = "● Conectado";
+                document.getElementById("api-status-pill").className = "block text-[10px] text-emerald-300 mt-1";
+                document.getElementById("header-nome").innerText = data.nome_completo;
+                document.getElementById("header-sus").innerText = `Cartão SUS: ${data.cartao_sus || "Não informado"}`;
+                document.getElementById("header-sangue").innerText = data.tipo_sanguineo || "S/N";
+                document.getElementById("card-alergias").innerText = data.alergias || "Nenhuma registada";
+                document.getElementById("card-cronicas").innerText = data.condicoes_cronicas || "Nenhuma";
+                document.getElementById("card-contato").innerText = data.contato_emergencia || "Não informado";
+
+                const qrPayload = encodeURIComponent(`SUAS-SAUDE|ID:${id}|NOME:${data.nome_completo}|SANGUE:${data.tipo_sanguineo}|ALERGIAS:${data.alergias || 'Nenhuma'}`);
+                document.getElementById("qr-emergencia-img").src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${qrPayload}`;
+            } catch (e) {
+                document.getElementById("header-nome").innerText = "Cidadão não encontrado";
+                document.getElementById("api-status-pill").innerText = "● Offline / ID inválido";
+                document.getElementById("api-status-pill").className = "block text-[10px] text-rose-300 mt-1";
+            }
+        }
+
+        async function carregarMedicamentos(id) {
+            const listaEl = document.getElementById("lista-medicamentos");
+            try {
+                const res = await fetch(`${API_URL}/cidadao/${id}/medicamentos`);
+                const meds = await res.json();
+                if (!res.ok || meds.length === 0) {
+                    listaEl.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nenhum medicamento registado ainda.</p>`;
+                    return;
+                }
+                listaEl.innerHTML = meds.map(m => `
+                    <div class="bg-slate-800 p-3.5 rounded-2xl border border-slate-700 flex justify-between items-center">
+                        <div>
+                            <h5 class="text-xs font-bold text-white">${m.nome_medicamento}</h5>
+                            <p class="text-[11px] text-slate-400">${m.posologia} • <span class="text-indigo-300">${m.horarios || "Uso contínuo"}</span></p>
+                        </div>
+                        <span class="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 text-[10px] font-bold">Ativo</span>
+                    </div>
+                `).join('');
+            } catch (e) {
+                listaEl.innerHTML = `<p class="text-xs text-rose-400 text-center py-4">Erro ao carregar medicamentos.</p>`;
+            }
+        }
+
+        async function cadastrarMedicamento(e) {
+            e.preventDefault();
+            const id = document.getElementById("cidadao-id-input").value || 1;
+            const payload = {
+                nome_medicamento: document.getElementById("med-nome").value,
+                posologia: document.getElementById("med-posologia").value,
+                horarios: document.getElementById("med-horarios").value,
+                uso_continuo: true
+            };
+            const res = await fetch(`${API_URL}/cidadao/${id}/medicamentos`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                e.target.reset();
+                await carregarMedicamentos(id);
+                await carregarAnaliseIA(id);
+            }
+        }
+
+        async function registrarAutomedicacao(e) {
+            e.preventDefault();
+            const id = document.getElementById("cidadao-id-input").value || 1;
+            const payload = {
+                medicamento_ingerido: document.getElementById("auto-nome").value,
+                motivo_sintoma: document.getElementById("auto-sintoma").value
+            };
+            const res = await fetch(`${API_URL}/cidadao/${id}/automedicacao`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                e.target.reset();
+                await carregarAnaliseIA(id);
+            }
+        }
+
+        async function carregarAnaliseIA(id) {
+            const box = document.getElementById("ia-detalhes-box");
+            const bannerTexto = document.getElementById("banner-ia-texto");
+            const bannerIcon = document.getElementById("banner-ia-icon");
+
+            try {
+                const res = await fetch(`${API_URL}/api/v1/predict-adverse-event/cidadao/${id}?idade=68`);
+                const data = await res.json();
+                if (!res.ok) return;
+
+                const alertas = data.alertas_farmacovigilancia || [];
+                const isAlto = data.nivel_risco_integrado === "Alto";
+                const isMod = data.nivel_risco_integrado === "Moderado";
+
+                bannerTexto.innerText = alertas.length > 0
+                    ? `${alertas.length} alerta(s) de interação • Risco ${data.nivel_risco_integrado}`
+                    : `Tudo seguro • Risco ${data.nivel_risco_integrado}`;
+
+                bannerIcon.className = isAlto
+                    ? "p-2.5 rounded-xl bg-rose-500/20 text-rose-400"
+                    : isMod
+                    ? "p-2.5 rounded-xl bg-amber-500/20 text-amber-400"
+                    : "p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400";
+
+                const alertasHtml = alertas.length === 0
+                    ? `<div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">Nenhuma interação medicamentosa ou alergia crítica detectada no momento.</div>`
+                    : alertas.map(a => `
+                        <div class="p-4 rounded-2xl bg-slate-800 border border-amber-500/40 space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-extrabold text-amber-400">${a.tipo}</span>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold">${a.severidade}</span>
+                            </div>
+                            <p class="text-xs text-slate-300 leading-relaxed">${a.descricao}</p>
+                        </div>
+                    `).join('');
+
+                box.innerHTML = `
+                    <div class="p-4 rounded-2xl bg-slate-800 border border-slate-700 flex justify-between items-center">
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-slate-400">Score de Risco IA</span>
+                            <div class="text-lg font-extrabold text-white">${data.nivel_risco_integrado} (${(data.score_ia_random_forest * 100).toFixed(1)}%)</div>
+                        </div>
+                        <span class="px-3 py-1 rounded-xl bg-indigo-500/20 text-indigo-300 text-xs font-bold">${data.prioridade_manchester_sugerida}</span>
+                    </div>
+                    ${alertasHtml}
+                `;
+            } catch (e) {
+                box.innerHTML = `<p class="text-xs text-slate-500 text-center">Não foi possível carregar a análise preditiva.</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
