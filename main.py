@@ -78,11 +78,11 @@ app.include_router(cidadao.router)  # Inclui as rotas do App do Cidadão com pre
 app.include_router(cco_cpo_external.router)
 
 
-# --- MÓDULO DE IA: Preditiva de Eventos Adversos ---
+# --- MÓDULO DE IA: Preditiva de Eventos Adversos & Farmacovigilância ---
 @app.post(
     "/api/v1/predict-adverse-event",
     tags=["Inteligência Preditiva (IA)"],
-    summary="Avalia o risco de evento adverso no prontuário"
+    summary="Avalia o risco de evento adverso no prontuário (parâmetros manuais)"
 )
 def predict_adverse_event(patient_data: PatientDataSchema):
     try:
@@ -98,3 +98,40 @@ def predict_adverse_event(patient_data: PatientDataSchema):
             status_code=500,
             detail=f"Erro ao processar predição de IA: {str(e)}"
         )
+
+
+@app.get(
+    "/api/v1/predict-adverse-event/cidadao/{cidadao_id}",
+    tags=["Inteligência Preditiva (IA)"],
+    summary="Análise Preditiva Integrada do Cidadão (Medicamentos, Automedicação & Alergias)"
+)
+def predict_adverse_event_cidadao(
+    cidadao_id: int,
+    idade: int = 55,
+    db: Session = Depends(database.get_db)
+):
+    cidadao_obj = db.query(models.CidadaoPerfil).filter(models.CidadaoPerfil.id == cidadao_id).first()
+    if not cidadao_obj:
+        raise HTTPException(status_code=404, detail="Cidadão não encontrado.")
+
+    medicamentos_app = db.query(models.MedicamentoCidadao).filter(
+        models.MedicamentoCidadao.cidadao_id == cidadao_id
+    ).all()
+    prescricoes_farmacia = db.query(models.MedicamentoItem).filter(
+        models.MedicamentoItem.cidadao_id == cidadao_id
+    ).all()
+    automedicacoes = db.query(models.AutomedicacaoLog).filter(
+        models.AutomedicacaoLog.cidadao_id == cidadao_id
+    ).all()
+    triagens = db.query(models.Triagem).filter(
+        models.Triagem.paciente_nome == cidadao_obj.nome_completo
+    ).all()
+
+    return ai_predictor.analisar_farmacovigilancia_cidadao(
+        cidadao=cidadao_obj,
+        medicamentos_app=medicamentos_app,
+        prescricoes_farmacia=prescricoes_farmacia,
+        automedicacoes=automedicacoes,
+        triagens=triagens,
+        idade_estimada=idade
+    )
