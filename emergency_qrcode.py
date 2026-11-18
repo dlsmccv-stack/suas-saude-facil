@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import database, models
@@ -8,14 +9,43 @@ from datetime import datetime
 
 router = APIRouter()
 
+
 class EmergencyProfileCreate(BaseModel):
-    cidadao_id: Optional[int] = Field(None, description="ID do cidadão associado no ecossistema", example=1)
-    cidadao_nome: str = Field(..., description="Nome completo do cidadão", example="Maria da Silva")
-    tipo_sanguineo: str = Field(..., description="Tipo sanguíneo e fator RH", example="O+")
-    alergias: str = Field(..., description="Alergias conhecidas a medicamentos ou substâncias", example="Penicilina, Dipirona")
-    condicoes_medicas: str = Field(..., description="Condições crónicas ou patologias importantes", example="Hipertensão, Diabetes Tipo 1")
-    contacto_emergencia_nome: str = Field(..., description="Nome do contacto de emergência/familiar", example="João Silva")
-    contacto_emergencia_telefone: str = Field(..., description="Telefone do contacto de emergência", example="(86) 99999-9999")
+    cidadao_id: Optional[int] = Field(
+        None,
+        description="ID do cidadão associado no ecossistema",
+        example=1
+    )
+    cidadao_nome: str = Field(
+        ...,
+        description="Nome completo do cidadão",
+        example="Maria da Silva"
+    )
+    tipo_sanguineo: str = Field(
+        ...,
+        description="Tipo sanguíneo e fator RH",
+        example="O+"
+    )
+    alergias: str = Field(
+        ...,
+        description="Alergias conhecidas a medicamentos ou substâncias",
+        example="Penicilina, Dipirona"
+    )
+    condicoes_medicas: str = Field(
+        ...,
+        description="Condições crónicas ou patologias importantes",
+        example="Hipertensão, Diabetes Tipo 1"
+    )
+    contacto_emergencia_nome: str = Field(
+        ...,
+        description="Nome do contacto de emergência/familiar",
+        example="João Silva"
+    )
+    contacto_emergencia_telefone: str = Field(
+        ...,
+        description="Telefone do contacto de emergência",
+        example="(86) 99999-9999"
+    )
 
     class Config:
         json_schema_extra = {
@@ -30,8 +60,13 @@ class EmergencyProfileCreate(BaseModel):
             }
         }
 
+
 class EmergencyValidateToken(BaseModel):
-    qr_code_token: str = Field(..., description="Token de emergência codificado no QR Code", example="QR-EMERG-ABC123XYZ")
+    qr_code_token: str = Field(
+        ...,
+        description="Token de emergência codificado no QR Code",
+        example="QR-EMERG-ABC123XYZ"
+    )
 
     class Config:
         json_schema_extra = {
@@ -40,11 +75,28 @@ class EmergencyValidateToken(BaseModel):
             }
         }
 
+
 class AcionamentoSamuPayload(BaseModel):
-    qr_code_token: str = Field(..., description="Token do QR Code de emergência do paciente", example="QR-EMERG-ABC123XYZ")
-    latitude: float = Field(..., description="Latitude da localização do incidente", example=-5.08921)
-    longitude: float = Field(..., description="Longitude da localização do incidente", example=-42.80194)
-    local_descricao: Optional[str] = Field("Endereço não especificado", description="Ponto de referência ou descrição do local", example="Próximo à Av. Frei Serafim")
+    qr_code_token: str = Field(
+        ...,
+        description="Token do QR Code de emergência do paciente",
+        example="QR-EMERG-ABC123XYZ"
+    )
+    latitude: float = Field(
+        ...,
+        description="Latitude da localização do incidente",
+        example=-5.08921
+    )
+    longitude: float = Field(
+        ...,
+        description="Longitude da localização do incidente",
+        example=-42.80194
+    )
+    local_descricao: Optional[str] = Field(
+        "Endereço não especificado",
+        description="Ponto de referência ou descrição do local",
+        example="Próximo à Av. Frei Serafim"
+    )
 
     class Config:
         json_schema_extra = {
@@ -56,35 +108,84 @@ class AcionamentoSamuPayload(BaseModel):
             }
         }
 
+
 class EmergencyProfileResponse(BaseModel):
-    id: int = Field(..., description="Identificador único do registo", example=1)
-    cidadao_id: Optional[int] = Field(None, description="ID do cidadão associado", example=1)
-    cidadao_nome: str = Field(..., description="Nome completo", example="Maria da Silva")
-    tipo_sanguineo: str = Field(..., description="Tipo sanguíneo", example="O+")
-    alergias: str = Field(..., description="Alergias", example="Penicilina, Dipirona")
-    condicoes_medicas: str = Field(..., description="Condições médicas", example="Hipertensão, Diabetes Tipo 1")
-    contacto_emergencia_nome: str = Field(..., description="Contacto de emergência", example="João Silva")
-    contacto_emergencia_telefone: str = Field(..., description="Telefone de emergência", example="(86) 99999-9999")
-    qr_code_token: str = Field(..., description="Token único do QR Code de emergência", example="QR-EMERG-ABC123XYZ")
-    data_registo: datetime = Field(..., description="Data de criação do perfil", example="2026-10-28T14:30:00")
+    id: int = Field(
+        ...,
+        description="Identificador único do registo",
+        example=1
+    )
+    cidadao_id: Optional[int] = Field(
+        None,
+        description="ID do cidadão associado",
+        example=1
+    )
+    cidadao_nome: str = Field(
+        ...,
+        description="Nome completo",
+        example="Maria da Silva"
+    )
+    tipo_sanguineo: str = Field(
+        ...,
+        description="Tipo sanguíneo",
+        example="O+"
+    )
+    alergias: str = Field(
+        ...,
+        description="Alergias",
+        example="Penicilina, Dipirona"
+    )
+    condicoes_medicas: str = Field(
+        ...,
+        description="Condições médicas",
+        example="Hipertensão, Diabetes Tipo 1"
+    )
+    contacto_emergencia_nome: str = Field(
+        ...,
+        description="Contacto de emergência",
+        example="João Silva"
+    )
+    contacto_emergencia_telefone: str = Field(
+        ...,
+        description="Telefone de emergência",
+        example="(86) 99999-9999"
+    )
+    qr_code_token: str = Field(
+        ...,
+        description="Token único do QR Code de emergência",
+        example="QR-EMERG-ABC123XYZ"
+    )
+    data_registo: datetime = Field(
+        ...,
+        description="Data de criação do perfil",
+        example="2026-10-28T14:30:00"
+    )
 
     class Config:
         from_attributes = True
+
 
 @router.post(
     "/",
     response_model=EmergencyProfileResponse,
     summary="Criar Perfil de QR Code de Emergência",
-    description="Regista um novo perfil médico de emergência e gera um token QR Code único para acesso rápido por equipas de socorro."
+    description=(
+        "Regista um novo perfil médico de emergência e gera "
+        "um token QR Code único para acesso rápido por "
+        "equipas de socorro."
+    )
 )
 def criar_perfil_emergencia(
     payload: EmergencyProfileCreate,
     db: Session = Depends(database.get_db)
 ):
     qr_token = f"QR-EMERG-{uuid.uuid4().hex[:8].upper()}"
-    
+
     if not hasattr(models, "EmergencyItem"):
-        raise HTTPException(status_code=500, detail="Tabela de emergência não configurada no models.py.")
+        raise HTTPException(
+            status_code=500,
+            detail="Tabela de emergência não configurada no models.py."
+        )
 
     db_emergencia = models.EmergencyItem(
         **payload.model_dump(),
@@ -96,91 +197,166 @@ def criar_perfil_emergencia(
     db.refresh(db_emergencia)
     return db_emergencia
 
+
 @router.get(
     "/",
     response_model=List[EmergencyProfileResponse],
     summary="Listar Perfis de Emergência",
-    description="Retorna a lista de todos os perfis médicos de emergência cadastrados no sistema."
+    description=(
+        "Retorna a lista de todos os perfis médicos "
+        "de emergência cadastrados no sistema."
+    )
 )
 def listar_emergencias(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(database.get_db)
 ):
-    return db.query(models.EmergencyItem).offset(skip).limit(limit).all()
+    return (
+        db.query(models.EmergencyItem)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
 
 @router.post(
     "/consultar/",
     response_model=EmergencyProfileResponse,
     summary="Consultar Emergência por Token QR Code",
-    description="Permite que serviços de socorro consultem rapidamente os dados críticos de saúde através do token do QR Code."
+    description=(
+        "Permite que serviços de socorro consultem "
+        "rapidamente os dados críticos de saúde "
+        "através do token do QR Code."
+    )
 )
 def consultar_por_qrcode(
     payload: EmergencyValidateToken,
     db: Session = Depends(database.get_db)
 ):
-    db_emergencia = db.query(models.EmergencyItem).filter(
-        models.EmergencyItem.qr_code_token == payload.qr_code_token
-    ).first()
-    
+    db_emergencia = (
+        db.query(models.EmergencyItem)
+        .filter(
+            models.EmergencyItem.qr_code_token
+            == payload.qr_code_token
+        )
+        .first()
+    )
+
     if not db_emergencia:
-        raise HTTPException(status_code=404, detail="Perfil de emergência não encontrado para o token fornecido.")
-    
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Perfil de emergência não encontrado "
+                "para o token fornecido."
+            )
+        )
+
     return db_emergencia
+
 
 @router.post(
     "/acionar-samu/",
-    summary="Acionamento Imediato do SAMU com Geolocalização, Triagem de Rede e Alerta ao Familiar",
-    description="Processa o QR Code de emergência, captura a localização exata, define o encaminhamento hospitalar e dispara a notificação automática ao familiar responsável."
+    summary=(
+        "Acionamento Imediato do SAMU com Geolocalização, "
+        "Triagem de Rede e Alerta ao Familiar"
+    ),
+    description=(
+        "Processa o QR Code de emergência, captura "
+        "a localização exata, define o encaminhamento "
+        "hospitalar e dispara a notificação automática "
+        "ao familiar responsável."
+    )
 )
 def acionar_samu_emergencia(
     payload: AcionamentoSamuPayload,
     db: Session = Depends(database.get_db)
 ):
     # Procura o perfil de emergência pelo token do QR Code
-    emergencia = db.query(models.EmergencyItem).filter(
-        models.EmergencyItem.qr_code_token == payload.qr_code_token
-    ).first()
+    emergencia = (
+        db.query(models.EmergencyItem)
+        .filter(
+            models.EmergencyItem.qr_code_token
+            == payload.qr_code_token
+        )
+        .first()
+    )
 
     if not emergencia:
         raise HTTPException(
-            status_code=404, 
-            detail="Perfil de emergência não encontrado para o token fornecido."
+            status_code=404,
+            detail=(
+                "Perfil de emergência não encontrado "
+                "para o token fornecido."
+            )
         )
 
-    # Verifica os dados do cidadão associado para checar plano de saúde ou cobertura (se houver registo)
+    # Verifica os dados do cidadão associado
+    # para checar plano de saúde ou cobertura
     cidadao = None
-    if emergencia.cidadao_id and hasattr(models, "CidadaoPerfil"):
-        cidadao = db.query(models.CidadaoPerfil).filter(
-            models.CidadaoPerfil.id == emergencia.cidadao_id
-        ).first()
 
-    possui_plano = cidadao and getattr(cidadao, "possui_plano_saude", False)
-    operadora = getattr(cidadao, "operadora_plano_saude", "Nenhum (Rede Pública)") if (cidadao and possui_plano) else "Nenhum (Rede Pública)"
+    if emergencia.cidadao_id and hasattr(
+        models, "CidadaoPerfil"
+    ):
+        cidadao = (
+            db.query(models.CidadaoPerfil)
+            .filter(
+                models.CidadaoPerfil.id
+                == emergencia.cidadao_id
+            )
+            .first()
+        )
+
+    possui_plano = (
+        cidadao
+        and getattr(cidadao, "possui_plano_saude", False)
+    )
+
+    operadora = (
+        getattr(
+            cidadao,
+            "operadora_plano_saude",
+            "Nenhum (Rede Pública)"
+        )
+        if (cidadao and possui_plano)
+        else "Nenhum (Rede Pública)"
+    )
 
     destino_sugerido = (
-        f"Rede Particular / Hospital Credenciado ({operadora})" 
-        if possui_plano 
+        f"Rede Particular / Hospital Credenciado ({operadora})"
+        if possui_plano
         else "Rede Pública de Saúde (SUS - UPA / Hospital de Urgência)"
     )
 
-    # Registo estruturado do alerta disparado para o familiar responsável em simultâneo
+    # Registo estruturado do alerta ao familiar
     notificacao_familiar = {
-        "destinatario_familiar": emergencia.contacto_emergencia_nome,
-        "telefone_contacto": emergencia.contacto_emergencia_telefone,
+        "destinatario_familiar": (
+            emergencia.contacto_emergencia_nome
+        ),
+        "telefone_contacto": (
+            emergencia.contacto_emergencia_telefone
+        ),
         "mensagem_enviada": (
             f"🚨 ALERTA DE EMERGÊNCIA - SUAS Saúde\n"
-            f"O(A) cidadão(ã) {emergencia.cidadao_nome} acionou o SAMU.\n"
-            f"📍 Localização: https://maps.google.com/?q={payload.latitude},{payload.longitude}\n"
+            f"O(A) cidadão(ã) {emergencia.cidadao_nome} "
+            f"acionou o SAMU.\n"
+            f"📍 Localização: "
+            f"https://maps.google.com/?q="
+            f"{payload.latitude},{payload.longitude}\n"
             f"🏥 Encaminhamento: {destino_sugerido}"
         ),
         "status_envio": "DISPARADO_EM_TEMPO_REAL"
     }
 
-    # Retorna o pacote completo para a central do SAMU e painel de controlo
+    # Retorna o pacote completo para a central
+    # do SAMU e painel de controlo
     return {
-        "status_despacho": "ALERTA VERMELHO - AMBULÂNCIA ACIONADA",
-        "timestamp_acionamento": datetime.utcnow().isoformat(),
+        "status_despacho": (
+            "ALERTA VERMELHO - AMBULÂNCIA ACIONADA"
+        ),
+        "timestamp_acionamento": (
+            datetime.utcnow().isoformat()
+        ),
         "localizacao_exata": {
             "latitude": payload.latitude,
             "longitude": payload.longitude,
@@ -198,4 +374,153 @@ def acionar_samu_emergencia(
             "detalhe_cobertura": operadora,
             "direcionamento_hospitalar": destino_sugerido
         }
+    }
+
+
+# =====================================================
+# NOVA INCLUSÃO — INTEGRAÇÃO COM CENTRAL SAMU
+# =====================================================
+# As funções acima foram preservadas.
+#
+# Esta nova rota permite consultar o cadastro
+# clínico vinculado a uma ocorrência registrada
+# no SUAS.
+#
+# Exige autenticação profissional e registra
+# a consulta para auditoria.
+#
+# IMPORTANTE:
+# Antes de uso real, restringir também o acesso
+# por profissional e ocorrência atribuída.
+# =====================================================
+
+import suas_samu
+from sqlalchemy import select
+
+
+@router.get(
+    "/integracao-central/ocorrencias/{ocorrencia_id}/ficha",
+    summary="SUAS — Ficha de emergência para Central SAMU"
+)
+def ficha_integrada_central(
+    ocorrencia_id: str,
+    db: Session = Depends(database.get_db),
+    usuario=Depends(
+        suas_samu.permitir(
+            "medico",
+            "operador",
+            "equipe"
+        )
+    )
+):
+    ocorrencia = suas_samu.buscar_ocorrencia(
+        db,
+        ocorrencia_id
+    )
+
+    if not ocorrencia.cidadao_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Ocorrência sem cidadão vinculado."
+        )
+
+    cidadao = db.get(
+        models.CidadaoPerfil,
+        ocorrencia.cidadao_id
+    )
+
+    perfil = db.scalar(
+        select(models.EmergencyItem)
+        .where(
+            models.EmergencyItem.cidadao_id
+            == ocorrencia.cidadao_id
+        )
+        .order_by(
+            models.EmergencyItem.data_registo.desc()
+        )
+    )
+
+    if not cidadao and not perfil:
+        raise HTTPException(
+            status_code=404,
+            detail="Ficha clínica não cadastrada."
+        )
+
+    medicamentos = db.scalars(
+        select(models.MedicamentoCidadao)
+        .where(
+            models.MedicamentoCidadao.cidadao_id
+            == ocorrencia.cidadao_id
+        )
+    ).all()
+
+    suas_samu.registrar(
+        db,
+        ocorrencia.id,
+        "FICHA_EMERGENCIA_CONSULTADA",
+        usuario,
+        {
+            "origem": "integracao_qr",
+            "perfil": usuario["perfil"]
+        }
+    )
+
+    db.commit()
+
+    def valor(*opcoes):
+        for opcao in opcoes:
+            if opcao is not None and opcao != "":
+                return opcao
+        return None
+
+    return {
+        "ocorrencia_id": ocorrencia.id,
+        "protocolo": ocorrencia.protocolo,
+        "paciente": {
+            "nome": valor(
+                getattr(cidadao, "nome_completo", None),
+                getattr(perfil, "cidadao_nome", None)
+            ),
+            "idade": None,
+            "tipo_sanguineo": valor(
+                getattr(perfil, "tipo_sanguineo", None),
+                getattr(cidadao, "tipo_sanguineo", None)
+            ),
+            "alergias": valor(
+                getattr(perfil, "alergias", None),
+                getattr(cidadao, "alergias", None)
+            ),
+            "comorbidades": valor(
+                getattr(perfil, "condicoes_medicas", None),
+                getattr(cidadao, "condicoes_cronicas", None)
+            ),
+            "medicamentos_cadastrados": [
+                medicamento.nome_medicamento
+                for medicamento in medicamentos
+                if medicamento.nome_medicamento
+            ]
+        },
+        "localizacao": {
+            "latitude": ocorrencia.latitude,
+            "longitude": ocorrencia.longitude,
+            "referencia": ocorrencia.referencia
+        },
+        "contato_emergencia": {
+            "nome": getattr(
+                perfil,
+                "contacto_emergencia_nome",
+                None
+            ),
+            "telefone": getattr(
+                perfil,
+                "contacto_emergencia_telefone",
+                None
+            )
+        },
+        "observacoes": [
+            "Dados obtidos do cadastro do paciente.",
+            "Idade indisponível no modelo atual.",
+            "Medicamentos cadastrados não confirmam uso atual.",
+            "Consulta registrada para auditoria."
+        ]
     }
