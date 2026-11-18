@@ -1,3 +1,4 @@
+
 from ai_engine import PatientDataSchema, ai_predictor
 import cco_cpo_external
 from fastapi import Depends, FastAPI, HTTPException
@@ -5,12 +6,38 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
-import cidadao, database, educacao_medica, emergency_qrcode, farmacia, fhir_integration, laboratorio, medico, models, regulacao, suas_social, triagem
+import cidadao
+import database
+import educacao_medica
+import emergency_qrcode
+import farmacia
+import fhir_integration
+import laboratorio
+import medico
+import models
+import regulacao
+import suas_social
+import triagem
 
-# Inicialização das tabelas
+# =====================================================
+# NOVOS MÓDULOS - SUAS SAMU 192
+# =====================================================
+
+import suas_samu
+import samu_integracoes
+
+
+# =====================================================
+# INICIALIZAÇÃO DAS TABELAS
+# =====================================================
+
 models.Base.metadata.create_all(bind=database.engine)
 
-# Atualização controlada das colunas de regulação
+
+# =====================================================
+# ATUALIZAÇÃO CONTROLADA DAS COLUNAS DE REGULAÇÃO
+# =====================================================
+
 with database.engine.begin() as conn:
     colunas_novas = [
         ("paciente_nome", "VARCHAR"),
@@ -49,31 +76,57 @@ with database.engine.begin() as conn:
                 )
             )
 
+
+# =====================================================
+# APLICAÇÃO PRINCIPAL FASTAPI
+# =====================================================
+
 app = FastAPI(
     title="SUAS Saúde / Saúde +Fácil",
     description="""
     ## Ecossistema Integrado de Saúde, Assistência Social e Inovação Tecnológica
 
     Esta API disponibiliza serviços operacionais para:
+
     * **App do Cidadão**: Onboarding, gestão de planos de saúde, alarmes de medicamentos (contínuos e temporários), scanner preventivo e QR Code de emergência/tela de bloqueio.
+
     * **Regulação**: Gestão centralizada de solicitações, leitos e encaminhamentos médicos com priorização intersetorial via SUAS.
+
     * **Painel do Médico**: Prescrições clínicas, geração de QR Code de farmácia e pedidos de regulação.
+
     * **Laboratório e Retornos**: Gestão de resultados de exames, notificações e agendamento automático de retorno.
+
     * **Triagem de Manchester**: Classificação de risco e priorização de atendimento.
+
     * **Assistência Social (SUAS)**: Registo e acompanhamento de cidadãos em situação de vulnerabilidade.
+
     * **Interoperabilidade FHIR**: Troca padronizada de dados de saúde (R4).
+
     * **QR Code de Emergência**: Acionamento rápido e suporte com dados clínicos críticos.
+
     * **Farmácia Digital**: Gestão e retirada de medicamentos por QR Code.
+
     * **Educação Médica**: Módulos de capacitação, formação continuada e créditos CME.
+
     * **CCO / CPO (Setor Externo Isolado)**: Canal seguro e segregado para reporte de ocorrências e gestão operacional descentralizada.
+
+    * **SUAS SAMU 192**: API de registro de solicitações SOS, regulação médica, acompanhamento de ocorrências, gestão de ambulâncias e comunicação em tempo real.
+
+    * **Integração SAMU e QR Code**: Registro de solicitação de socorro por QR Code e consulta de ficha clínica restrita aos profissionais autenticados.
     """,
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
-# CORS: configuração provisória, pendente de restrição
-# às origens autorizadas na etapa de segurança.
+
+# =====================================================
+# CONFIGURAÇÃO CORS
+# =====================================================
+
+# Configuração provisória.
+# Restringir às origens autorizadas antes da produção.
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -81,6 +134,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# =====================================================
+# ROTA PRINCIPAL
+# =====================================================
 
 @app.get("/", tags=["Início"])
 def read_root():
@@ -100,24 +158,86 @@ def read_root():
             "Farmácia Digital & Retirada por QR Code",
             "Educação Continuada & Indústria Farmacêutica",
             "Motor de IA Preditiva de Eventos Adversos",
-            "CCO / CPO - Setor Externo Isolado"
+            "CCO / CPO - Setor Externo Isolado",
+            "SUAS SAMU 192 - API de Regulação de Urgências",
+            "SUAS SAMU - Integração com QR Code e Ficha Clínica"
         ]
     }
 
-# Registro dos módulos existentes
-app.include_router(regulacao.router, prefix="/regulacao", tags=["Regulação"])
+
+# =====================================================
+# REGISTRO DOS MÓDULOS EXISTENTES
+# =====================================================
+
+app.include_router(
+    regulacao.router,
+    prefix="/regulacao",
+    tags=["Regulação"]
+)
+
 app.include_router(medico.router)
+
 app.include_router(laboratorio.router)
-app.include_router(triagem.router, prefix="/triagem", tags=["Triagem de Manchester"])
-app.include_router(suas_social.router, prefix="/suas", tags=["Assistência Social (SUAS)"])
-app.include_router(fhir_integration.router, prefix="/fhir", tags=["Interoperabilidade FHIR"])
-app.include_router(emergency_qrcode.router, prefix="/emergencia", tags=["QR Code de Emergência"])
-app.include_router(farmacia.router, prefix="/farmacia", tags=["Farmácia Digital"])
-app.include_router(educacao_medica.router, prefix="/educacao", tags=["Educação Médica"])
+
+app.include_router(
+    triagem.router,
+    prefix="/triagem",
+    tags=["Triagem de Manchester"]
+)
+
+app.include_router(
+    suas_social.router,
+    prefix="/suas",
+    tags=["Assistência Social (SUAS)"]
+)
+
+app.include_router(
+    fhir_integration.router,
+    prefix="/fhir",
+    tags=["Interoperabilidade FHIR"]
+)
+
+app.include_router(
+    emergency_qrcode.router,
+    prefix="/emergencia",
+    tags=["QR Code de Emergência"]
+)
+
+app.include_router(
+    farmacia.router,
+    prefix="/farmacia",
+    tags=["Farmácia Digital"]
+)
+
+app.include_router(
+    educacao_medica.router,
+    prefix="/educacao",
+    tags=["Educação Médica"]
+)
+
 app.include_router(cidadao.router)
+
 app.include_router(cco_cpo_external.router)
 
-# Inteligência artificial e farmacovigilância
+
+# =====================================================
+# NOVO - CENTRAL SUAS SAMU 192
+# =====================================================
+
+app.include_router(suas_samu.router)
+
+
+# =====================================================
+# NOVO - INTEGRAÇÃO SAMU E QR CODE
+# =====================================================
+
+app.include_router(samu_integracoes.router)
+
+
+# =====================================================
+# INTELIGÊNCIA ARTIFICIAL E FARMACOVIGILÂNCIA
+# =====================================================
+
 @app.post(
     "/api/v1/predict-adverse-event",
     tags=["Inteligência Preditiva (IA)"],
@@ -126,17 +246,25 @@ app.include_router(cco_cpo_external.router)
 def predict_adverse_event(patient_data: PatientDataSchema):
     try:
         data_dict = patient_data.dict()
+
         resultado = ai_predictor.predict_risk(data_dict)
+
         return {
             "status": "sucesso",
             "dados_analisados": data_dict,
             "predicao": resultado
         }
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Erro ao processar predição de IA: {str(e)}"
         )
+
+
+# =====================================================
+# ANÁLISE PREDITIVA INTEGRADA DO CIDADÃO
+# =====================================================
 
 @app.get(
     "/api/v1/predict-adverse-event/cidadao/{cidadao_id}",
@@ -148,7 +276,9 @@ def predict_adverse_event_cidadao(
     idade: int = 55,
     db: Session = Depends(database.get_db)
 ):
-    cidadao_obj = db.query(models.CidadaoPerfil).filter(
+    cidadao_obj = db.query(
+        models.CidadaoPerfil
+    ).filter(
         models.CidadaoPerfil.id == cidadao_id
     ).first()
 
@@ -158,19 +288,27 @@ def predict_adverse_event_cidadao(
             detail="Cidadão não encontrado."
         )
 
-    medicamentos_app = db.query(models.MedicamentoCidadao).filter(
+    medicamentos_app = db.query(
+        models.MedicamentoCidadao
+    ).filter(
         models.MedicamentoCidadao.cidadao_id == cidadao_id
     ).all()
 
-    prescricoes_farmacia = db.query(models.MedicamentoItem).filter(
+    prescricoes_farmacia = db.query(
+        models.MedicamentoItem
+    ).filter(
         models.MedicamentoItem.cidadao_id == cidadao_id
     ).all()
 
-    automedicacoes = db.query(models.AutomedicacaoLog).filter(
+    automedicacoes = db.query(
+        models.AutomedicacaoLog
+    ).filter(
         models.AutomedicacaoLog.cidadao_id == cidadao_id
     ).all()
 
-    triagens = db.query(models.Triagem).filter(
+    triagens = db.query(
+        models.Triagem
+    ).filter(
         models.Triagem.paciente_nome == cidadao_obj.nome_completo
     ).all()
 
@@ -182,4 +320,3 @@ def predict_adverse_event_cidadao(
         triagens=triagens,
         idade_estimada=idade
     )
-
