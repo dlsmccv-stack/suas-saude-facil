@@ -1,8 +1,11 @@
 
+from pathlib import Path
+
 from ai_engine import PatientDataSchema, ai_predictor
 import cco_cpo_external
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
@@ -20,11 +23,18 @@ import suas_social
 import triagem
 
 # =====================================================
-# NOVOS MÓDULOS - SUAS SAMU 192
+# MÓDULOS SUAS SAMU 192
 # =====================================================
 
 import suas_samu
 import samu_integracoes
+
+
+# =====================================================
+# DIRETÓRIO PRINCIPAL DA APLICAÇÃO
+# =====================================================
+
+BASE_DIR = Path(__file__).resolve().parent
 
 
 # =====================================================
@@ -88,31 +98,54 @@ app = FastAPI(
 
     Esta API disponibiliza serviços operacionais para:
 
-    * **App do Cidadão**: Onboarding, gestão de planos de saúde, alarmes de medicamentos (contínuos e temporários), scanner preventivo e QR Code de emergência/tela de bloqueio.
+    * **App do Cidadão**: Onboarding, gestão de planos de saúde,
+      alarmes de medicamentos (contínuos e temporários),
+      scanner preventivo e QR Code de emergência/tela de bloqueio.
 
-    * **Regulação**: Gestão centralizada de solicitações, leitos e encaminhamentos médicos com priorização intersetorial via SUAS.
+    * **Regulação**: Gestão centralizada de solicitações,
+      leitos e encaminhamentos médicos com priorização
+      intersetorial via SUAS.
 
-    * **Painel do Médico**: Prescrições clínicas, geração de QR Code de farmácia e pedidos de regulação.
+    * **Painel do Médico**: Prescrições clínicas,
+      geração de QR Code de farmácia e pedidos de regulação.
 
-    * **Laboratório e Retornos**: Gestão de resultados de exames, notificações e agendamento automático de retorno.
+    * **Laboratório e Retornos**: Gestão de resultados de exames,
+      notificações e agendamento automático de retorno.
 
-    * **Triagem de Manchester**: Classificação de risco e priorização de atendimento.
+    * **Triagem de Manchester**: Classificação de risco
+      e priorização de atendimento.
 
-    * **Assistência Social (SUAS)**: Registo e acompanhamento de cidadãos em situação de vulnerabilidade.
+    * **Assistência Social (SUAS)**: Registo e acompanhamento
+      de cidadãos em situação de vulnerabilidade.
 
-    * **Interoperabilidade FHIR**: Troca padronizada de dados de saúde (R4).
+    * **Interoperabilidade FHIR**: Troca padronizada
+      de dados de saúde (R4).
 
-    * **QR Code de Emergência**: Acionamento rápido e suporte com dados clínicos críticos.
+    * **QR Code de Emergência**: Acionamento rápido
+      e suporte com dados clínicos críticos.
 
-    * **Farmácia Digital**: Gestão e retirada de medicamentos por QR Code.
+    * **Farmácia Digital**: Gestão e retirada
+      de medicamentos por QR Code.
 
-    * **Educação Médica**: Módulos de capacitação, formação continuada e créditos CME.
+    * **Educação Médica**: Módulos de capacitação,
+      formação continuada e créditos CME.
 
-    * **CCO / CPO (Setor Externo Isolado)**: Canal seguro e segregado para reporte de ocorrências e gestão operacional descentralizada.
+    * **CCO / CPO (Setor Externo Isolado)**:
+      Canal seguro e segregado para reporte
+      de ocorrências e gestão operacional descentralizada.
 
-    * **SUAS SAMU 192**: API de registro de solicitações SOS, regulação médica, acompanhamento de ocorrências, gestão de ambulâncias e comunicação em tempo real.
+    * **SUAS SAMU 192**: API de registro de solicitações SOS,
+      regulação médica, acompanhamento de ocorrências,
+      gestão de ambulâncias e comunicação em tempo real.
 
-    * **Integração SAMU e QR Code**: Registro de solicitação de socorro por QR Code e consulta de ficha clínica restrita aos profissionais autenticados.
+    * **Integração SAMU e QR Code**:
+      Registro de solicitação de socorro por QR Code
+      e consulta de ficha clínica restrita aos
+      profissionais autenticados.
+
+    * **Interface Central SAMU 192**:
+      Painel web de acompanhamento operacional,
+      regulação e gestão de ocorrências.
     """,
     version="1.0.0",
     docs_url="/docs",
@@ -124,8 +157,8 @@ app = FastAPI(
 # CONFIGURAÇÃO CORS
 # =====================================================
 
-# Configuração provisória.
-# Restringir às origens autorizadas antes da produção.
+# Configuração provisória herdada do projeto.
+# Antes da produção, restringir às origens autorizadas.
 
 app.add_middleware(
     CORSMiddleware,
@@ -160,7 +193,8 @@ def read_root():
             "Motor de IA Preditiva de Eventos Adversos",
             "CCO / CPO - Setor Externo Isolado",
             "SUAS SAMU 192 - API de Regulação de Urgências",
-            "SUAS SAMU - Integração com QR Code e Ficha Clínica"
+            "SUAS SAMU - Integração com QR Code e Ficha Clínica",
+            "SUAS SAMU 192 - Interface Web da Central"
         ]
     }
 
@@ -221,17 +255,58 @@ app.include_router(cco_cpo_external.router)
 
 
 # =====================================================
-# NOVO - CENTRAL SUAS SAMU 192
+# CENTRAL SUAS SAMU 192 - API
 # =====================================================
 
 app.include_router(suas_samu.router)
 
 
 # =====================================================
-# NOVO - INTEGRAÇÃO SAMU E QR CODE
+# INTEGRAÇÃO SAMU E QR CODE
 # =====================================================
 
 app.include_router(samu_integracoes.router)
+
+
+# =====================================================
+# INTERFACE WEB - CENTRAL SUAS SAMU 192
+# =====================================================
+
+@app.get(
+    "/central-samu",
+    include_in_schema=False
+)
+@app.get(
+    "/central-samu/",
+    include_in_schema=False
+)
+def abrir_central_samu():
+    """
+    Disponibiliza a interface HTML da Central SAMU.
+
+    A autenticação das operações é realizada
+    pelos endpoints protegidos da API.
+    """
+
+    arquivo = BASE_DIR / "central-samu" / "index.html"
+
+    if not arquivo.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Interface da Central SAMU não encontrada. "
+                "Verifique central-samu/index.html."
+            )
+        )
+
+    return FileResponse(
+        path=str(arquivo),
+        media_type="text/html",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff"
+        }
+    )
 
 
 # =====================================================
@@ -241,13 +316,20 @@ app.include_router(samu_integracoes.router)
 @app.post(
     "/api/v1/predict-adverse-event",
     tags=["Inteligência Preditiva (IA)"],
-    summary="Avalia o risco de evento adverso no prontuário (parâmetros manuais)"
+    summary=(
+        "Avalia o risco de evento adverso no prontuário "
+        "(parâmetros manuais)"
+    )
 )
-def predict_adverse_event(patient_data: PatientDataSchema):
+def predict_adverse_event(
+    patient_data: PatientDataSchema
+):
     try:
         data_dict = patient_data.dict()
 
-        resultado = ai_predictor.predict_risk(data_dict)
+        resultado = ai_predictor.predict_risk(
+            data_dict
+        )
 
         return {
             "status": "sucesso",
@@ -258,7 +340,10 @@ def predict_adverse_event(patient_data: PatientDataSchema):
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Erro ao processar predição de IA: {str(e)}"
+            detail=(
+                "Erro ao processar predição de IA: "
+                f"{str(e)}"
+            )
         )
 
 
@@ -269,7 +354,10 @@ def predict_adverse_event(patient_data: PatientDataSchema):
 @app.get(
     "/api/v1/predict-adverse-event/cidadao/{cidadao_id}",
     tags=["Inteligência Preditiva (IA)"],
-    summary="Análise Preditiva Integrada do Cidadão (Medicamentos, Automedicação & Alergias)"
+    summary=(
+        "Análise Preditiva Integrada do Cidadão "
+        "(Medicamentos, Automedicação & Alergias)"
+    )
 )
 def predict_adverse_event_cidadao(
     cidadao_id: int,
