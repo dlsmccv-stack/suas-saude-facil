@@ -3,519 +3,1198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SUAS Saúde / Saúde +Fácil — Painel Integrado</title>
-    <!-- Tailwind CSS CDN -->
+    <title>SUAS Saúde +Fácil | Central Integrada</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --navy: #10263f;
+            --navy-deep: #0b1c30;
+            --blue: #2563eb;
+            --teal: #0d9488;
+            --surface: #f4f7fb;
+        }
+
+        body {
+            background: var(--surface);
+            color: #1e293b;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+                BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #10263f 0%, #0b1c30 100%);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 11px 14px;
+            border-radius: 12px;
+            color: #b8c7d9;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: left;
+            transition: .2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,.08);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(90deg, #2563eb, #0d9488);
+            color: white;
+            box-shadow: 0 5px 18px rgba(37,99,235,.22);
+        }
+
+        .nav-item i {
+            width: 18px;
+            height: 18px;
+        }
+
+        .panel {
+            background: white;
+            border: 1px solid #e5edf5;
+            border-radius: 18px;
+            box-shadow: 0 4px 18px rgba(15, 35, 65, .035);
+        }
+
+        .kpi-card {
+            position: relative;
+            overflow: hidden;
+            background: white;
+            border: 1px solid #e5edf5;
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 4px 18px rgba(15, 35, 65, .035);
+        }
+
+        .kpi-icon {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 13px;
+        }
+
+        .input-premium {
+            width: 100%;
+            border: 1px solid #dce5ef;
+            background: #f8fafc;
+            color: #1e293b;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 14px;
+            outline: none;
+            transition: .2s;
+        }
+
+        .input-premium:focus {
+            border-color: #60a5fa;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+        }
+
+        .table-head {
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+        }
+
+        .table-row:hover {
+            background: #f8fafc;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb, #0d9488);
+            color: white;
+            border-radius: 12px;
+            padding: 11px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            transition: .2s;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: .6;
+            cursor: wait;
+            transform: none;
+        }
+
+        .view-section {
+            animation: fadeIn .25s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 1023px) {
+            #sidebar {
+                transform: translateX(-100%);
+                transition: transform .25s ease;
+                position: fixed;
+                z-index: 50;
+            }
+
+            #sidebar.open {
+                transform: translateX(0);
+            }
+
+            #sidebar-overlay.visible {
+                display: block;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .kpi-card { padding: 16px; }
+            .panel { border-radius: 15px; }
+        }
+    </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
-    <!-- BARRA SUPERIOR / CABEÇALHO DE REDE -->
-    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
-        <div class="flex items-center gap-3">
-            <div class="p-2 bg-indigo-600 rounded-lg">
-                <i data-lucide="shield-alert" class="w-6 h-6 text-white"></i>
+<body class="min-h-screen">
+
+<div class="flex min-h-screen">
+
+    <!-- OVERLAY MOBILE -->
+    <div id="sidebar-overlay"
+         onclick="toggleSidebar()"
+         class="hidden fixed inset-0 bg-slate-950/50 z-40"></div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="sidebar w-72 min-h-screen flex flex-col text-white shrink-0">
+
+        <div class="px-6 py-6 border-b border-white/10">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-teal-400 flex items-center justify-center shadow-lg">
+                    <i data-lucide="heart-pulse" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold tracking-wide text-lg">SUAS</h1>
+                    <p class="text-[10px] tracking-[.15em] uppercase text-blue-200">
+                        Saúde +Fácil
+                    </p>
+                </div>
             </div>
-            <div>
-                <h1 class="text-xl font-bold tracking-wide">SUAS Saúde / Saúde +Fácil</h1>
-                <p class="text-xs text-slate-400">CCO/CPO • Regulação Intersetorial SUAS • Farmacovigilância IA</p>
+            <div class="mt-5 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+                <p class="text-[10px] uppercase tracking-wider text-slate-400">
+                    Plataforma integrada
+                </p>
+                <p class="text-xs text-slate-200 mt-1">Gestão inteligente em saúde</p>
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3">
-            <!-- Seletor de Servidor API (Local vs Render) -->
-            <select id="api-env-select" onchange="trocarAmbienteAPI()" class="bg-slate-950 border border-slate-700 rounded-full text-xs px-3 py-2 text-slate-300 font-medium">
-                <option value="http://127.0.0.1:8000">Servidor Local (127.0.0.1:8000)</option>
-                <option value="https://suas-saude-facil.onrender.com">Servidor Nuvem (Render)</option>
-            </select>
+        <nav class="flex-1 px-4 py-5 space-y-1 overflow-y-auto">
 
-            <!-- Indicador de Status da API -->
-            <div id="status-badge" class="flex items-center gap-2 bg-slate-950 px-4 py-2 rounded-full border border-slate-800">
-                <span class="w-3 h-3 rounded-full bg-amber-500 animate-pulse" id="status-dot"></span>
-                <span class="text-xs font-semibold text-slate-300" id="status-text">A Conectar...</span>
+            <p class="px-3 mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-slate-500">
+                Operações
+            </p>
+
+            <button id="tab-dashboard-btn" onclick="switchTab('dashboard')"
+                    class="nav-item active">
+                <i data-lucide="layout-dashboard"></i>
+                Dashboard Executivo
+            </button>
+
+            <button id="tab-campo-btn" onclick="switchTab('campo')"
+                    class="nav-item">
+                <i data-lucide="radio-tower"></i>
+                Reportar Ocorrência
+            </button>
+
+            <button id="tab-regulacao-btn" onclick="switchTab('regulacao')"
+                    class="nav-item">
+                <i data-lucide="heart-handshake"></i>
+                Regulação × SUAS
+            </button>
+
+            <button id="tab-ia-btn" onclick="switchTab('ia')"
+                    class="nav-item">
+                <i data-lucide="brain-circuit"></i>
+                Farmacovigilância IA
+            </button>
+
+            <div class="pt-5">
+                <p class="px-3 mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-slate-500">
+                    Ecossistema
+                </p>
+
+                <div class="px-3 py-2 text-xs text-slate-400 flex items-center gap-3">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    App do Cidadão
+                </div>
+
+                <div class="px-3 py-2 text-xs text-slate-400 flex items-center gap-3">
+                    <i data-lucide="stethoscope" class="w-4 h-4"></i>
+                    Painel Médico
+                </div>
+
+                <div class="px-3 py-2 text-xs text-slate-400 flex items-center gap-3">
+                    <i data-lucide="pill" class="w-4 h-4"></i>
+                    Farmácia Digital
+                </div>
+
+                <div class="px-3 py-2 text-xs text-slate-400 flex items-center gap-3">
+                    <i data-lucide="activity" class="w-4 h-4"></i>
+                    Triagem Inteligente
+                </div>
+
+                <div class="px-3 py-2 text-xs text-slate-400 flex items-center gap-3">
+                    <i data-lucide="network" class="w-4 h-4"></i>
+                    Interoperabilidade FHIR
+                </div>
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-white/10">
+            <div class="flex items-center gap-3 px-2">
+                <div class="w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-teal-300"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-white">Ambiente protegido</p>
+                    <p class="text-[10px] text-slate-400">Central de operações</p>
+                </div>
             </div>
         </div>
-    </header>
+    </aside>
 
-    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+    <!-- ÁREA PRINCIPAL -->
+    <div class="flex-1 min-w-0">
 
-        <!-- NAVEGAÇÃO ENTRE VISÕES (ABAS) -->
-        <div class="flex flex-wrap border-b border-slate-800 gap-2">
-            <button id="tab-dashboard-btn" onclick="switchTab('dashboard')" class="px-5 py-3 font-semibold text-sm border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2">
-                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Central CCO/CPO
-            </button>
-            <button id="tab-campo-btn" onclick="switchTab('campo')" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
-                <i data-lucide="radio" class="w-4 h-4"></i> Reportar de Campo (PWA)
-            </button>
-            <button id="tab-regulacao-btn" onclick="switchTab('regulacao')" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
-                <i data-lucide="heart-handshake" class="w-4 h-4"></i> Regulação × SUAS
-            </button>
-            <button id="tab-ia-btn" onclick="switchTab('ia')" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
-                <i data-lucide="brain-circuit" class="w-4 h-4"></i> Farmacovigilância IA
-            </button>
-        </div>
+        <!-- TOPBAR -->
+        <header class="bg-white border-b border-slate-200 px-4 md:px-8 py-4">
+            <div class="flex flex-wrap items-center justify-between gap-4">
 
-        <!-- VISÃO 1: DASHBOARD CENTRAL CCO/CPO -->
-        <section id="view-dashboard" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                    <span class="text-xs text-slate-400 uppercase font-bold">Total Ocorrências</span>
-                    <div class="text-3xl font-extrabold mt-2 text-white" id="kpi-total">0</div>
-                </div>
-                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                    <span class="text-xs text-amber-400 uppercase font-bold">Pendentes</span>
-                    <div class="text-3xl font-extrabold mt-2 text-amber-400" id="kpi-pendentes">0</div>
-                </div>
-                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                    <span class="text-xs text-rose-400 uppercase font-bold">Urgência Alta</span>
-                    <div class="text-3xl font-extrabold mt-2 text-rose-400" id="kpi-altas">0</div>
-                </div>
-                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                    <span class="text-xs text-emerald-400 uppercase font-bold">Atendidas</span>
-                    <div class="text-3xl font-extrabold mt-2 text-emerald-400" id="kpi-atendidas">0</div>
-                </div>
-            </div>
-
-            <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-                <div class="p-4 bg-slate-800/80 border-b border-slate-700 flex flex-wrap justify-between items-center gap-3">
-                    <h2 class="font-bold text-slate-200 flex items-center gap-2">
-                        <i data-lucide="list-filter" class="w-5 h-5 text-indigo-400"></i> Feed de Ocorrências em Tempo Real
-                    </h2>
-                    <div class="flex gap-2">
-                        <select id="filtro-status" onchange="carregarOcorrencias()" class="bg-slate-900 border border-slate-700 rounded-lg text-xs px-3 py-2 text-slate-300">
-                            <option value="">Todos os Status</option>
-                            <option value="Pendente">Apenas Pendentes</option>
-                            <option value="Em Atendimento">Em Atendimento</option>
-                        </select>
-                        <button onclick="carregarOcorrencias()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1">
-                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Atualizar
-                        </button>
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-slate-300">
-                        <thead class="bg-slate-900/50 text-slate-400 text-xs uppercase border-b border-slate-700">
-                            <tr>
-                                <th class="p-4">Protocolo</th>
-                                <th class="p-4">Data/Hora</th>
-                                <th class="p-4">Origem</th>
-                                <th class="p-4">Tipo</th>
-                                <th class="p-4">Urgência</th>
-                                <th class="p-4">Descrição</th>
-                                <th class="p-4">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabela-ocorrencias" class="divide-y divide-slate-700/50">
-                            <tr>
-                                <td colspan="7" class="p-6 text-center text-slate-500">A carregar dados do CCO/CPO...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- VISÃO 2: TERMINAL DE CAMPO / PWA (ENVIO) -->
-        <section id="view-campo" class="hidden max-w-xl mx-auto">
-            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4">
-                <div class="border-b border-slate-700 pb-3">
-                    <h2 class="text-lg font-bold text-slate-100">Registo Rápido de Ocorrência</h2>
-                    <p class="text-xs text-slate-400">Canal direto com o Centro de Operações (CCO/CPO)</p>
-                </div>
-
-                <form id="form-reportar" onsubmit="enviarOcorrencia(event)" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Setor de Origem</label>
-                        <select id="field-setor" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-100">
-                            <option value="Unidade Operacional Alfa">Unidade Operacional Alfa</option>
-                            <option value="Posto Beira Rio">Posto Beira Rio</option>
-                            <option value="Unidade Móvel SAMU">Unidade Móvel SAMU</option>
-                            <option value="Ponto de Apoio Central">Ponto de Apoio Central</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Tipo de Ocorrência</label>
-                        <input type="text" id="field-tipo" required placeholder="Ex: Risco Operacional, Falha de Energia, Triagem Lotação" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-100">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Nível de Urgência</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <label class="cursor-pointer border border-slate-700 rounded-lg p-3 text-center bg-slate-900 hover:border-emerald-500">
-                                <input type="radio" name="urgencia" value="Baixo" class="sr-only">
-                                <span class="text-xs font-bold text-emerald-400 block">🟢 Baixo</span>
-                            </label>
-                            <label class="cursor-pointer border border-slate-700 rounded-lg p-3 text-center bg-slate-900 hover:border-amber-500">
-                                <input type="radio" name="urgencia" value="Moderado" checked class="sr-only">
-                                <span class="text-xs font-bold text-amber-400 block">🟡 Moderado</span>
-                            </label>
-                            <label class="cursor-pointer border border-slate-700 rounded-lg p-3 text-center bg-slate-900 hover:border-rose-500">
-                                <input type="radio" name="urgencia" value="Alto" class="sr-only">
-                                <span class="text-xs font-bold text-rose-400 block">🔴 Alto</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Descrição do Evento</label>
-                        <textarea id="field-descricao" rows="3" required placeholder="Detalhe a ocorrência para a central..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-100"></textarea>
-                    </div>
-
-                    <button type="submit" id="btn-submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-lg transition-all flex justify-center items-center gap-2">
-                        <i data-lucide="send" class="w-4 h-4"></i> Transmitir Alerta ao CCO/CPO
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()"
+                            class="lg:hidden p-2 rounded-lg hover:bg-slate-100">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
-                </form>
 
-                <div id="feedback-message" class="hidden p-4 rounded-lg text-sm text-center"></div>
-            </div>
-        </section>
-
-        <!-- VISÃO 3: REGULAÇÃO × SUAS (PRIORIZAÇÃO INTERSETORIAL) -->
-        <section id="view-regulacao" class="hidden space-y-6">
-            <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-                <div class="p-4 bg-slate-800/80 border-b border-slate-700 flex flex-wrap justify-between items-center gap-3">
                     <div>
-                        <h2 class="font-bold text-slate-100 flex items-center gap-2">
-                            <i data-lucide="heart-handshake" class="w-5 h-5 text-emerald-400"></i> Fila de Regulação Priorizada (Saúde + SUAS)
+                        <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
+                            SUAS Tecnologia em Saúde
+                        </p>
+                        <h2 class="text-lg md:text-xl font-bold text-slate-800">
+                            Central Integrada de Operações
                         </h2>
-                        <p class="text-xs text-slate-400 mt-0.5">Ordenada automaticamente pelo Score Intersetorial (Risco Clínico + Vulnerabilidade Social / NIS)</p>
                     </div>
-                    <button onclick="carregarFilaRegulacao()" class="bg-indigo-600 hover:bg-indigo-500 px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5">
-                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Recalcular Fila SUAS
+                </div>
+
+                <div class="flex items-center gap-3 flex-wrap">
+
+                    <select id="api-env-select"
+                            onchange="trocarAmbienteAPI()"
+                            class="text-xs border border-slate-200 bg-slate-50 rounded-xl px-3 py-2.5 text-slate-600">
+                        <option value="http://127.0.0.1:8000">Servidor Local</option>
+                        <option value="https://suas-saude-facil.onrender.com">Servidor Nuvem</option>
+                    </select>
+
+                    <div id="status-badge"
+                         class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl">
+                        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                        <span id="status-text" class="text-xs font-semibold text-slate-600">
+                            Verificando API...
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-[1600px] mx-auto p-4 md:p-8 space-y-6">
+
+            <!-- DASHBOARD -->
+            <section id="view-dashboard" class="view-section space-y-6">
+
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Visão geral</h2>
+                        <p class="text-sm text-slate-500 mt-1">
+                            Acompanhamento operacional do ecossistema de saúde.
+                        </p>
+                    </div>
+                    <div class="text-xs text-slate-500 flex items-center gap-2">
+                        <i data-lucide="clock" class="w-4 h-4"></i>
+                        <span id="dashboard-clock">Atualização automática</span>
+                    </div>
+                </div>
+
+                <!-- KPIs -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+
+                    <div class="kpi-card">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-500">
+                                Total de ocorrências
+                            </span>
+                            <div class="kpi-icon bg-blue-50 text-blue-600">
+                                <i data-lucide="clipboard-list"></i>
+                            </div>
+                        </div>
+                        <div id="kpi-total" class="text-3xl font-extrabold text-slate-800 mt-3">0</div>
+                        <p class="text-xs text-slate-400 mt-2">Registros recebidos</p>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-500">Pendentes</span>
+                            <div class="kpi-icon bg-amber-50 text-amber-600">
+                                <i data-lucide="hourglass"></i>
+                            </div>
+                        </div>
+                        <div id="kpi-pendentes" class="text-3xl font-extrabold text-amber-600 mt-3">0</div>
+                        <p class="text-xs text-slate-400 mt-2">Aguardando atendimento</p>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-500">Urgência alta</span>
+                            <div class="kpi-icon bg-rose-50 text-rose-600">
+                                <i data-lucide="alert-triangle"></i>
+                            </div>
+                        </div>
+                        <div id="kpi-altas" class="text-3xl font-extrabold text-rose-600 mt-3">0</div>
+                        <p class="text-xs text-slate-400 mt-2">Requer atenção prioritária</p>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-500">Em atendimento</span>
+                            <div class="kpi-icon bg-emerald-50 text-emerald-600">
+                                <i data-lucide="check-circle-2"></i>
+                            </div>
+                        </div>
+                        <div id="kpi-atendidas" class="text-3xl font-extrabold text-emerald-600 mt-3">0</div>
+                        <p class="text-xs text-slate-400 mt-2">Ocorrências em andamento</p>
+                    </div>
+                </div>
+
+                <!-- FEED -->
+                <div class="panel overflow-hidden">
+
+                    <div class="p-5 md:p-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100">
+                        <div>
+                            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                <i data-lucide="activity" class="w-5 h-5 text-blue-600"></i>
+                                Feed de ocorrências
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-1">
+                                Monitoramento operacional CCO/CPO
+                            </p>
+                        </div>
+
+                        <div class="flex gap-2 flex-wrap">
+                            <select id="filtro-status"
+                                    onchange="carregarOcorrencias()"
+                                    class="text-xs border border-slate-200 rounded-xl bg-slate-50 px-3 py-2.5">
+                                <option value="">Todos os status</option>
+                                <option value="Pendente">Pendentes</option>
+                                <option value="Em Atendimento">Em atendimento</option>
+                            </select>
+
+                            <button onclick="carregarOcorrencias()"
+                                    class="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">
+                                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                                Atualizar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="table-head">
+                                <tr>
+                                    <th class="p-4">Protocolo</th>
+                                    <th class="p-4">Data / Hora</th>
+                                    <th class="p-4">Origem</th>
+                                    <th class="p-4">Tipo</th>
+                                    <th class="p-4">Urgência</th>
+                                    <th class="p-4">Descrição</th>
+                                    <th class="p-4">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-ocorrencias" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="7" class="p-8 text-center text-slate-400">
+                                        Carregando ocorrências...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="panel p-5">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon bg-blue-50 text-blue-600">
+                                <i data-lucide="network"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-sm">Ecossistema integrado</h3>
+                                <p class="text-xs text-slate-500">Saúde, assistência e operação</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-4 leading-5">
+                            Conectividade entre os módulos assistenciais e operacionais da plataforma.
+                        </p>
+                    </div>
+
+                    <div class="panel p-5">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon bg-teal-50 text-teal-600">
+                                <i data-lucide="shield-check"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-sm">Governança e segurança</h3>
+                                <p class="text-xs text-slate-500">Dados e rastreabilidade</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-4 leading-5">
+                            Estrutura preparada para integração com os serviços e controles de segurança existentes.
+                        </p>
+                    </div>
+
+                    <div class="panel p-5">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon bg-violet-50 text-violet-600">
+                                <i data-lucide="brain-circuit"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-sm">Inteligência aplicada</h3>
+                                <p class="text-xs text-slate-500">Apoio à análise operacional</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-4 leading-5">
+                            Recursos de análise e suporte à decisão integrados à arquitetura da plataforma.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CAMPO -->
+            <section id="view-campo" class="view-section hidden max-w-3xl mx-auto">
+
+                <div class="mb-5">
+                    <h2 class="text-2xl font-bold text-slate-800">Reportar ocorrência</h2>
+                    <p class="text-sm text-slate-500 mt-1">
+                        Comunicação direta com a Central de Operações.
+                    </p>
+                </div>
+
+                <div class="panel overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-700 to-teal-600 p-6 text-white">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center">
+                                <i data-lucide="radio-tower" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg">Registro de campo</h3>
+                                <p class="text-xs text-blue-100">
+                                    Canal de comunicação CCO/CPO
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-5 md:p-7">
+                        <form id="form-reportar" onsubmit="enviarOcorrencia(event)" class="space-y-5">
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-2">
+                                    Setor de origem
+                                </label>
+                                <select id="field-setor" required class="input-premium">
+                                    <option value="Unidade Operacional Alfa">Unidade Operacional Alfa</option>
+                                    <option value="Posto Beira Rio">Posto Beira Rio</option>
+                                    <option value="Unidade Móvel SAMU">Unidade Móvel SAMU</option>
+                                    <option value="Ponto de Apoio Central">Ponto de Apoio Central</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-2">
+                                    Tipo de ocorrência
+                                </label>
+                                <input type="text" id="field-tipo" required
+                                       placeholder="Ex.: Risco operacional, falha de energia..."
+                                       class="input-premium">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-2">
+                                    Nível de urgência
+                                </label>
+
+                                <div class="grid grid-cols-3 gap-3">
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="urgencia" value="Baixo" class="peer sr-only">
+                                        <div class="border border-slate-200 rounded-xl p-3 text-center peer-checked:border-emerald-500 peer-checked:bg-emerald-50 hover:bg-slate-50">
+                                            <span class="text-emerald-600 text-xs font-bold">● Baixo</span>
+                                        </div>
+                                    </label>
+
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="urgencia" value="Moderado" checked class="peer sr-only">
+                                        <div class="border border-slate-200 rounded-xl p-3 text-center peer-checked:border-amber-500 peer-checked:bg-amber-50 hover:bg-slate-50">
+                                            <span class="text-amber-600 text-xs font-bold">● Moderado</span>
+                                        </div>
+                                    </label>
+
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="urgencia" value="Alto" class="peer sr-only">
+                                        <div class="border border-slate-200 rounded-xl p-3 text-center peer-checked:border-rose-500 peer-checked:bg-rose-50 hover:bg-slate-50">
+                                            <span class="text-rose-600 text-xs font-bold">● Alto</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-2">
+                                    Descrição do evento
+                                </label>
+                                <textarea id="field-descricao" rows="4" required
+                                          placeholder="Descreva os detalhes da ocorrência..."
+                                          class="input-premium resize-y"></textarea>
+                            </div>
+
+                            <button type="submit" id="btn-submit" class="btn-primary w-full flex justify-center items-center gap-2">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                                Transmitir alerta ao CCO/CPO
+                            </button>
+                        </form>
+
+                        <div id="feedback-message" class="hidden mt-4 p-4 rounded-xl text-sm"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- REGULAÇÃO -->
+            <section id="view-regulacao" class="view-section hidden space-y-5">
+
+                <div class="flex flex-wrap justify-between items-center gap-3">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Regulação × SUAS</h2>
+                        <p class="text-sm text-slate-500 mt-1">
+                            Priorização intersetorial e contrarreferência social.
+                        </p>
+                    </div>
+
+                    <button onclick="carregarFilaRegulacao()" class="btn-primary flex items-center gap-2">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        Recalcular fila
                     </button>
                 </div>
 
-                <div id="feedback-suas" class="hidden mx-4 mt-4 p-3 rounded-lg text-xs font-medium bg-emerald-500/20 border border-emerald-500/40 text-emerald-300"></div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-slate-300">
-                        <thead class="bg-slate-900/50 text-slate-400 text-xs uppercase border-b border-slate-700">
-                            <tr>
-                                <th class="p-4">Score</th>
-                                <th class="p-4">Paciente</th>
-                                <th class="p-4">Especialidade / Insumo</th>
-                                <th class="p-4">Vínculo SUAS & NIS</th>
-                                <th class="p-4">Critérios Somados</th>
-                                <th class="p-4">Contrarreferência SUAS</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabela-regulacao-suas" class="divide-y divide-slate-700/50">
-                            <tr>
-                                <td colspan="6" class="p-6 text-center text-slate-500">Clique em "Recalcular Fila SUAS" para carregar.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- VISÃO 4: FARMACOVIGILÂNCIA IA (APP DO CIDADÃO) -->
-        <section id="view-ia" class="hidden space-y-6">
-            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-5">
-                <div class="flex flex-wrap justify-between items-end gap-4 border-b border-slate-700 pb-4">
-                    <div>
-                        <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
-                            <i data-lucide="brain-circuit" class="w-5 h-5 text-indigo-400"></i> Motor Preditivo de Farmacovigilância (RandomForest + Regras Clínicas)
-                        </h2>
-                        <p class="text-xs text-slate-400 mt-1">Cruza medicamentos prescritos, automedicação do scanner, alergias e triagem de Manchester.</p>
+                <div class="panel overflow-hidden">
+                    <div class="p-5 border-b border-slate-100">
+                        <h3 class="font-bold text-slate-800">Fila de regulação priorizada</h3>
+                        <p class="text-xs text-slate-500 mt-1">
+                            Score intersetorial: risco clínico e vulnerabilidade social.
+                        </p>
                     </div>
 
-                    <div class="flex items-end gap-2">
-                        <div>
-                            <label class="block text-[11px] uppercase font-bold text-slate-400 mb-1">ID Cidadão</label>
-                            <input type="number" id="ia-cidadao-id" value="1" min="1" class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] uppercase font-bold text-slate-400 mb-1">Idade</label>
-                            <input type="number" id="ia-cidadao-idade" value="68" min="1" max="120" class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
-                        </div>
-                        <button onclick="executarFarmacovigilanciaIA()" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
-                            <i data-lucide="sparkles" class="w-4 h-4"></i> Analisar Prontuário
-                        </button>
+                    <div id="feedback-suas" class="hidden mx-5 mt-4 p-4 rounded-xl text-sm"></div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="table-head">
+                                <tr>
+                                    <th class="p-4">Score</th>
+                                    <th class="p-4">Paciente</th>
+                                    <th class="p-4">Especialidade / Insumo</th>
+                                    <th class="p-4">Vínculo SUAS / NIS</th>
+                                    <th class="p-4">Critérios</th>
+                                    <th class="p-4">Contrarreferência</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-regulacao-suas" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="6" class="p-8 text-center text-slate-400">
+                                        Clique em Recalcular fila para carregar.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
+            </section>
 
-                <div id="resultado-ia-container" class="text-sm text-slate-400 text-center py-8">
-                    Informe o ID do cidadão (ex: <strong>1</strong> para Maria Aparecida da Silva) e clique em <strong>Analisar Prontuário</strong>.
+            <!-- FARMACOVIGILÂNCIA IA -->
+            <section id="view-ia" class="view-section hidden space-y-5">
+
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Farmacovigilância IA</h2>
+                    <p class="text-sm text-slate-500 mt-1">
+                        Análise integrada de riscos farmacológicos e dados clínicos.
+                    </p>
                 </div>
-            </div>
-        </section>
 
-    </main>
+                <div class="panel overflow-hidden">
+                    <div class="bg-gradient-to-r from-indigo-700 to-blue-600 p-6 text-white">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center">
+                                <i data-lucide="brain-circuit" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg">Motor de análise farmacovigilância</h3>
+                                <p class="text-xs text-blue-100">
+                                    RandomForest + regras clínicas
+                                </p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-blue-100 mt-4 leading-5">
+                            Cruzamento de medicamentos prescritos, automedicação, alergias e triagem.
+                        </p>
+                    </div>
 
-    <!-- JS DE INTEGRAÇÃO COM A API FASTAPI -->
-    <script>
-        // Detecta automaticamente ambiente local vs produção
-        const isLocal = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
-        let ROOT_API = isLocal ? "http://127.0.0.1:8000" : "https://suas-saude-facil.onrender.com";
+                    <div class="p-5 md:p-6 space-y-5">
 
-        document.addEventListener("DOMContentLoaded", () => {
-            document.getElementById("api-env-select").value = ROOT_API;
-            lucide.createIcons();
-            verificarStatusAPI();
-            carregarOcorrencias();
-            setInterval(carregarOcorrencias, 15000);
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-2">
+                                    ID do cidadão
+                                </label>
+                                <input type="number" id="ia-cidadao-id" value="1" min="1"
+                                       class="input-premium">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-2">
+                                    Idade
+                                </label>
+                                <input type="number" id="ia-cidadao-idade" value="68" min="1" max="120"
+                                       class="input-premium">
+                            </div>
+
+                            <button onclick="executarFarmacovigilanciaIA()" class="btn-primary flex justify-center items-center gap-2">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                Analisar prontuário
+                            </button>
+                        </div>
+
+                        <div id="resultado-ia-container" class="text-sm text-slate-500 text-center py-8">
+                            Informe o ID do cidadão e clique em Analisar Prontuário.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="text-center text-xs text-slate-400 pt-2 pb-6">
+                SUAS Saúde +Fácil • Plataforma Integrada de Tecnologia em Saúde
+            </footer>
+        </main>
+    </div>
+</div>
+
+<script>
+    const isLocal = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
+    let ROOT_API = isLocal
+        ? "http://127.0.0.1:8000"
+        : "https://suas-saude-facil.onrender.com";
+
+    const tabs = ["dashboard", "campo", "regulacao", "ia"];
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("api-env-select").value = ROOT_API;
+        lucide.createIcons();
+        verificarStatusAPI();
+        carregarOcorrencias();
+        setInterval(carregarOcorrencias, 15000);
+        atualizarRelogio();
+        setInterval(atualizarRelogio, 60000);
+    });
+
+    function atualizarRelogio() {
+        const el = document.getElementById("dashboard-clock");
+        if (el) {
+            el.innerText = "Atualizado: " + new Date().toLocaleString("pt-BR");
+        }
+    }
+
+    function escapeHTML(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function toggleSidebar() {
+        document.getElementById("sidebar").classList.toggle("open");
+        document.getElementById("sidebar-overlay").classList.toggle("visible");
+    }
+
+    function switchTab(tab) {
+        tabs.forEach(t => {
+            const view = document.getElementById(`view-${t}`);
+            const btn = document.getElementById(`tab-${t}-btn`);
+
+            if (!view || !btn) return;
+
+            view.classList.toggle("hidden", t !== tab);
+            btn.classList.toggle("active", t === tab);
         });
 
-        function trocarAmbienteAPI() {
-            ROOT_API = document.getElementById("api-env-select").value;
-            verificarStatusAPI();
-            carregarOcorrencias();
+        document.getElementById("sidebar").classList.remove("open");
+        document.getElementById("sidebar-overlay").classList.remove("visible");
+
+        if (tab === "dashboard") carregarOcorrencias();
+        if (tab === "regulacao") carregarFilaRegulacao();
+        if (tab === "ia") executarFarmacovigilanciaIA();
+
+        lucide.createIcons();
+    }
+
+    function trocarAmbienteAPI() {
+        ROOT_API = document.getElementById("api-env-select").value;
+        verificarStatusAPI();
+        carregarOcorrencias();
+    }
+
+    async function verificarStatusAPI() {
+        const dot = document.getElementById("status-dot");
+        const text = document.getElementById("status-text");
+
+        dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
+        text.innerText = "Verificando API...";
+
+        try {
+            const res = await fetch(`${ROOT_API}/`, { signal: AbortSignal.timeout(8000) });
+
+            if (res.ok) {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+                text.innerText = ROOT_API.includes("127.0.0.1")
+                    ? "API Local conectada"
+                    : "Ecossistema online";
+            } else {
+                throw new Error("API respondeu com erro");
+            }
+        } catch (e) {
+            dot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
+            text.innerText = "Offline / conexão indisponível";
+        }
+    }
+
+    // CCO / CPO
+    async function carregarOcorrencias() {
+        const filtro = document.getElementById("filtro-status").value;
+        const baseCCO = `${ROOT_API}/cco-cpo/externo`;
+        const url = filtro
+            ? `${baseCCO}/ocorrencias?status_filtro=${encodeURIComponent(filtro)}`
+            : `${baseCCO}/ocorrencias`;
+
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.detail || "Falha ao carregar ocorrências");
+            }
+
+            const lista = data.ocorrencias || [];
+            renderizarTabela(lista);
+            atualizarKPIs(lista);
+            atualizarRelogio();
+        } catch (e) {
+            console.error("Erro ao carregar feed:", e);
+            document.getElementById("tabela-ocorrencias").innerHTML = `
+                <tr>
+                    <td colspan="7" class="p-8 text-center text-rose-500">
+                        Não foi possível carregar as ocorrências. Verifique a conexão com a API.
+                    </td>
+                </tr>`;
+        }
+    }
+
+    function renderizarTabela(lista) {
+        const tbody = document.getElementById("tabela-ocorrencias");
+
+        if (!lista.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="p-8 text-center text-slate-400">
+                        Nenhuma ocorrência encontrada.
+                    </td>
+                </tr>`;
+            return;
         }
 
-        // Alternância de Abas
-        function switchTab(tab) {
-            const tabs = ["dashboard", "campo", "regulacao", "ia"];
-            tabs.forEach(t => {
-                const view = document.getElementById(`view-${t}`);
-                const btn = document.getElementById(`tab-${t}-btn`);
-                if (t === tab) {
-                    view.classList.remove("hidden");
-                    btn.className = "px-5 py-3 font-semibold text-sm border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2";
-                } else {
-                    view.classList.add("hidden");
-                    btn.className = "px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2";
-                }
+        tbody.innerHTML = lista.map(o => {
+            const dataObj = new Date(o.data_hora);
+            const dataFormatada = isNaN(dataObj)
+                ? "-"
+                : dataObj.toLocaleString("pt-BR", {
+                    day: "2-digit", month: "2-digit",
+                    hour: "2-digit", minute: "2-digit"
+                });
+
+            let urgencia = "Baixo";
+            let urgenciaClass = "bg-emerald-50 text-emerald-700";
+
+            if (o.nivel_urgencia === "Alto") {
+                urgencia = "Alto";
+                urgenciaClass = "bg-rose-50 text-rose-700";
+            } else if (o.nivel_urgencia === "Moderado") {
+                urgencia = "Moderado";
+                urgenciaClass = "bg-amber-50 text-amber-700";
+            }
+
+            const status = o.status === "Pendente"
+                ? `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">Pendente</span>`
+                : `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">${escapeHTML(o.status || "Em Atendimento")}</span>`;
+
+            return `
+                <tr class="table-row border-b border-slate-100">
+                    <td class="p-4 font-mono font-bold text-blue-600">${escapeHTML(o.protocolo)}</td>
+                    <td class="p-4 text-slate-500 whitespace-nowrap">${escapeHTML(dataFormatada)}</td>
+                    <td class="p-4 font-medium text-slate-700">${escapeHTML(o.setor_origem)}</td>
+                    <td class="p-4 text-slate-600">${escapeHTML(o.tipo_ocorrencia)}</td>
+                    <td class="p-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${urgenciaClass}">
+                            ${escapeHTML(urgencia)}
+                        </span>
+                    </td>
+                    <td class="p-4 text-slate-500 max-w-xs truncate">${escapeHTML(o.descricao)}</td>
+                    <td class="p-4">${status}</td>
+                </tr>`;
+        }).join("");
+    }
+
+    function atualizarKPIs(lista) {
+        document.getElementById("kpi-total").innerText = lista.length;
+        document.getElementById("kpi-pendentes").innerText =
+            lista.filter(o => o.status === "Pendente").length;
+        document.getElementById("kpi-altas").innerText =
+            lista.filter(o => o.nivel_urgencia === "Alto").length;
+        document.getElementById("kpi-atendidas").innerText =
+            lista.filter(o => o.status === "Em Atendimento").length;
+    }
+
+    async function enviarOcorrencia(e) {
+        e.preventDefault();
+
+        const btn = document.getElementById("btn-submit");
+        const msg = document.getElementById("feedback-message");
+
+        const payload = {
+            setor_origem: document.getElementById("field-setor").value,
+            tipo_ocorrencia: document.getElementById("field-tipo").value,
+            nivel_urgencia: document.querySelector('input[name="urgencia"]:checked').value,
+            descricao: document.getElementById("field-descricao").value
+        };
+
+        btn.disabled = true;
+        btn.innerHTML = "Transmitindo...";
+
+        try {
+            const res = await fetch(`${ROOT_API}/cco-cpo/externo/reportar`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
             });
 
-            if (tab === "dashboard") carregarOcorrencias();
-            if (tab === "regulacao") carregarFilaRegulacao();
-            if (tab === "ia") executarFarmacovigilanciaIA();
-        }
+            const data = await res.json();
 
-        // Status da API
-        async function verificarStatusAPI() {
-            try {
-                const res = await fetch(`${ROOT_API}/`);
-                if (res.ok) {
-                    document.getElementById("status-dot").className = "w-3 h-3 rounded-full bg-emerald-500 animate-pulse";
-                    document.getElementById("status-text").innerText = isLocal ? "API Local Conectada" : "Ecossistema Online";
-                }
-            } catch (e) {
-                document.getElementById("status-dot").className = "w-3 h-3 rounded-full bg-rose-500";
-                document.getElementById("status-text").innerText = "Offline / Erro de Conexão";
+            if (!res.ok) {
+                throw new Error(data.detail || "Erro ao transmitir.");
             }
+
+            msg.className = "mt-4 p-4 rounded-xl text-sm bg-emerald-50 border border-emerald-200 text-emerald-700";
+            msg.innerText = `Ocorrência registrada! Protocolo: ${data.protocolo_gerado}`;
+            document.getElementById("form-reportar").reset();
+            carregarOcorrencias();
+
+        } catch (err) {
+            msg.className = "mt-4 p-4 rounded-xl text-sm bg-rose-50 border border-rose-200 text-rose-700";
+            msg.innerText = `Falha no envio: ${err.message}`;
+        } finally {
+            msg.classList.remove("hidden");
+            btn.disabled = false;
+            btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> Transmitir alerta ao CCO/CPO`;
+            lucide.createIcons();
         }
+    }
 
-        // --- MÓDULO CCO/CPO ---
-        async function carregarOcorrencias() {
-            const filtro = document.getElementById("filtro-status").value;
-            const baseCCO = `${ROOT_API}/cco-cpo/externo`;
-            const url = filtro ? `${baseCCO}/ocorrencias?status_filtro=${encodeURIComponent(filtro)}` : `${baseCCO}/ocorrencias`;
+    // REGULAÇÃO × SUAS
+    async function carregarFilaRegulacao() {
+        const tbody = document.getElementById("tabela-regulacao-suas");
 
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-                if (res.ok) {
-                    renderizarTabela(data.ocorrencias || []);
-                    atualizarKPIs(data.ocorrencias || []);
-                }
-            } catch (e) {
-                console.error("Erro ao carregar feed:", e);
-            }
-        }
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="p-8 text-center text-slate-400">
+                    Calculando fila de priorização...
+                </td>
+            </tr>`;
 
-        function renderizarTabela(lista) {
-            const tbody = document.getElementById("tabela-ocorrencias");
-            if (lista.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500">Nenhuma ocorrência encontrada.</td></tr>`;
+        try {
+            const res = await fetch(`${ROOT_API}/regulacao/fila-priorizada-suas`);
+            const lista = await res.json();
+
+            if (!res.ok) throw new Error("Falha ao consultar fila");
+
+            if (!Array.isArray(lista) || lista.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-slate-400">
+                            Nenhuma solicitação na fila de regulação.
+                        </td>
+                    </tr>`;
                 return;
             }
-            tbody.innerHTML = lista.map(o => {
-                const dataFormatada = new Date(o.data_hora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const badgeUrgencia = o.nivel_urgencia === 'Alto'
-                    ? '<span class="px-2 py-1 text-xs font-bold bg-rose-500/20 text-rose-400 rounded-md">Alto</span>'
-                    : o.nivel_urgencia === 'Moderado'
-                    ? '<span class="px-2 py-1 text-xs font-bold bg-amber-500/20 text-amber-400 rounded-md">Moderado</span>'
-                    : '<span class="px-2 py-1 text-xs font-bold bg-emerald-500/20 text-emerald-400 rounded-md">Baixo</span>';
 
-                const badgeStatus = o.status === 'Pendente'
-                    ? '<span class="px-2 py-1 text-xs font-semibold bg-amber-500/10 text-amber-300 rounded-full border border-amber-500/30">Pendente</span>'
-                    : '<span class="px-2 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-300 rounded-full border border-emerald-500/30">Em Atendimento</span>';
+            tbody.innerHTML = lista.map(item => {
+                const score = Number(item.score_prioridade_intersetorial || 0);
+
+                const scoreClass = score >= 60
+                    ? "bg-rose-50 text-rose-700 border-rose-200"
+                    : score >= 40
+                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                    : "bg-emerald-50 text-emerald-700 border-emerald-200";
+
+                let acaoHtml = "";
+
+                if (item.acao_suas_vinculada) {
+                    acaoHtml = `
+                        <span class="text-xs text-emerald-700 font-semibold">
+                            ${escapeHTML(item.acao_suas_vinculada)}
+                        </span>`;
+                } else {
+                    acaoHtml = `
+                        <button
+                            data-id="${Number(item.id)}"
+                            data-nome="${escapeHTML(item.paciente_nome || "")}"
+                            onclick="acionarCrasPorBotao(this)"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg">
+                            Acionar CRAS
+                        </button>`;
+                }
 
                 return `
-                    <tr class="hover:bg-slate-800/50 transition-colors">
-                        <td class="p-4 font-mono text-indigo-400 font-bold">${o.protocolo}</td>
-                        <td class="p-4 text-slate-400">${dataFormatada}</td>
-                        <td class="p-4 font-medium text-slate-200">${o.setor_origem}</td>
-                        <td class="p-4 text-slate-300">${o.tipo_ocorrencia}</td>
-                        <td class="p-4">${badgeUrgencia}</td>
-                        <td class="p-4 text-slate-400 max-w-xs truncate">${o.descricao}</td>
-                        <td class="p-4">${badgeStatus}</td>
-                    </tr>
-                `;
-            }).join('');
+                    <tr class="table-row border-b border-slate-100">
+                        <td class="p-4">
+                            <span class="px-2.5 py-1 rounded-lg border font-extrabold text-xs ${scoreClass}">
+                                ${score} pts
+                            </span>
+                        </td>
+                        <td class="p-4 font-semibold text-slate-700">
+                            ${escapeHTML(item.paciente_nome || "-")}
+                        </td>
+                        <td class="p-4 text-slate-600">
+                            ${escapeHTML(item.especialidade_solicitada || "-")}
+                            <br>
+                            <span class="text-xs text-slate-400">
+                                ${escapeHTML(item.unidade_origem || "-")} → ${escapeHTML(item.unidade_destino || "-")}
+                            </span>
+                        </td>
+                        <td class="p-4 text-xs">
+                            <span class="text-blue-700 font-semibold">
+                                ${escapeHTML(item.vulnerabilidade_suas || "Sem vínculo")}
+                            </span>
+                            <br>
+                            <span class="text-slate-400">
+                                NIS: ${escapeHTML(item.nis_vinculado || "N/A")}
+                            </span>
+                        </td>
+                        <td class="p-4 text-xs text-slate-500 max-w-xs">
+                            ${escapeHTML(item.justificativa_priorizacao || "-")}
+                        </td>
+                        <td class="p-4">${acaoHtml}</td>
+                    </tr>`;
+            }).join("");
+
+        } catch (e) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="p-8 text-center text-rose-500">
+                        Erro ao conectar na API de Regulação.
+                    </td>
+                </tr>`;
         }
+    }
 
-        function atualizarKPIs(lista) {
-            document.getElementById("kpi-total").innerText = lista.length;
-            document.getElementById("kpi-pendentes").innerText = lista.filter(o => o.status === 'Pendente').length;
-            document.getElementById("kpi-altas").innerText = lista.filter(o => o.nivel_urgencia === 'Alto').length;
-            document.getElementById("kpi-atendidas").innerText = lista.filter(o => o.status === 'Em Atendimento').length;
+    function acionarCrasPorBotao(button) {
+        const id = Number(button.dataset.id);
+        const nome = button.dataset.nome;
+        acionarCras(id, nome);
+    }
+
+    async function acionarCras(solicitacaoId, pacienteNome) {
+        const feedback = document.getElementById("feedback-suas");
+
+        try {
+            const res = await fetch(`${ROOT_API}/regulacao/${solicitacaoId}/acionar-suas`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tipo_apoio_social: "Transporte Sanitário Social + Cesta Nutricional",
+                    equipamento_destino: "CRAS Referência Territorial",
+                    observacao_social: `Acionado pelo Painel Integrado para ${pacienteNome}.`
+                })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.detail || "Falha ao acionar CRAS");
+
+            feedback.className = "mx-5 mt-4 p-4 rounded-xl text-sm bg-emerald-50 border border-emerald-200 text-emerald-700";
+            feedback.innerText = `Contrarreferência enviada ao CRAS para ${data.paciente_nome}: ${data.acao_suas_vinculada}`;
+            feedback.classList.remove("hidden");
+
+            carregarFilaRegulacao();
+
+        } catch (e) {
+            feedback.className = "mx-5 mt-4 p-4 rounded-xl text-sm bg-rose-50 border border-rose-200 text-rose-700";
+            feedback.innerText = `Erro ao acionar CRAS: ${e.message}`;
+            feedback.classList.remove("hidden");
         }
+    }
 
-        async function enviarOcorrencia(e) {
-            e.preventDefault();
-            const btn = document.getElementById("btn-submit");
-            const msg = document.getElementById("feedback-message");
-            const payload = {
-                setor_origem: document.getElementById("field-setor").value,
-                tipo_ocorrencia: document.getElementById("field-tipo").value,
-                nivel_urgencia: document.querySelector('input[name="urgencia"]:checked').value,
-                descricao: document.getElementById("field-descricao").value
-            };
+    // FARMACOVIGILÂNCIA IA
+    async function executarFarmacovigilanciaIA() {
+        const id = document.getElementById("ia-cidadao-id").value || 1;
+        const idade = document.getElementById("ia-cidadao-idade").value || 68;
+        const container = document.getElementById("resultado-ia-container");
 
-            btn.disabled = true;
-            btn.innerText = "A transmitir...";
+        container.innerHTML = `
+            <div class="py-8 text-center">
+                <div class="inline-flex items-center gap-2 text-blue-600 font-medium">
+                    <i data-lucide="loader-circle" class="w-5 h-5 animate-spin"></i>
+                    Analisando dados clínicos...
+                </div>
+                <p class="text-xs text-slate-400 mt-2">
+                    Cruzamento de informações e avaliação de risco
+                </p>
+            </div>`;
+        lucide.createIcons();
 
-            try {
-                const res = await fetch(`${ROOT_API}/cco-cpo/externo/reportar`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    msg.className = "p-4 rounded-lg text-sm text-center bg-emerald-500/20 border border-emerald-500/40 text-emerald-300";
-                    msg.innerText = `Ocorrência registada! Protocolo: ${data.protocolo_gerado}`;
-                    document.getElementById("form-reportar").reset();
-                } else {
-                    throw new Error(data.detail || "Erro ao transmitir.");
-                }
-            } catch (err) {
-                msg.className = "p-4 rounded-lg text-sm text-center bg-rose-500/20 border border-rose-500/40 text-rose-300";
-                msg.innerText = `Falha no envio: ${err.message}`;
-            } finally {
-                msg.classList.remove("hidden");
-                btn.disabled = false;
-                btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> Transmitir Alerta ao CCO/CPO`;
-                lucide.createIcons();
+        try {
+            const res = await fetch(
+                `${ROOT_API}/api/v1/predict-adverse-event/cidadao/${encodeURIComponent(id)}?idade=${encodeURIComponent(idade)}`
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.detail || "Cidadão não encontrado");
             }
-        }
 
-        // --- MÓDULO 3: REGULAÇÃO × SUAS ---
-        async function carregarFilaRegulacao() {
-            const tbody = document.getElementById("tabela-regulacao-suas");
-            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">A calcular scores intersetoriais...</td></tr>`;
+            const risco = data.nivel_risco_integrado || "Não informado";
 
-            try {
-                const res = await fetch(`${ROOT_API}/regulacao/fila-priorizada-suas`);
-                const lista = await res.json();
+            const riscoClass = risco === "Alto"
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : risco === "Moderado"
+                ? "border-amber-200 bg-amber-50 text-amber-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700";
 
-                if (!res.ok || lista.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-500">Nenhuma solicitação na fila de regulação.</td></tr>`;
-                    return;
-                }
+            const alertas = data.alertas_farmacovigilancia || [];
 
-                tbody.innerHTML = lista.map(item => {
-                    const score = item.score_prioridade_intersetorial || 0;
-                    const corScore = score >= 60 ? "bg-rose-500/20 text-rose-400 border-rose-500/40"
-                                   : score >= 40 ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                                   : "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
-
-                    const acaoHtml = item.acao_suas_vinculada
-                        ? `<span class="text-xs text-emerald-400 font-semibold">✅ ${item.acao_suas_vinculada}</span>`
-                        : `<button onclick="acionarCras(${item.id}, '${(item.paciente_nome || '').replace(/'/g, "\\'")}')" class="bg-emerald-600/80 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg">Acionar CRAS / Transporte</button>`;
-
-                    return `
-                        <tr class="hover:bg-slate-800/50">
-                            <td class="p-4"><span class="px-2.5 py-1 rounded-lg border font-extrabold text-xs ${corScore}">${score} pts</span></td>
-                            <td class="p-4 font-semibold text-slate-100">${item.paciente_nome || "-"}</td>
-                            <td class="p-4 text-slate-300">${item.especialidade_solicitada || "-"}<br><span class="text-xs text-slate-500">${item.unidade_origem} → ${item.unidade_destino}</span></td>
-                            <td class="p-4 text-xs"><span class="text-indigo-300 font-semibold">${item.vulnerabilidade_suas || "Sem vínculo"}</span><br><span class="text-slate-400">NIS: ${item.nis_vinculado || "N/A"}</span></td>
-                            <td class="p-4 text-xs text-slate-400 max-w-xs">${item.justificativa_priorizacao || "-"}</td>
-                            <td class="p-4">${acaoHtml}</td>
-                        </tr>
-                    `;
-                }).join('');
-            } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-rose-400">Erro ao conectar na API de Regulação.</td></tr>`;
-            }
-        }
-
-        async function acionarCras(solicitacaoId, pacienteNome) {
-            const feedback = document.getElementById("feedback-suas");
-            try {
-                const res = await fetch(`${ROOT_API}/regulacao/${solicitacaoId}/acionar-suas`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        tipo_apoio_social: "Transporte Sanitário Social + Cesta Nutricional",
-                        equipamento_destino: "CRAS Referência Territorial",
-                        observacao_social: `Acionado pelo Painel Integrado para ${pacienteNome}.`
-                    })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    feedback.classList.remove("hidden");
-                    feedback.innerText = `Contrarreferência enviada ao CRAS para ${data.paciente_nome}: ${data.acao_suas_vinculada}`;
-                    carregarFilaRegulacao();
-                }
-            } catch (e) {
-                alert("Erro ao acionar o CRAS.");
-            }
-        }
-
-        // --- MÓDULO 2: FARMACOVIGILÂNCIA IA ---
-        async function executarFarmacovigilanciaIA() {
-            const id = document.getElementById("ia-cidadao-id").value || 1;
-            const idade = document.getElementById("ia-cidadao-idade").value || 68;
-            const container = document.getElementById("resultado-ia-container");
-            container.innerHTML = `<p class="text-indigo-400 animate-pulse">Executando RandomForest & cruzamento farmacológico...</p>`;
-
-            try {
-                const res = await fetch(`${ROOT_API}/api/v1/predict-adverse-event/cidadao/${id}?idade=${idade}`);
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.detail || "Cidadão não encontrado");
-
-                const riscoCor = data.nivel_risco_integrado === "Alto" ? "border-rose-500 bg-rose-500/10 text-rose-300"
-                               : data.nivel_risco_integrado === "Moderado" ? "border-amber-500 bg-amber-500/10 text-amber-300"
-                               : "border-emerald-500 bg-emerald-500/10 text-emerald-300";
-
-                const alertasHtml = (data.alertas_farmacovigilancia || []).length === 0
-                    ? `<div class="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">Nenhuma interação medicamentosa ou alergia crítica detectada.</div>`
-                    : data.alertas_farmacovigilancia.map(a => `
-                        <div class="p-4 rounded-lg bg-slate-900 border border-amber-500/40 text-left space-y-1">
-                            <div class="flex justify-between items-center">
-                                <span class="text-xs font-bold text-amber-400">${a.tipo}</span>
-                                <span class="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Severidade: ${a.severidade}</span>
-                            </div>
-                            <p class="text-xs text-slate-300">${a.descricao}</p>
+            const alertasHtml = alertas.length === 0
+                ? `
+                    <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+                        Nenhuma interação medicamentosa ou alergia crítica detectada pela análise.
+                    </div>`
+                : alertas.map(a => `
+                    <div class="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-2">
+                        <div class="flex flex-wrap justify-between gap-2">
+                            <span class="text-xs font-bold text-amber-700">
+                                ${escapeHTML(a.tipo)}
+                            </span>
+                            <span class="text-[11px] px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold">
+                                Severidade: ${escapeHTML(a.severidade)}
+                            </span>
                         </div>
-                    `).join('');
+                        <p class="text-sm text-slate-600">${escapeHTML(a.descricao)}</p>
+                    </div>
+                `).join("");
 
-                container.innerHTML = `
-                    <div class="text-left space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="p-4 rounded-xl border ${riscoCor}">
-                                <span class="text-xs uppercase font-bold opacity-80">Risco Integrado</span>
-                                <div class="text-2xl font-extrabold mt-1">${data.nivel_risco_integrado} (${(data.score_ia_random_forest * 100).toFixed(1)}%)</div>
-                                <div class="text-xs mt-1">Paciente: <strong>${data.cidadao_nome}</strong></div>
+            const resumo = data.resumo_clinico_analisado || {};
+
+            container.innerHTML = `
+                <div class="space-y-5 text-left">
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                        <div class="p-5 rounded-2xl border ${riscoClass}">
+                            <p class="text-xs uppercase font-bold opacity-70">Risco integrado</p>
+                            <div class="text-2xl font-extrabold mt-2">
+                                ${escapeHTML(risco)}
                             </div>
-                            <div class="p-4 rounded-xl bg-slate-900 border border-slate-700">
-                                <span class="text-xs uppercase font-bold text-slate-400">Prioridade Manchester</span>
-                                <div class="text-lg font-bold text-slate-100 mt-1">${data.prioridade_manchester_sugerida}</div>
-                                <div class="text-xs text-slate-400 mt-1">Alergias: ${data.resumo_clinico_analisado.alergias}</div>
-                            </div>
-                            <div class="p-4 rounded-xl bg-slate-900 border border-slate-700">
-                                <span class="text-xs uppercase font-bold text-slate-400">Fármacos Ativos (${data.resumo_clinico_analisado.total_farmacos_unicos})</span>
-                                <div class="text-xs text-slate-300 mt-1">Prescritos: ${data.resumo_clinico_analisado.medicamentos_prescritos_ou_app.join(", ") || "Nenhum"}</div>
-                                <div class="text-xs text-amber-300 mt-1">Scanner: ${data.resumo_clinico_analisado.automedicacoes_scanner.join(", ") || "Nenhum"}</div>
-                            </div>
+                            <p class="text-sm mt-1">
+                                Score: ${(Number(data.score_ia_random_forest || 0) * 100).toFixed(1)}%
+                            </p>
+                            <p class="text-xs mt-3">
+                                Cidadão: <strong>${escapeHTML(data.cidadao_nome)}</strong>
+                            </p>
                         </div>
-                        <div class="space-y-2">
-                            <h3 class="text-xs font-bold uppercase text-slate-400">Alertas Clínicos & Interações Detectadas</h3>
-                            ${alertasHtml}
+
+                        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                            <p class="text-xs uppercase font-bold text-slate-400">
+                                Prioridade Manchester
+                            </p>
+                            <div class="text-lg font-bold text-slate-800 mt-2">
+                                ${escapeHTML(data.prioridade_manchester_sugerida)}
+                            </div>
+                            <p class="text-xs text-slate-500 mt-3">
+                                Alergias: ${escapeHTML(resumo.alergias)}
+                            </p>
+                        </div>
+
+                        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                            <p class="text-xs uppercase font-bold text-slate-400">
+                                Fármacos ativos (${escapeHTML(resumo.total_farmacos_unicos)})
+                            </p>
+                            <p class="text-xs text-slate-600 mt-2">
+                                Prescritos: ${escapeHTML((resumo.medicamentos_prescritos_ou_app || []).join(", ") || "Nenhum")}
+                            </p>
+                            <p class="text-xs text-amber-700 mt-2">
+                                Scanner: ${escapeHTML((resumo.automedicacoes_scanner || []).join(", ") || "Nenhum")}
+                            </p>
                         </div>
                     </div>
-                `;
-            } catch (err) {
-                container.innerHTML = `<p class="text-rose-400">Erro: ${err.message}</p>`;
-            }
+
+                    <div class="space-y-3">
+                        <h3 class="font-bold text-slate-700">
+                            Alertas clínicos e interações detectadas
+                        </h3>
+                        ${alertasHtml}
+                    </div>
+
+                    <div class="p-4 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 leading-5">
+                        <strong>Nota:</strong> Esta análise é um recurso de apoio à decisão.
+                        A avaliação clínica e a conduta devem ser realizadas por profissional habilitado.
+                    </div>
+                </div>`;
+
+        } catch (err) {
+            container.innerHTML = `
+                <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700">
+                    <strong>Não foi possível realizar a análise.</strong>
+                    <p class="mt-1 text-sm">${escapeHTML(err.message)}</p>
+                </div>`;
         }
-    </script>
+    }
+</script>
+
 </body>
 </html>
