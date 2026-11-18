@@ -154,3 +154,30 @@ class FHIRItem(Base):
     resource_type = Column(String, index=True)
     resource_data = Column(Text)
     data_criacao = Column(DateTime, default=datetime.datetime.utcnow)
+# ==========================================
+# EDUCAÇÃO MÉDICA CONTINUADA
+# ==========================================
+
+class EducacaoMedicaItem(Base):
+    __tablename__ = "educacao_medica_itens"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    titulo_curso = Column(String, nullable=False)
+    especialidade = Column(String, nullable=False)
+    parceiro_industria = Column(String, nullable=False)
+
+    descricao_conteudo = Column(Text, nullable=False)
+    link_material_estudo = Column(String, nullable=False)
+
+    pontos_credito_cme = Column(
+        Integer,
+        nullable=False,
+        default=0
+    )
+
+    data_publicacao = Column(
+        DateTime,
+        default=datetime.datetime.utcnow,
+        nullable=False
+    )
