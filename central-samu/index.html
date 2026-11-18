@@ -1,0 +1,690 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SUAS | Central SAMU 192</title>
+<style>
+:root {
+  --navy:#142b45;
+  --blue:#267b99;
+  --teal:#138b86;
+  --bg:#f5f8fb;
+  --white:#fff;
+  --line:#e3ebf1;
+  --text:#24384b;
+  --muted:#788b9a;
+  --red:#d94755;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.layout{display:flex;min-height:100vh}
+.sidebar{
+  width:230px;
+  background:var(--white);
+  border-right:1px solid var(--line);
+  padding:24px 14px;
+  flex-shrink:0;
+}
+.logo{text-align:center;padding-bottom:28px}
+.logo strong{
+  display:block;
+  font-size:39px;
+  letter-spacing:2px;
+  color:var(--navy);
+}
+.pulse{
+  color:var(--teal);
+  font-size:25px;
+  letter-spacing:2px;
+}
+.logo small{
+  display:block;
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.5;
+}
+nav button{
+  width:100%;
+  display:block;
+  border:0;
+  background:transparent;
+  color:var(--text);
+  text-align:left;
+  padding:13px;
+  margin:5px 0;
+  border-radius:10px;
+}
+nav button.active,nav button:hover{
+  background:#eaf5f8;
+  color:var(--blue);
+}
+.main{flex:1;min-width:0}
+header{
+  background:white;
+  border-bottom:1px solid var(--line);
+  padding:22px 30px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+h1{font-size:23px;margin:0 0 5px}
+h2{font-size:17px;margin:0 0 16px}
+.subtitle{color:var(--muted);font-size:13px}
+.content{padding:25px;max-width:1500px;margin:auto}
+.cards{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:15px;
+}
+.card{
+  background:white;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:20px;
+}
+.metric{
+  font-size:28px;
+  font-weight:700;
+  color:var(--navy);
+  margin-top:10px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:1.15fr 1fr;
+  gap:18px;
+  margin-top:18px;
+}
+.muted{color:var(--muted)}
+.item{
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  margin-bottom:10px;
+  cursor:pointer;
+}
+.item:hover,.item.selected{
+  border-color:var(--teal);
+  background:#f4fbfa;
+}
+.item strong{display:block;margin-bottom:6px}
+.tag{
+  display:inline-block;
+  background:#eef4f8;
+  padding:5px 9px;
+  border-radius:20px;
+  font-size:12px;
+  margin-top:7px;
+}
+.danger{color:var(--red)}
+label{
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+  margin:13px 0 6px;
+}
+input,select,textarea{
+  width:100%;
+  border:1px solid #d7e2e9;
+  border-radius:9px;
+  padding:11px;
+  background:white;
+  color:var(--text);
+}
+textarea{min-height:85px}
+.btn{
+  border:0;
+  background:var(--navy);
+  color:white;
+  padding:11px 15px;
+  border-radius:9px;
+}
+.btn.alt{background:var(--teal)}
+.btn.light{background:#edf3f7;color:var(--navy)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}
+.notice{
+  padding:12px;
+  border-radius:9px;
+  background:#f1f7fa;
+  font-size:13px;
+  line-height:1.6;
+}
+.alert{
+  background:#fff0f1;
+  color:#a42b38;
+  padding:13px;
+  border-radius:10px;
+  margin-bottom:15px;
+}
+pre{
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  font-size:12px;
+}
+.hidden{display:none}
+@media(max-width:1000px){
+  .sidebar{width:175px}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .grid{grid-template-columns:1fr}
+}
+@media(max-width:650px){
+  .layout{display:block}
+  .sidebar{width:100%;padding:12px}
+  .logo{padding:5px}
+  nav{display:flex;overflow-x:auto}
+  nav button{min-width:max-content}
+  header{padding:18px}
+  .content{padding:13px}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<aside class="sidebar">
+  <div class="logo">
+    <strong>SUAS</strong>
+    <div class="pulse">⌁ ♥ ⌁</div>
+    <small>Sistema Unificado<br>Aprimorado à Saúde</small>
+  </div>
+  <nav>
+    <button class="active" onclick="aba('painel',this)">
+      ◫ Painel geral
+    </button>
+    <button onclick="aba('clinica',this)">
+      ♡ Ficha clínica
+    </button>
+    <button onclick="aba('familia',this)">
+      ♧ Familiar
+    </button>
+    <button onclick="aba('regulacao',this)">
+      ✚ Regulação
+    </button>
+    <button onclick="aba('viaturas',this)">
+      🚑 Ambulâncias
+    </button>
+  </nav>
+</aside>
+
+<div class="main">
+<header>
+  <div>
+    <h1>Central SAMU 192</h1>
+    <div class="subtitle">
+      Gestão integrada de urgências
+    </div>
+  </div>
+  <div id="estado" class="subtitle">● Desconectado</div>
+</header>
+
+<div class="content">
+
+<section class="card" style="margin-bottom:18px">
+  <h2>Acesso profissional</h2>
+  <div class="grid" style="margin-top:0">
+    <div>
+      <label>Endereço da API</label>
+      <input id="api" placeholder="https://sua-api.com">
+      <label>Profissional</label>
+      <input id="nome" placeholder="Identificação profissional">
+    </div>
+    <div>
+      <label>Perfil</label>
+      <select id="perfil">
+        <option value="operador">Operador</option>
+        <option value="medico">Médico regulador</option>
+        <option value="despachante">Despachante</option>
+      </select>
+      <label>Token profissional</label>
+      <input id="token" type="password"
+        autocomplete="off" placeholder="Token de acesso">
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn alt" onclick="conectar()">
+      Conectar
+    </button>
+    <button class="btn light" onclick="atualizar()">
+      Atualizar
+    </button>
+    <button class="btn light" onclick="sair()">
+      Sair
+    </button>
+  </div>
+  <p id="mensagem" class="subtitle"></p>
+</section>
+
+<section id="painel">
+  <div class="cards">
+    <div class="card">
+      <div class="subtitle">Ocorrências consultadas</div>
+      <div class="metric" id="total">—</div>
+    </div>
+    <div class="card">
+      <div class="subtitle">Novos chamados</div>
+      <div class="metric" id="novos">—</div>
+    </div>
+    <div class="card">
+      <div class="subtitle">Em atendimento</div>
+      <div class="metric" id="ativos">—</div>
+    </div>
+    <div class="card">
+      <div class="subtitle">Encerradas</div>
+      <div class="metric" id="fechadas">—</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Ocorrências</h2>
+      <div id="lista" class="muted">
+        Conecte-se para consultar.
+      </div>
+    </div>
+    <div class="card">
+      <h2>Atendimento selecionado</h2>
+      <div id="detalhes" class="notice">
+        Selecione uma ocorrência na lista.
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="reconhecer()">
+          Reconhecer chamado
+        </button>
+        <button class="btn light"
+          onclick="aba('clinica')">
+          Ficha clínica
+        </button>
+        <button class="btn light"
+          onclick="aba('familia')">
+          Notificação familiar
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="clinica" class="hidden">
+  <div class="card">
+    <h2>Ficha clínica de emergência</h2>
+    <p class="subtitle">
+      Acesso restrito a profissionais autorizados.
+    </p>
+    <div class="notice">
+      A ficha é consultada somente após selecionar
+      uma ocorrência e autenticar o profissional.
+      Não é exibida ao cidadão que lê o QR Code.
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="ficha()">
+        Consultar ficha clínica
+      </button>
+    </div>
+    <pre id="dadosClinicos"></pre>
+  </div>
+</section>
+
+<section id="familia" class="hidden">
+  <div class="card">
+    <h2>Notificação ao familiar</h2>
+    <div class="notice">
+      O cidadão que aciona o QR Code não visualiza
+      os dados do familiar.
+
+      O acompanhamento deve indicar se a notificação
+      está pendente, enviada, entregue ou confirmada.
+    </div>
+    <p class="subtitle" id="statusFamilia">
+      Integração de notificações ainda não conectada
+      a esta interface.
+    </p>
+  </div>
+</section>
+
+<section id="regulacao" class="hidden">
+  <div class="card">
+    <h2>Regulação médica</h2>
+    <p id="casoRegulacao" class="subtitle">
+      Nenhuma ocorrência selecionada.
+    </p>
+    <label>Prioridade</label>
+    <select id="prioridade">
+      <option value="vermelha">Vermelha</option>
+      <option value="laranja">Laranja</option>
+      <option value="amarela">Amarela</option>
+      <option value="verde">Verde</option>
+      <option value="azul">Azul</option>
+    </select>
+    <label>Decisão</label>
+    <select id="decisao">
+      <option value="despacho_autorizado">
+        Autorizar despacho
+      </option>
+      <option value="orientacao_medica">
+        Orientação médica
+      </option>
+      <option value="encaminhamento">
+        Encaminhamento
+      </option>
+      <option value="encerramento">
+        Encerrar pela regulação
+      </option>
+    </select>
+    <label>Justificativa clínica</label>
+    <textarea id="justificativa"
+      placeholder="Registre a justificativa médica"></textarea>
+    <div class="actions">
+      <button class="btn alt" onclick="regular()">
+        Registrar decisão
+      </button>
+    </div>
+  </div>
+</section>
+
+<section id="viaturas" class="hidden">
+  <div class="card">
+    <h2>Ambulâncias</h2>
+    <p class="subtitle">
+      Consulta de viaturas cadastradas no SAMU.
+    </p>
+    <div id="listaViaturas">Nenhuma consulta realizada.</div>
+    <div class="actions">
+      <button class="btn" onclick="ambulancias()">
+        Consultar ambulâncias
+      </button>
+    </div>
+  </div>
+</section>
+
+</div>
+</div>
+</div>
+
+<script>
+let api = "";
+let credencial = "";
+let profissional = "";
+let perfil = "";
+let ocorrencias = [];
+let selecionada = null;
+let atualizador = null;
+
+const el = id => document.getElementById(id);
+
+function informar(texto, erro=false) {
+  el("mensagem").textContent = texto;
+  el("mensagem").style.color =
+    erro ? "#d94755" : "#138b86";
+}
+
+function aba(id, botao=null) {
+  ["painel","clinica","familia","regulacao","viaturas"]
+    .forEach(nome => el(nome).classList.add("hidden"));
+
+  el(id).classList.remove("hidden");
+
+  document.querySelectorAll("nav button")
+    .forEach(b => b.classList.remove("active"));
+
+  if (botao) botao.classList.add("active");
+}
+
+async function request(path, method="GET", dados=null) {
+  if (!api || !credencial || !profissional) {
+    throw Error("Conecte-se primeiro.");
+  }
+
+  const resposta = await fetch(api + path, {
+    method,
+    cache:"no-store",
+    headers:{
+      "Content-Type":"application/json",
+      "X-SAMU-Token":credencial,
+      "X-SAMU-Profissional":profissional
+    },
+    body:dados ? JSON.stringify(dados) : undefined
+  });
+
+  const json = await resposta.json().catch(() => ({}));
+
+  if (!resposta.ok) {
+    throw Error(json.detail || "Erro HTTP " + resposta.status);
+  }
+  return json;
+}
+
+async function executar(funcao) {
+  try {
+    await funcao();
+  } catch (erro) {
+    informar(String(erro.message), true);
+  }
+}
+
+function conectar() {
+  executar(async () => {
+    sair(false);
+
+    api = el("api").value.trim().replace(/\/+$/,"");
+    credencial = el("token").value.trim();
+    profissional = el("nome").value.trim();
+    perfil = el("perfil").value;
+
+    if (!/^https:\/\/[^/]+/.test(api) &&
+        !/^http:\/\/localhost(:\d+)?$/.test(api)) {
+      throw Error("Informe uma API HTTPS válida.");
+    }
+
+    await request("/samu/ocorrencias");
+
+    el("estado").textContent = "● API conectada";
+    informar("Acesso autorizado.");
+
+    await atualizar();
+
+    atualizador = setInterval(atualizar,15000);
+  });
+}
+
+function sair(limpar=true) {
+  if (atualizador) clearInterval(atualizador);
+  atualizador = null;
+
+  if (!limpar) return;
+
+  api = "";
+  credencial = "";
+  profissional = "";
+  ocorrencias = [];
+  selecionada = null;
+
+  el("token").value = "";
+  el("estado").textContent = "● Desconectado";
+  el("lista").textContent = "Sessão encerrada.";
+  el("dadosClinicos").textContent = "";
+  el("detalhes").textContent = "Nenhuma ocorrência selecionada.";
+
+  informar("Sessão encerrada.");
+}
+
+async function atualizar() {
+  if (!api || !credencial) return;
+
+  try {
+    ocorrencias = await request("/samu/ocorrencias");
+
+    el("total").textContent = ocorrencias.length;
+
+    el("novos").textContent = ocorrencias.filter(
+      o => o.status === "recebida"
+    ).length;
+
+    el("fechadas").textContent = ocorrencias.filter(
+      o => o.status === "encerrada"
+    ).length;
+
+    el("ativos").textContent = ocorrencias.filter(
+      o => !["recebida","encerrada"].includes(o.status)
+    ).length;
+
+    renderizar();
+
+    if (selecionada) {
+      const atual = ocorrencias.find(
+        o => o.id === selecionada.id
+      );
+      if (atual) selecionar(atual.id);
+    }
+  } catch (erro) {
+    informar("Atualização: " + erro.message,true);
+  }
+}
+
+function renderizar() {
+  const lista = el("lista");
+  lista.replaceChildren();
+
+  if (!ocorrencias.length) {
+    lista.textContent = "Nenhuma ocorrência encontrada.";
+    return;
+  }
+
+  for (const o of ocorrencias) {
+    const item = document.createElement("div");
+    item.className = "item";
+
+    const titulo = document.createElement("strong");
+    titulo.textContent = o.protocolo;
+
+    const descricao = document.createElement("div");
+    descricao.textContent = o.descricao;
+
+    const status = document.createElement("span");
+    status.className = "tag";
+    status.textContent = o.status;
+
+    item.append(titulo,descricao,status);
+    item.onclick = () => selecionar(o.id);
+
+    lista.appendChild(item);
+  }
+}
+
+function selecionar(id) {
+  selecionada = ocorrencias.find(o => o.id === id);
+  if (!selecionada) return;
+
+  const o = selecionada;
+
+  el("detalhes").textContent =
+    "Protocolo: " + o.protocolo +
+    "\nStatus: " + o.status +
+    "\nOrigem: " + o.origem +
+    "\nPrioridade: " + (o.prioridade || "Pendente") +
+    "\nReferência: " + (o.referencia || "Não informada") +
+    "\nGPS: " +
+    (o.latitude ?? "—") + ", " +
+    (o.longitude ?? "—");
+
+  el("casoRegulacao").textContent =
+    "Ocorrência: " + o.protocolo;
+
+  el("dadosClinicos").textContent = "";
+}
+
+function idCaso() {
+  if (!selecionada) {
+    throw Error("Selecione uma ocorrência.");
+  }
+  return encodeURIComponent(selecionada.id);
+}
+
+function reconhecer() {
+  executar(async () => {
+    if (perfil !== "operador") {
+      throw Error("Ação restrita ao operador.");
+    }
+
+    await request(
+      "/samu/alertas/" + idCaso() + "/reconhecer",
+      "POST"
+    );
+
+    informar("Chamado reconhecido.");
+    await atualizar();
+  });
+}
+
+function ficha() {
+  executar(async () => {
+    const dados = await request(
+      "/samu/ocorrencias/" + idCaso() +
+      "/ficha-clinica"
+    );
+
+    el("dadosClinicos").textContent =
+      JSON.stringify(dados,null,2);
+  });
+}
+
+function regular() {
+  executar(async () => {
+    if (perfil !== "medico") {
+      throw Error("Ação restrita ao médico regulador.");
+    }
+
+    const justificativa =
+      el("justificativa").value.trim();
+
+    if (justificativa.length < 10) {
+      throw Error("A justificativa deve ter ao menos 10 caracteres.");
+    }
+
+    await request(
+      "/samu/ocorrencias/" + idCaso() + "/regulacao",
+      "POST",
+      {
+        prioridade:el("prioridade").value,
+        decisao:el("decisao").value,
+        justificativa
+      }
+    );
+
+    informar("Decisão médica registrada.");
+    await atualizar();
+  });
+}
+
+function ambulancias() {
+  executar(async () => {
+    const dados = await request("/samu/ambulancias");
+
+    const lista = el("listaViaturas");
+    lista.replaceChildren();
+
+    if (!dados.length) {
+      lista.textContent = "Nenhuma ambulância cadastrada.";
+      return;
+    }
+
+    for (const a of dados) {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.textContent =
+        a.prefixo + " • " + a.tipo + " • " + a.status;
+      lista.appendChild(div);
+    }
+  });
+}
+</script>
+</body>
+</html>
