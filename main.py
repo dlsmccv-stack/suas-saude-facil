@@ -1,15 +1,16 @@
-from ai_engine import PatientDataSchema, ai_predictor  # Importa o motor preditivo e o esquema de IA
-import cco_cpo_external  # Importa o módulo isolado do CCO / CPO (Setor Externo)
+from ai_engine import PatientDataSchema, ai_predictor
+import cco_cpo_external
 from fastapi import Depends, FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware  # <-- IMPORTAÇÃO DO CORS
-from sqlalchemy import text
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
+
 import cidadao, database, educacao_medica, emergency_qrcode, farmacia, fhir_integration, laboratorio, medico, models, regulacao, suas_social, triagem
 
-# Inicializa as tabelas no banco de dados de forma centralizada
+# Inicialização das tabelas
 models.Base.metadata.create_all(bind=database.engine)
 
-# Migração automática segura para adicionar colunas da Integração SUAS x Regulação no SQLite existente
+# Atualização controlada das colunas de regulação
 with database.engine.begin() as conn:
     colunas_novas = [
         ("paciente_nome", "VARCHAR"),
@@ -26,17 +27,33 @@ with database.engine.begin() as conn:
         ("justificativa_priorizacao", "TEXT"),
         ("acao_suas_vinculada", "VARCHAR"),
     ]
+
+    inspector = inspect(conn)
+
+    if not inspector.has_table("regulacao_itens"):
+        raise RuntimeError(
+            "A tabela regulacao_itens não foi encontrada."
+        )
+
+    colunas_existentes = {
+        coluna["name"]
+        for coluna in inspector.get_columns("regulacao_itens")
+    }
+
     for col_nome, col_tipo in colunas_novas:
-        try:
-            conn.execute(text(f"ALTER TABLE regulacao_itens ADD COLUMN {col_nome} {col_tipo}"))
-        except Exception:
-            pass  # Coluna já existe
+        if col_nome not in colunas_existentes:
+            conn.execute(
+                text(
+                    f"ALTER TABLE regulacao_itens "
+                    f"ADD COLUMN {col_nome} {col_tipo}"
+                )
+            )
 
 app = FastAPI(
     title="SUAS Saúde / Saúde +Fácil",
     description="""
     ## Ecossistema Integrado de Saúde, Assistência Social e Inovação Tecnológica
-    
+
     Esta API disponibiliza serviços operacionais para:
     * **App do Cidadão**: Onboarding, gestão de planos de saúde, alarmes de medicamentos (contínuos e temporários), scanner preventivo e QR Code de emergência/tela de bloqueio.
     * **Regulação**: Gestão centralizada de solicitações, leitos e encaminhamentos médicos com priorização intersetorial via SUAS.
@@ -55,7 +72,8 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# --- CONFIGURAÇÃO DE CORS PARA LIBERAR O GITHUB PAGES ---
+# CORS: configuração provisória, pendente de restrição
+# às origens autorizadas na etapa de segurança.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -86,23 +104,20 @@ def read_root():
         ]
     }
 
-# Registo de todos os routers modulares do ecossistema
+# Registro dos módulos existentes
 app.include_router(regulacao.router, prefix="/regulacao", tags=["Regulação"])
-app.include_router(medico.router)  # Inclui o Painel do Médico com prefixo /medico definido no router
-app.include_router(laboratorio.router)  # Inclui as rotas de laboratório e agendamento automático de retorno
+app.include_router(medico.router)
+app.include_router(laboratorio.router)
 app.include_router(triagem.router, prefix="/triagem", tags=["Triagem de Manchester"])
 app.include_router(suas_social.router, prefix="/suas", tags=["Assistência Social (SUAS)"])
 app.include_router(fhir_integration.router, prefix="/fhir", tags=["Interoperabilidade FHIR"])
 app.include_router(emergency_qrcode.router, prefix="/emergencia", tags=["QR Code de Emergência"])
 app.include_router(farmacia.router, prefix="/farmacia", tags=["Farmácia Digital"])
 app.include_router(educacao_medica.router, prefix="/educacao", tags=["Educação Médica"])
-app.include_router(cidadao.router)  # Inclui as rotas do App do Cidadão com prefixo /cidadao
-
-# Registo do Router Isolado para o CCO / CPO (Setor Externo)
+app.include_router(cidadao.router)
 app.include_router(cco_cpo_external.router)
 
-
-# --- MÓDULO DE IA: Preditiva de Eventos Adversos & Farmacovigilância ---
+# Inteligência artificial e farmacovigilância
 @app.post(
     "/api/v1/predict-adverse-event",
     tags=["Inteligência Preditiva (IA)"],
@@ -123,7 +138,6 @@ def predict_adverse_event(patient_data: PatientDataSchema):
             detail=f"Erro ao processar predição de IA: {str(e)}"
         )
 
-
 @app.get(
     "/api/v1/predict-adverse-event/cidadao/{cidadao_id}",
     tags=["Inteligência Preditiva (IA)"],
@@ -134,19 +148,28 @@ def predict_adverse_event_cidadao(
     idade: int = 55,
     db: Session = Depends(database.get_db)
 ):
-    cidadao_obj = db.query(models.CidadaoPerfil).filter(models.CidadaoPerfil.id == cidadao_id).first()
+    cidadao_obj = db.query(models.CidadaoPerfil).filter(
+        models.CidadaoPerfil.id == cidadao_id
+    ).first()
+
     if not cidadao_obj:
-        raise HTTPException(status_code=404, detail="Cidadão não encontrado.")
+        raise HTTPException(
+            status_code=404,
+            detail="Cidadão não encontrado."
+        )
 
     medicamentos_app = db.query(models.MedicamentoCidadao).filter(
         models.MedicamentoCidadao.cidadao_id == cidadao_id
     ).all()
+
     prescricoes_farmacia = db.query(models.MedicamentoItem).filter(
         models.MedicamentoItem.cidadao_id == cidadao_id
     ).all()
+
     automedicacoes = db.query(models.AutomedicacaoLog).filter(
         models.AutomedicacaoLog.cidadao_id == cidadao_id
     ).all()
+
     triagens = db.query(models.Triagem).filter(
         models.Triagem.paciente_nome == cidadao_obj.nome_completo
     ).all()
@@ -159,3 +182,4 @@ def predict_adverse_event_cidadao(
         triagens=triagens,
         idade_estimada=idade
     )
+
