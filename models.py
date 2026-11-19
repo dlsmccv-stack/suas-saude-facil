@@ -65,7 +65,7 @@ class CidadaoPerfil(Base):
     alergias = Column(String, nullable=True)
     condicoes_cronicas = Column(String, nullable=True)
     contacto_responsavel = Column(String)
-    
+
     possui_plano_saude = Column(Boolean, default=False)
     operadora_plano = Column(String, nullable=True)
     numero_carteira = Column(String, nullable=True)
@@ -75,6 +75,8 @@ class CidadaoPerfil(Base):
     medicamentos = relationship("MedicamentoCidadao", back_populates="cidadao")
     automedicacoes = relationship("AutomedicacaoLog", back_populates="cidadao")
     emergencias = relationship("EmergencyItem", back_populates="cidadao")
+    exames_requisitados = relationship("ExameRequisicaoItem", back_populates="cidadao")
+    notificacoes = relationship("NotificacaoCidadaoItem", back_populates="cidadao")
 
 class MedicamentoCidadao(Base):
     __tablename__ = "medicamentos_cidadao"
@@ -101,6 +103,45 @@ class AutomedicacaoLog(Base):
     cidadao = relationship("CidadaoPerfil", back_populates="automedicacoes")
 
 # ==========================================
+# REQUISIÇÕES DE EXAMES & NOTIFICAÇÕES DO CIDADÃO
+# ==========================================
+
+class ExameRequisicaoItem(Base):
+    __tablename__ = "exames_requisicoes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    codigo_requisicao = Column(String, unique=True, index=True)
+    cidadao_id = Column(Integer, ForeignKey("cidadaos_perfil.id"), nullable=True)
+    cidadao_nome = Column(String, index=True)
+    medico_crm = Column(String, nullable=True)
+    categoria_exame = Column(String, default="Laboratorial")
+    exame_nome = Column(String, index=True)
+    laboratorio_ou_unidade = Column(String, nullable=True)
+    prioridade = Column(String, default="Rotina")
+    indicacao_clinica = Column(Text, nullable=True)
+    preparo_observacoes = Column(Text, nullable=True)
+    status_exame = Column(String, default="SOLICITADO")
+    data_solicitacao = Column(DateTime, default=datetime.datetime.utcnow)
+
+    cidadao = relationship("CidadaoPerfil", back_populates="exames_requisitados")
+
+class NotificacaoCidadaoItem(Base):
+    __tablename__ = "notificacoes_cidadao"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cidadao_id = Column(Integer, ForeignKey("cidadaos_perfil.id"), nullable=True)
+    cidadao_nome = Column(String, index=True, nullable=True)
+    tipo_evento = Column(String, index=True)  # "EXAME_SOLICITADO" | "RETORNO_MEDICO"
+    titulo = Column(String)
+    mensagem = Column(Text)
+    data_agendada = Column(String, nullable=True)
+    alarme_sugerido = Column(String, nullable=True)
+    lida = Column(Boolean, default=False)
+    data_criacao = Column(DateTime, default=datetime.datetime.utcnow)
+
+    cidadao = relationship("CidadaoPerfil", back_populates="notificacoes")
+
+# ==========================================
 # FARMÁCIA DIGITAL & DISPENSAÇÃO
 # ==========================================
 
@@ -114,11 +155,11 @@ class MedicamentoItem(Base):
     dosagem = Column(String)
     posologia = Column(String)
     quantidade_disponibilizada = Column(Integer)
-    
+
     fornecido_pelo_sus = Column(Boolean, default=True)
     uso_continuo = Column(Boolean, default=False)
     horarios_alarme = Column(String, nullable=True)
-    
+
     qr_code_token = Column(String, unique=True, index=True)
     dispensado = Column(Boolean, default=False)
     data_dispensacao = Column(DateTime, nullable=True)
@@ -154,6 +195,7 @@ class FHIRItem(Base):
     resource_type = Column(String, index=True)
     resource_data = Column(Text)
     data_criacao = Column(DateTime, default=datetime.datetime.utcnow)
+
 # ==========================================
 # EDUCAÇÃO MÉDICA CONTINUADA
 # ==========================================
