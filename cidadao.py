@@ -25,6 +25,76 @@ def listar_cidadaos(db: Session = Depends(get_db)):
     ]
 
 
+@router.get("/{cidadao_id}/notificacoes-lembretes", summary="Consultar Notificações e Lembretes Reais (Exames e Retornos)")
+def listar_notificacoes_lembretes(cidadao_id: int, db: Session = Depends(get_db)):
+    cidadao = db.query(models.CidadaoPerfil).filter(models.CidadaoPerfil.id == cidadao_id).first()
+    if not cidadao:
+        raise HTTPException(status_code=404, detail="Cidadão não encontrado.")
+
+    notificacoes = (
+        db.query(models.NotificacaoCidadaoItem)
+        .filter(models.NotificacaoCidadaoItem.cidadao_id == cidadao_id)
+        .order_by(models.NotificacaoCidadaoItem.id.desc())
+        .all()
+    )
+
+    exames = (
+        db.query(models.ExameRequisicaoItem)
+        .filter(models.ExameRequisicaoItem.cidadao_id == cidadao_id)
+        .order_by(models.ExameRequisicaoItem.id.desc())
+        .all()
+    )
+
+    return {
+        "cidadao_id": cidadao.id,
+        "cidadao_nome": cidadao.nome_completo,
+        "total_notificacoes": len(notificacoes),
+        "nao_lidas": sum(1 for n in notificacoes if not n.lida),
+        "notificacoes_e_lembretes": [
+            {
+                "id": n.id,
+                "tipo_evento": n.tipo_evento,
+                "titulo": n.titulo,
+                "mensagem": n.mensagem,
+                "data_agendada": n.data_agendada,
+                "alarme_sugerido": n.alarme_sugerido,
+                "lida": n.lida,
+                "data_criacao": n.data_criacao.isoformat() if n.data_criacao else None,
+            }
+            for n in notificacoes
+        ],
+        "exames_requisitados": [
+            {
+                "id": e.id,
+                "codigo_requisicao": e.codigo_requisicao,
+                "categoria_exame": e.categoria_exame,
+                "exame_nome": e.exame_nome,
+                "laboratorio_ou_unidade": e.laboratorio_ou_unidade,
+                "prioridade": e.prioridade,
+                "status_exame": e.status_exame,
+                "data_solicitacao": e.data_solicitacao.isoformat() if e.data_solicitacao else None,
+            }
+            for e in exames
+        ],
+    }
+
+
+@router.post("/notificacoes/{notificacao_id}/marcar-lida", summary="Marcar Notificação/Lembrete do Cidadão como Lida")
+def marcar_notificacao_lida(notificacao_id: int, db: Session = Depends(get_db)):
+    notif = (
+        db.query(models.NotificacaoCidadaoItem)
+        .filter(models.NotificacaoCidadaoItem.id == notificacao_id)
+        .first()
+    )
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notificação não encontrada.")
+
+    notif.lida = True
+    db.commit()
+    db.refresh(notif)
+    return {"status": "sucesso", "notificacao_id": notif.id, "lida": notif.lida}
+
+
 @router.post("/onboarding", response_model=schemas.CidadaoResponse, summary="Registar Cidadão e Plano de Saúde")
 def criar_cidadao(dados: schemas.CidadaoCreate, db: Session = Depends(get_db)):
     # Identificação automática da cobertura para direcionamento inteligente
