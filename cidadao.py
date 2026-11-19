@@ -8,12 +8,29 @@ import json
 
 router = APIRouter(prefix="/cidadao", tags=["App do Cidadão"])
 
+
+@router.get("/listar", summary="Listar Cidadãos Cadastrados")
+def listar_cidadaos(db: Session = Depends(get_db)):
+    cidadaos = db.query(models.CidadaoPerfil).all()
+    return [
+        {
+            "id": c.id,
+            "nome_completo": c.nome_completo,
+            "cpf": c.cpf,
+            "tipo_sanguineo": c.tipo_sanguineo,
+            "alergias": c.alergias,
+            "condicoes_cronicas": c.condicoes_cronicas,
+        }
+        for c in cidadaos
+    ]
+
+
 @router.post("/onboarding", response_model=schemas.CidadaoResponse, summary="Registar Cidadão e Plano de Saúde")
 def criar_cidadao(dados: schemas.CidadaoCreate, db: Session = Depends(get_db)):
     # Identificação automática da cobertura para direcionamento inteligente
     tipo_cobertura = None
     rede_credenciada = None
-    
+
     if dados.possui_plano_saude:
         tipo_cobertura = "Hospitalar com Internação e Urgência"
         rede_credenciada = "Rede Particular Credenciada (Hospitais Privados Parceiros)"
@@ -27,6 +44,7 @@ def criar_cidadao(dados: schemas.CidadaoCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_cidadao)
     return db_cidadao
+
 
 @router.post("/{cidadao_id}/medicamentos", response_model=schemas.MedicamentoCidadaoResponse, summary="Adicionar Medicamento (Contínuo ou Temporário com Campainha/Despertador)")
 def adicionar_medicamento(cidadao_id: int, item: schemas.MedicamentoCidadaoCreate, db: Session = Depends(get_db)):
@@ -42,6 +60,7 @@ def adicionar_medicamento(cidadao_id: int, item: schemas.MedicamentoCidadaoCreat
     db.commit()
     db.refresh(db_med)
     return db_med
+
 
 @router.post("/{cidadao_id}/automedicacao", summary="Registar Automedicação via Scanner e Acionar Alerta Preventivo")
 def registar_automedicacao(cidadao_id: int, item: schemas.AutomedicacaoCreate, db: Session = Depends(get_db)):
@@ -77,6 +96,7 @@ def registar_automedicacao(cidadao_id: int, item: schemas.AutomedicacaoCreate, d
         "alerta_preventivo": alerta_preventivo
     }
 
+
 @router.get("/{cidadao_id}/qrcode-emergencia", summary="Gerar Dados para o QR Code de Emergência (Tela de Bloqueio e SAMU)")
 def gerar_qrcode_emergencia(cidadao_id: int, db: Session = Depends(get_db)):
     cidadao = db.query(models.CidadaoPerfil).filter(models.CidadaoPerfil.id == cidadao_id).first()
@@ -101,7 +121,7 @@ def gerar_qrcode_emergencia(cidadao_id: int, db: Session = Depends(get_db)):
     }
 
     json_str = json.dumps(payload_emergencia, ensure_ascii=False)
-    
+
     return {
         "status": "Sucesso",
         "instrucao_app": "Converta a string 'payload_qr' num gráfico de QR Code no front-end do aplicativo para exibição no perfil e na tela de bloqueio.",
