@@ -6,4 +6,5 @@ requests
 scikit-learn
 pandas
 numpy
+psycopg[binary]
 psycopg2-binary
