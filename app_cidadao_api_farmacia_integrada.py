@@ -1,11 +1,14 @@
 """API Integrada e 100% Ativa do App do Cidadão — SUAS Saúde +Fácil.
 Compatível com main.py, models.py e database.py existentes sem alterá-los.
 Inclui: Cadastro/Login seguros (PBKDF2 + SHA-256), Cartão Vital editável com QR Code,
-SOS Geolocalizado, Pré-Triagem Inteligente com Check-in QR, Farmácia Digital (SUS e Plano)
-e Despertador de Posologia (Temporário 6/6h, 8/8h, 12/12h e Uso Contínuo).
+SOS Geolocalizado com registo permanente em samu_ocorrencias, Pré-Triagem Inteligente
+com Check-in QR, Farmácia Digital (SUS e Plano) e Despertador de Posologia
+(Temporário 6/6h, 8/8h, 12/12h e Uso Contínuo).
 """
 import os
 import re
+import uuid
+import json
 import secrets
 import hashlib
 import hmac
@@ -13,7 +16,7 @@ import time
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, inspect, text
 from sqlalchemy.orm import Session
 import database
 import models
@@ -130,6 +133,119 @@ def calcular_horarios_intervalo(intervalo_horas: int, hora_inicial: str = "08:00
         h_atual = (hh + i * intervalo_horas) % 24
         lista.append(f"{h_atual:02d}:{mm:02d}")
     return ", ".join(lista)
+
+
+def _to_float_or_none(val: str | float | int | None) -> float | None:
+    if val is None or val == "":
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
+def _registrar_ocorrencia_samu(
+    db: Session,
+    protocolo: str,
+    cidadao_id: int,
+    nome_cidadao: str | None,
+    latitude: str | None,
+    longitude: str | None,
+    observacao: str,
+) -> tuple[bool, str | None, dict | None]:
+    """Grava permanentemente a ocorrência na tabela samu_ocorrencias e evento em samu_eventos."""
+    if db.bind is None:
+        return False, None, None
+
+    inspector = inspect(db.bind)
+    if not inspector.has_table("samu_ocorrencias"):
+        return False, None, None
+
+    colunas = {c["name"] for c in inspector.get_columns("samu_ocorrencias")}
+    ocorrencia_id = str(uuid.uuid4())
+    agora_utc = datetime.utcnow()
+    lat_f = _to_float_or_none(latitude)
+    lon_f = _to_float_or_none(longitude)
+    descricao_completa = f"{observacao} (Cidadão: {nome_cidadao})" if nome_cidadao else observacao
+
+    valores: dict[str, object] = {}
+    if "id" in colunas:
+        valores["id"] = ocorrencia_id
+    if "protocolo" in colunas:
+        valores["protocolo"] = protocolo
+    if "origem" in colunas:
+        valores["origem"] = "app_cidadao"
+    if "cidadao_id" in colunas:
+        valores["cidadao_id"] = cidadao_id
+    if "descricao" in colunas:
+        valores["descricao"] = descricao_completa
+    if "latitude" in colunas:
+        valores["latitude"] = lat_f
+    if "longitude" in colunas:
+        valores["longitude"] = lon_f
+    if "gps_atualizado_em" in colunas:
+        valores["gps_atualizado_em"] = agora_utc
+    if "status" in colunas:
+        valores["status"] = "recebida"
+    if "recebida_em" in colunas:
+        valores["recebida_em"] = agora_utc
+    if "atualizada_em" in colunas:
+        valores["atualizada_em"] = agora_utc
+
+    if not valores:
+        return False, None, None
+
+    cols_sql = ", ".join(valores.keys())
+    params_sql = ", ".join(f":{k}" for k in valores.keys())
+    db.execute(text(f"INSERT INTO samu_ocorrencias ({cols_sql}) VALUES ({params_sql})"), valores)
+
+    if inspector.has_table("samu_eventos"):
+        ev_cols = {c["name"] for c in inspector.get_columns("samu_eventos")}
+        ev_vals: dict[str, object] = {}
+        if "id" in ev_cols:
+            ev_vals["id"] = str(uuid.uuid4())
+        if "ocorrencia_id" in ev_cols:
+            ev_vals["ocorrencia_id"] = ocorrencia_id
+        if "tipo" in ev_cols:
+            ev_vals["tipo"] = "SOS_RECEBIDO"
+        if "profissional" in ev_cols:
+            ev_vals["profissional"] = "APP_CIDADAO"
+        if "detalhes" in ev_cols:
+            ev_vals["detalhes"] = json.dumps(
+                {"origem": "app_cidadao", "cidadao_id": cidadao_id, "protocolo": protocolo},
+                ensure_ascii=False,
+            )
+        if "criado_em" in ev_cols:
+            ev_vals["criado_em"] = agora_utc
+
+        if ev_vals:
+            ev_cols_sql = ", ".join(ev_vals.keys())
+            ev_params_sql = ", ".join(f":{k}" for k in ev_vals.keys())
+            db.execute(text(f"INSERT INTO samu_eventos ({ev_cols_sql}) VALUES ({ev_params_sql})"), ev_vals)
+
+    alerta_ws = {
+        "tipo": "NOVO_SOS",
+        "protocolo": protocolo,
+        "ocorrencia_id": ocorrencia_id,
+        "latitude": lat_f,
+        "longitude": lon_f,
+        "horario": agora_utc.isoformat(),
+        "alerta_visual": True,
+        "alerta_sonoro": True,
+        "status": "recebida",
+    }
+    return True, ocorrencia_id, alerta_ws
+
+
+async def _notificar_central_ws(alerta_ws: dict | None) -> None:
+    if not alerta_ws:
+        return
+    try:
+        import suas_samu
+        if hasattr(suas_samu, "central") and hasattr(suas_samu.central, "publicar"):
+            await suas_samu.central.publicar(alerta_ws)
+    except Exception:
+        pass
 
 
 # --- Schemas Pydantic ---
@@ -339,18 +455,32 @@ def cartao_vital(c=Depends(current_citizen), db: Session = Depends(get_db)):
 
 
 @router.post("/sos", status_code=201)
-def acionar_sos(data: SosIn, c=Depends(current_citizen), db: Session = Depends(get_db)):
+async def acionar_sos(data: SosIn, c=Depends(current_citizen), db: Session = Depends(get_db)):
     protocolo = f"SOS-{datetime.utcnow().strftime('%Y%m%d')}-{secrets.token_hex(2).upper()}"
+    observacao = data.observacao or "Acionamento via App do Cidadão"
     log = CitizenEmergencyLog(
         cidadao_id=c.id,
         protocolo=protocolo,
         latitude=data.latitude,
         longitude=data.longitude,
-        observacao=data.observacao or "Acionamento via App do Cidadão",
+        observacao=observacao,
     )
     db.add(log)
+
+    registrado_samu, ocorrencia_samu_id, alerta_ws = _registrar_ocorrencia_samu(
+        db=db,
+        protocolo=protocolo,
+        cidadao_id=c.id,
+        nome_cidadao=getattr(c, "nome_completo", None),
+        latitude=data.latitude,
+        longitude=data.longitude,
+        observacao=observacao,
+    )
+
     db.commit()
     db.refresh(log)
+    await _notificar_central_ws(alerta_ws)
+
     maps_url = (
         f"https://www.google.com/maps?q={data.latitude},{data.longitude}"
         if data.latitude and data.longitude
@@ -358,10 +488,12 @@ def acionar_sos(data: SosIn, c=Depends(current_citizen), db: Session = Depends(g
     )
     return {
         "protocolo": protocolo,
+        "ocorrencia_samu_id": ocorrencia_samu_id,
+        "registrado_samu": registrado_samu,
         "status": log.status,
         "maps_url": maps_url,
         "contato_emergencia": getattr(c, "contacto_responsavel", None),
-        "mensagem": "Alerta SOS registrado no painel CCO/CPO com sua geolocalização.",
+        "mensagem": "Alerta SOS registrado permanentemente no SAMU com sua geolocalização.",
     }
 
 
