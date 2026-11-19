@@ -75,6 +75,7 @@ header{
   align-items:center;
   justify-content:space-between;
   gap:14px;
+  flex-wrap:wrap;
 }
 h1{font-size:23px;margin:0 0 5px}
 h2{font-size:17px;margin:0 0 16px}
@@ -114,6 +115,10 @@ h2{font-size:17px;margin:0 0 16px}
 .item:hover,.item.selected{
   border-color:var(--teal);
   background:#f4fbfa;
+}
+.item.novo-alerta{
+  border-color:var(--red);
+  background:#fff5f6;
 }
 .item strong{display:block;margin-bottom:6px}
 .tag{
@@ -157,6 +162,7 @@ textarea{min-height:85px}
   background:#f1f7fa;
   font-size:13px;
   line-height:1.6;
+  white-space:pre-line;
 }
 .alert{
   background:#fff0f1;
@@ -223,7 +229,12 @@ pre{
       Gestão integrada de urgências
     </div>
   </div>
-  <div id="estado" class="subtitle">● Desconectado</div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <button class="btn light" type="button" onclick="ativarSom(true)">
+      🔊 Som: <span id="estadoSom">Desativado</span>
+    </button>
+    <div id="estado" class="subtitle">● Desconectado</div>
+  </div>
 </header>
 
 <div class="content">
@@ -416,6 +427,11 @@ let perfil = "";
 let ocorrencias = [];
 let selecionada = null;
 let atualizador = null;
+let somAtivo = false;
+let audioCtx = null;
+let idsConhecidos = new Set();
+let idsDestacados = new Set();
+let primeiraCarga = true;
 
 const el = id => document.getElementById(id);
 
@@ -423,6 +439,46 @@ function informar(texto, erro=false) {
   el("mensagem").textContent = texto;
   el("mensagem").style.color =
     erro ? "#d94755" : "#138b86";
+}
+
+function ativarSom(testarBeep = false) {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!audioCtx) audioCtx = new Ctx();
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+    somAtivo = true;
+    el("estadoSom").textContent = "Ativo";
+    if (testarBeep) tocarAlertaSonoro();
+  } catch (e) {
+    informar("Áudio não suportado neste navegador.", true);
+  }
+}
+
+function tocarAlertaSonoro() {
+  if (!somAtivo) return;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!audioCtx) audioCtx = new Ctx();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+
+    const agora = audioCtx.currentTime;
+    [880, 660, 880, 1174.66].forEach((freq, idx) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, agora + idx * 0.18);
+      gain.gain.setValueAtTime(0.22, agora + idx * 0.18);
+      gain.gain.exponentialRampToValueAtTime(0.001, agora + idx * 0.18 + 0.17);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(agora + idx * 0.18);
+      osc.stop(agora + idx * 0.18 + 0.18);
+    });
+  } catch (e) {
+    informar("Não foi possível reproduzir o som de alerta.", true);
+  }
 }
 
 function aba(id, botao=null) {
@@ -483,6 +539,11 @@ function conectar() {
       throw Error("Informe uma API HTTPS válida.");
     }
 
+    idsConhecidos = new Set();
+    idsDestacados = new Set();
+    primeiraCarga = true;
+    ativarSom(false);
+
     await request("/samu/ocorrencias");
 
     el("estado").textContent = "● API conectada";
@@ -505,6 +566,9 @@ function sair(limpar=true) {
   profissional = "";
   ocorrencias = [];
   selecionada = null;
+  idsConhecidos = new Set();
+  idsDestacados = new Set();
+  primeiraCarga = true;
 
   el("token").value = "";
   el("estado").textContent = "● Desconectado";
@@ -520,6 +584,22 @@ async function atualizar() {
 
   try {
     ocorrencias = await request("/samu/ocorrencias");
+
+    const atuaisIds = new Set(ocorrencias.map(o => o.id));
+    const novasOcorrencias = ocorrencias.filter(o => !idsConhecidos.has(o.id));
+
+    if (!primeiraCarga && novasOcorrencias.length > 0) {
+      novasOcorrencias.forEach(o => idsDestacados.add(o.id));
+      tocarAlertaSonoro();
+      const prot = novasOcorrencias.map(o => o.protocolo).filter(Boolean).join(", ");
+      informar(
+        `Novo chamado SAMU recebido (${novasOcorrencias.length}): ${prot || "verifique a lista"}.`,
+        true
+      );
+    }
+
+    idsConhecidos = atuaisIds;
+    primeiraCarga = false;
 
     el("total").textContent = ocorrencias.length;
 
@@ -560,6 +640,8 @@ function renderizar() {
   for (const o of ocorrencias) {
     const item = document.createElement("div");
     item.className = "item";
+    if (idsDestacados.has(o.id)) item.classList.add("novo-alerta");
+    if (selecionada && selecionada.id === o.id) item.classList.add("selected");
 
     const titulo = document.createElement("strong");
     titulo.textContent = o.protocolo;
@@ -581,6 +663,8 @@ function renderizar() {
 function selecionar(id) {
   selecionada = ocorrencias.find(o => o.id === id);
   if (!selecionada) return;
+  idsDestacados.delete(id);
+  renderizar();
 
   const o = selecionada;
 
