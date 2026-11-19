@@ -198,7 +198,7 @@ def emitir_prescricao(
 @router.post(
     "/requisitar-exame/",
     summary="Médico emite Requisição de Exame (Laboratorial, Imagem ou Demais Exames)",
-    description="Regista solicitação de exames laboratoriais, de imagem ou diagnósticos complementares para execução em laboratório/unidade e posterior retorno.",
+    description="Regista permanentemente a solicitação de exame no banco e cria notificação/lembrete para o App do Cidadão quando vinculado.",
 )
 def requisitar_exame_medico(
     payload: RequisicaoExameCreate,
@@ -229,10 +229,54 @@ def requisitar_exame_medico(
     prefixo = "REQ-LAB" if "lab" in cat_lower else "REQ-EXM"
     codigo_requisicao = f"{prefixo}-{uuid.uuid4().hex[:8].upper()}"
     emitido_em = datetime.utcnow()
+    unidade_destino = payload.laboratorio_ou_unidade or "Laboratório / Rede Credenciada"
+
+    db_exame = models.ExameRequisicaoItem(
+        codigo_requisicao=codigo_requisicao,
+        cidadao_id=cidadao.id if cidadao else payload.cidadao_id,
+        cidadao_nome=nome_paciente,
+        medico_crm=auth["crm"],
+        categoria_exame=payload.categoria_exame,
+        exame_nome=payload.exame_nome,
+        laboratorio_ou_unidade=unidade_destino,
+        prioridade=payload.prioridade,
+        indicacao_clinica=payload.indicacao_clinica,
+        preparo_observacoes=payload.preparo_observacoes,
+        status_exame="SOLICITADO",
+        data_solicitacao=emitido_em,
+    )
+    db.add(db_exame)
+
+    notificacao_criada = False
+    if cidadao:
+        msg_exame = (
+            f"Exame solicitado ({payload.exame_nome}) em {unidade_destino}. "
+            f"Código: {codigo_requisicao} | Prioridade: {payload.prioridade}."
+        )
+        if payload.preparo_observacoes:
+            msg_exame += f" Preparo/Obs.: {payload.preparo_observacoes}"
+
+        db_notif = models.NotificacaoCidadaoItem(
+            cidadao_id=cidadao.id,
+            cidadao_nome=cidadao.nome_completo,
+            tipo_evento="EXAME_SOLICITADO",
+            titulo=f"Exame Solicitado: {payload.exame_nome}",
+            mensagem=msg_exame,
+            data_agendada=None,
+            alarme_sugerido="07:00",
+            lida=False,
+            data_criacao=emitido_em,
+        )
+        db.add(db_notif)
+        notificacao_criada = True
+
+    db.commit()
+    db.refresh(db_exame)
 
     return {
         "status": "Sucesso",
-        "mensagem": f"Requisição de exame '{payload.exame_nome}' emitida para {payload.laboratorio_ou_unidade or 'rede diagnóstica'}.",
+        "mensagem": f"Requisição de exame '{payload.exame_nome}' registada para {unidade_destino}.",
+        "requisicao_id": db_exame.id,
         "codigo_requisicao": codigo_requisicao,
         "status_exame": "SOLICITADO",
         "medico_responsavel_crm": auth["crm"],
@@ -244,14 +288,15 @@ def requisitar_exame_medico(
         "exame": {
             "categoria_exame": payload.categoria_exame,
             "exame_nome": payload.exame_nome,
-            "laboratorio_ou_unidade": payload.laboratorio_ou_unidade or "Laboratório / Rede Credenciada",
+            "laboratorio_ou_unidade": unidade_destino,
             "prioridade": payload.prioridade,
             "indicacao_clinica": payload.indicacao_clinica,
             "preparo_observacoes": payload.preparo_observacoes,
         },
-        "integracao_laboratorio": {
-            "endpoint_resultado": "/laboratorio/resultado",
-            "observacao": "Quando o laboratório registrar o resultado como REALIZADO, o sistema integra ao fluxo de retorno e notificação ao cidadão.",
+        "notificacao_app_cidadao": {
+            "registada_no_banco": notificacao_criada,
+            "alarme_sugerido": "07:00" if notificacao_criada else None,
+            "endpoint_consulta": f"/cidadao/{cidadao.id}/notificacoes-lembretes" if cidadao else None,
         },
     }
 
