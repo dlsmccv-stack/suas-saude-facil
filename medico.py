@@ -5,13 +5,32 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 import database
 import farmacia_schemas
 import models
+import regulacao
 
 router = APIRouter(prefix="/medico", tags=["Painel do Médico"])
+
+
+class RequisicaoExameCreate(BaseModel):
+    cidadao_id: Optional[int] = Field(None, description="ID do cidadão no sistema")
+    cidadao_nome: Optional[str] = Field(None, description="Nome completo do paciente")
+    categoria_exame: str = Field(
+        "Laboratorial",
+        description="Ex.: Laboratorial, Imagem / Radiologia, Cardiológico / Diagnóstico, Outros Exames Médicos",
+    )
+    exame_nome: str = Field(..., description="Nome do exame solicitado", example="Hemograma Completo")
+    laboratorio_ou_unidade: Optional[str] = Field(
+        "Laboratório / Rede Credenciada",
+        description="Unidade, laboratório parceiro ou setor executante",
+    )
+    prioridade: str = Field("Rotina", description="Rotina, Urgente ou Emergência")
+    indicacao_clinica: Optional[str] = Field(None, description="Hipótese diagnóstica ou justificativa clínica")
+    preparo_observacoes: Optional[str] = Field(None, description="Preparo necessário ou observações ao laboratório")
 
 
 def verificar_token_medico(
@@ -177,20 +196,103 @@ def emitir_prescricao(
 
 
 @router.post(
+    "/requisitar-exame/",
+    summary="Médico emite Requisição de Exame (Laboratorial, Imagem ou Demais Exames)",
+    description="Regista solicitação de exames laboratoriais, de imagem ou diagnósticos complementares para execução em laboratório/unidade e posterior retorno.",
+)
+def requisitar_exame_medico(
+    payload: RequisicaoExameCreate,
+    db: Session = Depends(database.get_db),
+    auth: dict = Depends(verificar_token_medico),
+):
+    cidadao = None
+    if payload.cidadao_id:
+        cidadao = (
+            db.query(models.CidadaoPerfil)
+            .filter(models.CidadaoPerfil.id == payload.cidadao_id)
+            .first()
+        )
+        if not cidadao:
+            raise HTTPException(status_code=404, detail="Cidadão não encontrado.")
+
+    nome_paciente = (
+        (payload.cidadao_nome or "").strip()
+        or (cidadao.nome_completo if cidadao else None)
+    )
+    if not nome_paciente:
+        raise HTTPException(
+            status_code=400,
+            detail="Informe cidadao_id válido ou cidadao_nome para emitir a requisição de exame.",
+        )
+
+    cat_lower = (payload.categoria_exame or "").lower()
+    prefixo = "REQ-LAB" if "lab" in cat_lower else "REQ-EXM"
+    codigo_requisicao = f"{prefixo}-{uuid.uuid4().hex[:8].upper()}"
+    emitido_em = datetime.utcnow()
+
+    return {
+        "status": "Sucesso",
+        "mensagem": f"Requisição de exame '{payload.exame_nome}' emitida para {payload.laboratorio_ou_unidade or 'rede diagnóstica'}.",
+        "codigo_requisicao": codigo_requisicao,
+        "status_exame": "SOLICITADO",
+        "medico_responsavel_crm": auth["crm"],
+        "data_emissao": emitido_em.isoformat(),
+        "paciente": {
+            "cidadao_id": cidadao.id if cidadao else payload.cidadao_id,
+            "nome": nome_paciente,
+        },
+        "exame": {
+            "categoria_exame": payload.categoria_exame,
+            "exame_nome": payload.exame_nome,
+            "laboratorio_ou_unidade": payload.laboratorio_ou_unidade or "Laboratório / Rede Credenciada",
+            "prioridade": payload.prioridade,
+            "indicacao_clinica": payload.indicacao_clinica,
+            "preparo_observacoes": payload.preparo_observacoes,
+        },
+        "integracao_laboratorio": {
+            "endpoint_resultado": "/laboratorio/resultado",
+            "observacao": "Quando o laboratório registrar o resultado como REALIZADO, o sistema integra ao fluxo de retorno e notificação ao cidadão.",
+        },
+    }
+
+
+@router.post(
     "/regulacao/",
-    summary="Médico solicita Item de Regulação (Óculos, Prótese, Aparelho Auditivo)",
-    description="Encaminha o pedido de regulação do paciente para a fila unificada.",
+    summary="Médico solicita Regulação Assistencial ou Transferência Hospitalar",
+    description="Encaminha pedido de item de regulação ou transferência hospitalar (com origem, destino, especialidade, prioridade e observações) para a fila unificada.",
 )
 def solicitar_regulacao_medica(
     cidadao_nome: str,
     tipo_item: str,
+    unidade_origem: Optional[str] = None,
+    unidade_destino: Optional[str] = None,
+    especialidade_solicitada: Optional[str] = None,
+    prioridade_clinica: Optional[str] = "Média",
+    observacoes_medicas: Optional[str] = None,
     db: Session = Depends(database.get_db),
     auth: dict = Depends(verificar_token_medico),
 ):
+    prioridade_final = prioridade_clinica or "Média"
+    analise = regulacao.calcular_prioridade_intersetorial(
+        nome_paciente=cidadao_nome,
+        prioridade_clinica=prioridade_final,
+        db=db,
+    )
+
     db_reg = models.RegulacaoItem(
         cidadao_nome=cidadao_nome,
         paciente_nome=cidadao_nome,
         tipo_item=tipo_item,
+        unidade_origem=unidade_origem,
+        unidade_destino=unidade_destino,
+        especialidade_solicitada=especialidade_solicitada or tipo_item,
+        prioridade_clinica=prioridade_final,
+        observacoes_medicas=observacoes_medicas,
+        nis_vinculado=analise["nis_vinculado"],
+        vulnerabilidade_suas=analise["vulnerabilidade_suas"],
+        beneficio_social_ativo=analise["beneficio_social_ativo"],
+        score_prioridade_intersetorial=analise["score"],
+        justificativa_priorizacao=analise["justificativa"],
         status="Pendente",
         status_solicitacao="Pendente",
         data_solicitacao=datetime.utcnow(),
@@ -199,12 +301,28 @@ def solicitar_regulacao_medica(
     db.commit()
     db.refresh(db_reg)
 
+    eh_transferencia = "transfer" in (tipo_item or "").lower()
+
     return {
         "status": "Sucesso",
-        "mensagem": f"Solicitação de {tipo_item} enviada para a fila de regulação.",
+        "mensagem": (
+            f"Solicitação de transferência hospitalar enviada para a regulação ({unidade_origem or 'Origem não informada'} -> {unidade_destino or 'Destino a definir'})."
+            if eh_transferencia
+            else f"Solicitação de {tipo_item} enviada para a fila de regulação."
+        ),
+        "tipo_solicitacao": "transferencia_hospitalar" if eh_transferencia else "regulacao_assistencial",
         "medico_responsavel_crm": auth["crm"],
         "registo_id": db_reg.id,
         "status_regulacao": db_reg.status,
+        "score_prioridade_intersetorial": db_reg.score_prioridade_intersetorial,
+        "detalhes_transferencia": {
+            "paciente_nome": db_reg.paciente_nome,
+            "unidade_origem": db_reg.unidade_origem,
+            "unidade_destino": db_reg.unidade_destino,
+            "especialidade_solicitada": db_reg.especialidade_solicitada,
+            "prioridade_clinica": db_reg.prioridade_clinica,
+            "observacoes_medicas": db_reg.observacoes_medicas,
+        },
     }
 
 
