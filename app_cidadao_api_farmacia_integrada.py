@@ -47,13 +47,13 @@ class CitizenTriage(models.Base):
     __tablename__ = "app_cidadao_triagens"
     id = Column(Integer, primary_key=True)
     cidadao_id = Column(Integer, ForeignKey("cidadaos_perfil.id"), nullable=False, index=True)
-    protocolo = Column(String(32), unique=True, index=True, nullable=True)
-    queixa_principal = Column(String(1500), nullable=False)
-    gravidade_autorreferida = Column(String(12), nullable=False)
-    unidade_indicada = Column(String(120), default="UBS de Referência")
+    protocolo = Column(String(64), unique=True, index=True, nullable=True)
+    queixa_principal = Column(Text, nullable=False)
+    gravidade_autorreferida = Column(String(40), nullable=False)
+    unidade_indicada = Column(String(255), default="UBS de Referência")
     tempo_estimado_min = Column(Integer, default=35)
-    qr_checkin = Column(String(64), nullable=True)
-    status = Column(String(60), default="Pré-triagem validada · Aguardando check-in QR")
+    qr_checkin = Column(String(255), nullable=True)
+    status = Column(String(255), default="Pré-triagem validada · Aguardando check-in QR")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
