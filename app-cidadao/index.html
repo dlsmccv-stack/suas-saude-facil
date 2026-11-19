@@ -334,15 +334,53 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
       </div>
 
       <div class="card">
+        <h2>📅 Agendamento para Retirada de Medicamentos</h2>
+        <p class="muted">Agende dia, horário e unidade/farmácia para retirar seus medicamentos sem fila e gere o QR Code de retirada.</p>
+        <form id="pickup-schedule-form">
+          <label>Medicamento para retirada</label>
+          <input name="medicamento_nome" placeholder="Ex: Losartana 50mg, Metformina 850mg" required maxlength="180">
+
+          <div class="row">
+            <div>
+              <label>Modalidade</label>
+              <select name="modalidade">
+                <option value="SUS">Rede Pública (SUS)</option>
+                <option value="PLANO_DESCONTO">Farmácia Credenciada / Plano</option>
+              </select>
+            </div>
+            <div>
+              <label>Unidade / Farmácia</label>
+              <input name="unidade_retirada" placeholder="Ex: UBS / Farmácia Popular" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Data da retirada</label>
+              <input name="data_retirada" type="date" required>
+            </div>
+            <div>
+              <label>Horário agendado</label>
+              <input name="hora_retirada" type="time" value="09:00" required>
+            </div>
+          </div>
+
+          <button class="success" style="width:100%;margin-top:12px">Confirmar Agendamento de Retirada</button>
+        </form>
+
+        <div id="pickup-schedule-list" class="notice" style="margin-top:12px">Nenhum agendamento de retirada registrado ainda.</div>
+      </div>
+
+      <div class="card">
         <div class="row">
-          <h2 style="margin:0">💊 Receitas, Agendamento e Retirada</h2>
+          <h2 style="margin:0">💊 Receitas & QR Code da Farmácia</h2>
           <button id="refresh-meds" class="secondary btn-sm" type="button" style="flex:0">Atualizar</button>
         </div>
-        <p class="muted">Agende data e horário para retirada de medicamentos no SUS ou farmácia credenciada e gere seu QR Code.</p>
+        <p class="muted">Gere seu QR Code para retirada agendada no SUS ou desconto nas farmácias credenciadas do plano.</p>
         <div id="med-list" class="notice">Consultando prescrições...</div>
 
         <div style="border-top:1px solid #e2e8f0;padding-top:12px;margin-top:12px">
-          <h3>Agendar Retirada e Gerar QR Code</h3>
+          <h3>Gerar QR Code Rápido da Farmácia</h3>
           <form id="farma-qr-form">
             <label>Medicamento prescrito</label>
             <input name="medicamento_nome" placeholder="Ex: Losartana 50mg ou Insulina NPH" required>
@@ -351,19 +389,7 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
               <option value="SUS">Rede Pública (SUS — Retirada Agendada)</option>
               <option value="PLANO_DESCONTO">Plano de Saúde (Desconto Farmácia Credenciada)</option>
             </select>
-            <div class="row">
-              <div>
-                <label>Data agendada para retirada</label>
-                <input name="data_agendada" type="date" required>
-              </div>
-              <div>
-                <label>Horário agendado</label>
-                <input name="hora_agendada" type="time" value="09:00" required>
-              </div>
-            </div>
-            <label>Unidade / Farmácia de retirada (opcional)</label>
-            <input name="unidade_retirada" placeholder="Ex: Farmácia Popular / UBS do bairro">
-            <button style="width:100%;margin-top:10px">Confirmar Agendamento e Gerar QR Code</button>
+            <button style="width:100%;margin-top:10px">Gerar QR Code da Farmácia</button>
           </form>
           <div id="farma-qr-box" class="qr-box hidden">
             <strong id="farma-qr-title">QR Code Autorizado</strong>
@@ -450,6 +476,7 @@ let user = null;
 let allAlarms = [];
 let activeAlarms = [];
 let medFilter = 'TODOS';
+let pickupSchedules = [];
 let triggeredLog = {};
 let lastMapsUrl = null;
 let lastThirdPartyWaUrl = null;
@@ -667,7 +694,6 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
 
 /* --- Leitor de QR para Terceiros (Sem expor dados do QR Code na tela) --- */
 function extractSafeQrReference(rawValue) {
-  // Extrai apenas o código identificador (ex: SUAS-VITAL-12) sem exibir dados pessoais/clínicos brutos
   const clean = String(rawValue || '').trim();
   if (!clean) return '';
   const match = clean.match(/SUAS[-_][A-Z0-9_-]+/i);
@@ -708,7 +734,6 @@ $('toggle-qr-scanner-btn').onclick = async () => {
           const codes = await detector.detect(video);
           if (codes && codes.length) {
             const refCode = extractSafeQrReference(codes[0].rawValue);
-            // Não mostra os dados brutos do QR; apenas confirma a leitura do identificador para o botão de emergência
             $('third-qr-code').value = refCode ? 'QR-DETECTADO' : 'QR-LIDO';
             $('third-qr-code').dataset.qrRef = refCode || 'QR-LIDO';
             stopQrScanner();
@@ -747,7 +772,6 @@ $('third-party-samu-btn').onclick = () => {
       ? `https://wa.me/55${familyPhone}?text=${waText}`
       : `https://wa.me/?text=${waText}`;
 
-    // Se houver sessão autenticada, registra também no endpoint /app-cidadao/sos
     if (token) {
       try {
         await request('/app-cidadao/sos', {
@@ -990,7 +1014,7 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   $('tab-' + b.dataset.tab).classList.add('active');
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
   if (b.dataset.tab === 'avisos') { loadNotificationsAndExams(); }
-  if (b.dataset.tab === 'meds') { loadAlarms(); loadMeds(); }
+  if (b.dataset.tab === 'meds') { loadAlarms(); loadMeds(); renderPickupSchedules(); }
   if (b.dataset.tab === 'triagem') { loadTriages(); }
 });
 
@@ -1193,13 +1217,89 @@ $('alarm-form').onsubmit = async e => {
   } catch (err) { notice(err.message, 'warning'); }
 };
 
-/* --- Receitas, Agendamento para Retirada e Farmácia --- */
+/* --- Agendamento para Retirada de Medicamentos --- */
+function renderPickupSchedules() {
+  const box = $('pickup-schedule-list');
+  box.replaceChildren();
+  if (!pickupSchedules.length) {
+    box.textContent = 'Nenhum agendamento de retirada registrado ainda.';
+    return;
+  }
+  pickupSchedules.forEach((ag, idx) => {
+    const d = document.createElement('div');
+    d.className = 'item';
+
+    const top = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = `${ag.medicamento_nome} `;
+    const pill = document.createElement('span');
+    pill.className = 'pill pill-green';
+    pill.textContent = 'AGENDADO';
+    top.append(title, pill);
+
+    const info = document.createElement('div');
+    info.textContent = `📅 ${ag.data_retirada} às ${ag.hora_retirada} · ${ag.unidade_retirada} (${ag.modalidade === 'SUS' ? 'SUS' : 'Credenciada'})`;
+
+    const actions = document.createElement('div');
+    actions.className = 'row';
+    actions.style.marginTop = '8px';
+
+    const btnQr = document.createElement('button');
+    btnQr.className = 'secondary btn-sm';
+    btnQr.type = 'button';
+    btnQr.textContent = 'Ver QR Code de Retirada';
+    btnQr.onclick = () => {
+      gerarQrFarmacia(ag.medicamento_nome, ag.modalidade, null, {
+        data: ag.data_retirada,
+        hora: ag.hora_retirada,
+        unidade: ag.unidade_retirada
+      });
+    };
+
+    const btnCancel = document.createElement('button');
+    btnCancel.className = 'outline btn-sm';
+    btnCancel.type = 'button';
+    btnCancel.textContent = 'Cancelar';
+    btnCancel.onclick = () => {
+      pickupSchedules.splice(idx, 1);
+      renderPickupSchedules();
+      notice('Agendamento de retirada cancelado.', 'warning');
+    };
+
+    actions.append(btnQr, btnCancel);
+    d.append(top, info, actions);
+    box.append(d);
+  });
+}
+
+$('pickup-schedule-form').onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const novo = {
+    medicamento_nome: f.get('medicamento_nome'),
+    modalidade: f.get('modalidade'),
+    unidade_retirada: f.get('unidade_retirada'),
+    data_retirada: f.get('data_retirada'),
+    hora_retirada: f.get('hora_retirada')
+  };
+  pickupSchedules.unshift(novo);
+  renderPickupSchedules();
+  await gerarQrFarmacia(novo.medicamento_nome, novo.modalidade, null, {
+    data: novo.data_retirada,
+    hora: novo.hora_retirada,
+    unidade: novo.unidade_retirada
+  });
+  e.target.reset();
+  notice('✅ Retirada de medicamento agendada e QR Code gerado!', 'ok');
+};
+
+/* --- Receitas e Farmácia --- */
 async function loadMeds() {
   const box = $('med-list');
   try {
     const rows = await request('/app-cidadao/prescricoes');
     box.replaceChildren();
-    if (!rows.length) { box.textContent = 'Nenhuma prescrição médica enviada pelo consultório ainda. Você pode agendar retirada e gerar QR Code abaixo.'; return; }
+    if (!rows.length) { box.textContent = 'Nenhuma prescrição médica enviada pelo consultório ainda. Você pode gerar QR Code abaixo.'; return; }
     rows.forEach(p => {
       const d = document.createElement('div'); d.className = 'item';
       const t = document.createElement('strong'); t.textContent = `${p.medicamento_nome} ${p.dosagem || ''}`;
@@ -1228,23 +1328,14 @@ async function gerarQrFarmacia(medicamento_nome, modalidade, medicamento_id = nu
     setText('farma-qr-code', r.codigo_autorizacao);
     setText('farma-qr-desc', `${r.mensagem || ''}${agendStr}`);
     show('farma-qr-box', true);
-    notice('Agendamento e QR Code gerados! Apresente no balcão da farmácia.', 'ok');
+    notice('QR Code gerado! Apresente no balcão da farmácia.', 'ok');
   } catch (err) { notice(err.message, 'warning'); }
 }
 
 $('farma-qr-form').onsubmit = e => {
   e.preventDefault();
   const f = new FormData(e.target);
-  gerarQrFarmacia(
-    f.get('medicamento_nome'),
-    f.get('modalidade'),
-    null,
-    {
-      data: f.get('data_agendada'),
-      hora: f.get('hora_agendada'),
-      unidade: f.get('unidade_retirada')
-    }
-  );
+  gerarQrFarmacia(f.get('medicamento_nome'), f.get('modalidade'));
 };
 
 /* --- Farmacovigilância e Automedicação --- */
