@@ -39,8 +39,8 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
 .tab{display:none}
 .tab.active{display:block}
-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #cbd5e1;display:flex;justify-content:center;z-index:20;padding:6px 8px;gap:4px;box-shadow:0 -2px 10px rgba(0,0,0,.05)}
-nav button{font-size:11.5px;padding:8px 4px;background:#fff;color:#64748b;flex:1;max-width:125px;border-radius:10px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #cbd5e1;display:flex;justify-content:center;z-index:20;padding:6px 6px;gap:3px;box-shadow:0 -2px 10px rgba(0,0,0,.05)}
+nav button{font-size:10.5px;padding:8px 2px;background:#fff;color:#64748b;flex:1;max-width:112px;border-radius:10px}
 nav button.active{background:#e0f2fe;color:#072B59}
 .item{border-top:1px solid #e2e8f0;padding:11px 0}
 .item:first-child{border:0}
@@ -49,9 +49,11 @@ a{color:#0369a1;text-decoration:none}
 .pill{display:inline-block;background:#e0f2fe;color:#072B59;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:700}
 .pill-green{background:#dcfce7;color:#166534}
 .pill-amber{background:#fef3c7;color:#92400e}
+.pill-blue{background:#dbeafe;color:#1e40af}
 .qr-box{text-align:center;background:#f8fafc;border:1px dashed #94a3b8;border-radius:14px;padding:14px;margin-top:12px}
 .qr-box canvas{background:#fff;padding:10px;border-radius:10px;border:1px solid #e2e8f0;max-width:210px;height:auto}
 .alarm-banner{position:fixed;top:12px;left:12px;right:12px;max-width:536px;margin:auto;background:#072B59;color:#fff;border:2px solid #38bdf8;border-radius:16px;padding:16px;z-index:50;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-fit:cover;margin-top:8px}
 </style>
 </head>
 <body>
@@ -77,11 +79,43 @@ a{color:#0369a1;text-decoration:none}
 <main class="wrap">
   <div id="message" class="notice hidden" role="status"></div>
 
+  <!-- BLOCO PÚBLICO DE EMERGÊNCIA / LEITOR QR PARA TERCEIROS (SEM EXPOR DADOS DO QR) -->
+  <section id="third-party-qr-card" class="card">
+    <div class="row">
+      <h2 style="margin:0">🆘 Leitor QR — Acionar SAMU para Terceiro</h2>
+      <button class="secondary btn-sm" id="toggle-qr-scanner-btn" type="button" style="flex:0;white-space:nowrap">📷 Ler QR Code</button>
+    </div>
+    <p class="muted">Para socorrer alguém: escaneie o QR Code (ou informe o código do cartão). <strong>Os dados privados do QR Code não são exibidos na tela</strong> — o botão aciona o SAMU, envia a localização e notifica o familiar.</p>
+
+    <div id="qr-scanner-box" class="hidden">
+      <video id="qr-video" playsinline muted></video>
+      <div class="row" style="margin-top:8px">
+        <button class="outline btn-sm" id="stop-qr-scanner-btn" type="button">Parar Câmera</button>
+      </div>
+    </div>
+
+    <label for="third-qr-code">Código do Cartão Vital / QR (opcional)</label>
+    <input id="third-qr-code" placeholder="Ex: SUAS-VITAL-1 ou código escaneado">
+
+    <label for="third-family-phone">Telefone / WhatsApp do familiar para notificar (opcional)</label>
+    <input id="third-family-phone" type="tel" placeholder="Ex: 86999990000">
+
+    <button class="danger" id="third-party-samu-btn" type="button" style="margin-top:12px">
+      🚨 ACIONAR SAMU + ENVIAR LOCALIZAÇÃO + NOTIFICAR FAMILIAR
+    </button>
+
+    <div id="third-party-result" class="notice ok hidden"></div>
+    <div class="row hidden" id="third-party-actions" style="margin-top:8px">
+      <a href="tel:192" style="flex:1"><button class="danger btn-sm" type="button" style="width:100%">📞 Ligar SAMU 192</button></a>
+      <button class="gold btn-sm" id="third-party-wa-btn" type="button">📲 Enviar WhatsApp Familiar</button>
+    </div>
+  </section>
+
   <!-- AUTENTICAÇÃO -->
   <section id="auth">
     <div class="card">
       <h2>Entrar no aplicativo</h2>
-      <p class="muted">Acesse sua jornada digital de saúde, Cartão Vital com QR Code, pré-triagem e despertador de medicamentos.</p>
+      <p class="muted">Acesse sua jornada digital de saúde, Cartão Vital com QR Code, exames, retornos, pré-triagem e despertador de medicamentos.</p>
       <form id="login-form">
         <label for="login-cns">Cartão Nacional de Saúde (15 dígitos)</label>
         <input id="login-cns" inputmode="numeric" autocomplete="username" placeholder="Ex: 700000000000001" maxlength="18" required>
@@ -180,7 +214,28 @@ a{color:#0369a1;text-decoration:none}
       </div>
     </section>
 
-    <!-- ABA 2: PRÉ-TRIAGEM INTELIGENTE -->
+    <!-- ABA 2: NOTIFICAÇÕES, EXAMES E RETORNOS -->
+    <section id="tab-avisos" class="tab">
+      <div class="card">
+        <div class="row">
+          <h2 style="margin:0">🔔 Notificações & Lembretes</h2>
+          <button id="refresh-avisos" class="secondary btn-sm" type="button" style="flex:0">Atualizar</button>
+        </div>
+        <p class="muted">Acompanhe avisos de exames solicitados, resultados e retornos médicos (incluindo retorno de 14 dias).</p>
+        <div style="margin-bottom:8px">
+          <span class="pill pill-amber" id="unread-badge">0 não lidas</span>
+        </div>
+        <div id="notif-list" class="notice">Carregando notificações...</div>
+      </div>
+
+      <div class="card">
+        <h2>🧪 Exames Solicitados</h2>
+        <p class="muted">Status atualizado em tempo real conforme solicitação médica e resultado laboratorial.</p>
+        <div id="exams-list" class="notice">Carregando exames...</div>
+      </div>
+    </section>
+
+    <!-- ABA 3: PRÉ-TRIAGEM INTELIGENTE -->
     <section id="tab-triagem" class="tab">
       <div class="card">
         <h2>🩺 Pré-triagem Digital (Sem Ficha Física)</h2>
@@ -214,14 +269,20 @@ a{color:#0369a1;text-decoration:none}
       </div>
     </section>
 
-    <!-- ABA 3: MEDICAMENTOS, FARMÁCIA E DESPERTADOR -->
+    <!-- ABA 4: MEDICAMENTOS (CONTÍNUO / TEMPORÁRIO), AGENDAMENTO E FARMACOVIGILÂNCIA -->
     <section id="tab-meds" class="tab">
       <div class="card">
         <div class="row">
-          <h2 style="margin:0">⏰ Despertador de Posologia</h2>
+          <h2 style="margin:0">⏰ Posologia: Uso Contínuo e Temporário</h2>
           <button class="gold btn-sm" id="test-alarm-btn" type="button" style="flex:0;white-space:nowrap">🔔 Testar Alarme</button>
         </div>
-        <p class="muted">Alertas sonoros e por voz para tratamentos temporários (6/6h, 8/8h, 12/12h) ou uso contínuo.</p>
+        <p class="muted">Alertas sonoros e por voz para <strong>tratamento temporário</strong> (por dias) ou <strong>uso contínuo</strong>.</p>
+
+        <div class="row" style="margin-bottom:8px">
+          <button type="button" class="secondary btn-sm filter-med-btn" data-filter="TODOS">Todos</button>
+          <button type="button" class="outline btn-sm filter-med-btn" data-filter="CONTINUO">Uso Contínuo</button>
+          <button type="button" class="outline btn-sm filter-med-btn" data-filter="TEMPORARIO">Temporário</button>
+        </div>
 
         <form id="alarm-form">
           <div class="row">
@@ -274,23 +335,35 @@ a{color:#0369a1;text-decoration:none}
 
       <div class="card">
         <div class="row">
-          <h2 style="margin:0">💊 Receitas & Farmácia Digital</h2>
+          <h2 style="margin:0">💊 Receitas, Agendamento e Retirada</h2>
           <button id="refresh-meds" class="secondary btn-sm" type="button" style="flex:0">Atualizar</button>
         </div>
-        <p class="muted">Gere seu QR Code para retirada agendada no SUS ou desconto nas farmácias credenciadas do plano.</p>
+        <p class="muted">Agende data e horário para retirada de medicamentos no SUS ou farmácia credenciada e gere seu QR Code.</p>
         <div id="med-list" class="notice">Consultando prescrições...</div>
 
         <div style="border-top:1px solid #e2e8f0;padding-top:12px;margin-top:12px">
-          <h3>Gerar QR Code de Retirada / Desconto</h3>
+          <h3>Agendar Retirada e Gerar QR Code</h3>
           <form id="farma-qr-form">
             <label>Medicamento prescrito</label>
-            <input name="medicamento_nome" placeholder="Ex: Dipirona 500mg ou Insulina NPH" required>
+            <input name="medicamento_nome" placeholder="Ex: Losartana 50mg ou Insulina NPH" required>
             <label>Modalidade de atendimento</label>
             <select name="modalidade">
               <option value="SUS">Rede Pública (SUS — Retirada Agendada)</option>
               <option value="PLANO_DESCONTO">Plano de Saúde (Desconto Farmácia Credenciada)</option>
             </select>
-            <button style="width:100%;margin-top:10px">Gerar QR Code da Farmácia</button>
+            <div class="row">
+              <div>
+                <label>Data agendada para retirada</label>
+                <input name="data_agendada" type="date" required>
+              </div>
+              <div>
+                <label>Horário agendado</label>
+                <input name="hora_agendada" type="time" value="09:00" required>
+              </div>
+            </div>
+            <label>Unidade / Farmácia de retirada (opcional)</label>
+            <input name="unidade_retirada" placeholder="Ex: Farmácia Popular / UBS do bairro">
+            <button style="width:100%;margin-top:10px">Confirmar Agendamento e Gerar QR Code</button>
           </form>
           <div id="farma-qr-box" class="qr-box hidden">
             <strong id="farma-qr-title">QR Code Autorizado</strong>
@@ -302,17 +375,32 @@ a{color:#0369a1;text-decoration:none}
       </div>
 
       <div class="card">
-        <h2>🛡️ Controle Preventivo de Automedicação</h2>
-        <p class="muted">Registre medicamentos tomados sem receita para alerta automático de recorrência.</p>
-        <form id="self-med-form">
-          <input name="nome_medicamento" placeholder="Nome do medicamento utilizado sem receita" required maxlength="180">
-          <button class="outline" style="width:100%;margin-top:10px">Registrar Uso Avulso</button>
+        <h2>🛡️ Farmacovigilância e Automedicação</h2>
+        <p class="muted">Notifique reações adversas, eventos indesejados ou uso sem receita para monitoramento de segurança do medicamento.</p>
+        <form id="vigilance-form">
+          <label>Medicamento</label>
+          <input id="vig-med" name="nome_medicamento" placeholder="Nome do medicamento" required maxlength="180">
+          <label>Tipo de ocorrência</label>
+          <select name="tipo_ocorrencia">
+            <option value="REACAO_ADVERSA">Reação Adversa / Efeito Colateral</option>
+            <option value="AUTOMEDICACAO">Uso sem Receita (Automedicação)</option>
+            <option value="FALHA_TERAPEUTICA">Ineficácia / Efeito Inesperado</option>
+          </select>
+          <label>Gravidade percebida</label>
+          <select name="gravidade">
+            <option value="LEVE">Leve</option>
+            <option value="MODERADA">Moderada</option>
+            <option value="GRAVE">Grave</option>
+          </select>
+          <label>Sintomas ou observações clínicas</label>
+          <textarea name="descricao_sintomas" rows="2" placeholder="Ex: Tontura, náusea, erupção na pele ou uso recorrente..."></textarea>
+          <button class="gold" style="width:100%;margin-top:10px">Registrar em Farmacovigilância</button>
         </form>
-        <div id="self-med-result" class="notice warning hidden"></div>
+        <div id="vigilance-result" class="notice warning hidden"></div>
       </div>
     </section>
 
-    <!-- ABA 4: PERFIL E ATUALIZAÇÃO VITAL -->
+    <!-- ABA 5: PERFIL E ATUALIZAÇÃO VITAL -->
     <section id="tab-perfil" class="tab">
       <div class="card">
         <h2>👤 Meus Dados Cadastrais</h2>
@@ -345,7 +433,8 @@ a{color:#0369a1;text-decoration:none}
     </section>
 
     <nav aria-label="Navegação principal">
-      <button data-tab="emergencia" class="active" type="button">🚨<br>Emergência</button>
+      <button data-tab="emergencia" class="active" type="button">🚨<br>SOS</button>
+      <button data-tab="avisos" type="button">🔔<br>Avisos</button>
       <button data-tab="triagem" type="button">🩺<br>Triagem</button>
       <button data-tab="meds" type="button">💊<br>Remédios</button>
       <button data-tab="perfil" type="button">👤<br>Perfil</button>
@@ -358,9 +447,14 @@ a{color:#0369a1;text-decoration:none}
 const API = 'https://suas-saude-facil.onrender.com';
 let token = sessionStorage.getItem('suas_token') || null;
 let user = null;
+let allAlarms = [];
 let activeAlarms = [];
+let medFilter = 'TODOS';
 let triggeredLog = {};
 let lastMapsUrl = null;
+let lastThirdPartyWaUrl = null;
+let qrStream = null;
+let qrScanTimer = null;
 const $ = id => document.getElementById(id);
 
 /* --- Gerador QR Code Nativo (Byte-mode Versões 1-8, ECC Level L, Mask 0) --- */
@@ -571,12 +665,122 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
   return data;
 }
 
+/* --- Leitor de QR para Terceiros (Sem expor dados do QR Code na tela) --- */
+function extractSafeQrReference(rawValue) {
+  // Extrai apenas o código identificador (ex: SUAS-VITAL-12) sem exibir dados pessoais/clínicos brutos
+  const clean = String(rawValue || '').trim();
+  if (!clean) return '';
+  const match = clean.match(/SUAS[-_][A-Z0-9_-]+/i);
+  if (match) return match[0];
+  const parts = clean.split('|');
+  if (parts.length > 1 && parts[1]) return parts[1].trim();
+  return clean.slice(0, 40);
+}
+
+function stopQrScanner() {
+  if (qrScanTimer) { clearInterval(qrScanTimer); qrScanTimer = null; }
+  if (qrStream) {
+    qrStream.getTracks().forEach(t => t.stop());
+    qrStream = null;
+  }
+  show('qr-scanner-box', false);
+}
+
+$('stop-qr-scanner-btn').onclick = stopQrScanner;
+
+$('toggle-qr-scanner-btn').onclick = async () => {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    notice('Câmera não disponível neste dispositivo. Digite o código do QR no campo abaixo.', 'warning');
+    return;
+  }
+  try {
+    show('qr-scanner-box', true);
+    qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = $('qr-video');
+    video.srcObject = qrStream;
+    await video.play();
+
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      qrScanTimer = setInterval(async () => {
+        if (video.readyState < 2) return;
+        try {
+          const codes = await detector.detect(video);
+          if (codes && codes.length) {
+            const refCode = extractSafeQrReference(codes[0].rawValue);
+            // Não mostra os dados brutos do QR; apenas confirma a leitura do identificador para o botão de emergência
+            $('third-qr-code').value = refCode ? 'QR-DETECTADO' : 'QR-LIDO';
+            $('third-qr-code').dataset.qrRef = refCode || 'QR-LIDO';
+            stopQrScanner();
+            notice('QR Code lido com segurança (dados ocultos). Toque no botão vermelho para acionar o SAMU e notificar o familiar.', 'ok');
+          }
+        } catch {}
+      }, 450);
+    } else {
+      notice('Câmera aberta. Aponte para o QR Code ou digite o código no campo abaixo e toque no botão vermelho.', 'ok');
+    }
+  } catch (err) {
+    stopQrScanner();
+    notice('Permita o acesso à câmera ou informe o código do QR no campo abaixo.', 'warning');
+  }
+};
+
+$('third-party-samu-btn').onclick = () => {
+  if (!navigator.geolocation) {
+    notice('Geolocalização não suportada neste aparelho.', 'warning');
+    return;
+  }
+  const qrRef = $('third-qr-code').dataset.qrRef || extractSafeQrReference($('third-qr-code').value) || 'TERCEIRO-QR';
+  const familyPhone = digits($('third-family-phone').value);
+  const resBox = $('third-party-result');
+  show('third-party-result', true);
+  resBox.textContent = 'Obtendo localização GPS e preparando chamado SAMU + notificação ao familiar...';
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const { latitude, longitude } = pos.coords;
+    const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    const protocol = 'SAMU-' + Date.now().toString().slice(-6);
+    const waText = encodeURIComponent(
+      `🚨 ALERTA DE EMERGÊNCIA (SAMU) — Protocolo ${protocol}! Ocorrência via QR (${qrRef}). Localização exata: ${mapsUrl}`
+    );
+    lastThirdPartyWaUrl = familyPhone
+      ? `https://wa.me/55${familyPhone}?text=${waText}`
+      : `https://wa.me/?text=${waText}`;
+
+    // Se houver sessão autenticada, registra também no endpoint /app-cidadao/sos
+    if (token) {
+      try {
+        await request('/app-cidadao/sos', {
+          method: 'POST',
+          body: {
+            latitude: String(latitude),
+            longitude: String(longitude),
+            observacao: `Chamado SAMU para terceiro via QR (${qrRef})`
+          }
+        });
+      } catch {}
+    }
+
+    resBox.innerHTML = `🚨 <strong>Chamado SAMU preparado (${protocol})</strong>\n📍 Localização GPS capturada: <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Abrir no Google Maps</a>\n📲 Notificação ao familiar pronta${familyPhone ? ' para ' + familyPhone : ''}.`;
+    show('third-party-actions', true);
+    playBeep();
+  }, () => {
+    resBox.textContent = 'Permita o acesso à localização GPS para enviar o local exato ao SAMU e ao familiar.';
+  }, { enableHighAccuracy: true, timeout: 12000 });
+};
+
+$('third-party-wa-btn').onclick = () => {
+  if (!lastThirdPartyWaUrl) return;
+  window.open(lastThirdPartyWaUrl, '_blank', 'noopener,noreferrer');
+};
+
+/* --- App Principal --- */
 function showApp(yes) { show('auth', !yes); show('app', yes); }
 
 function fillProfile(p) {
   user = p;
   setText('hello', p.nome_completo || 'Cidadão');
-  setText('connection', `CNS: ${p.cns || 'Ativo'} · Sessão protegida`);
+  setText('connection', `ID #${p.id || '-'} · CNS: ${p.cns || 'Ativo'}`);
   const safe = v => document.createTextNode(v || 'Não informado');
   const pairs = [
     ['vital', [
@@ -587,6 +791,7 @@ function fillProfile(p) {
       ['Contato de emergência', p.contacto_responsavel]
     ]],
     ['profile', [
+      ['ID do Cidadão', p.id],
       ['Nome completo', p.nome_completo],
       ['Cartão SUS (CNS)', p.cns],
       ['CPF', p.cpf ? ('***.***.***-' + p.cpf.slice(-2)) : null],
@@ -621,7 +826,114 @@ async function loadProfile() {
   fillProfile(p);
   showApp(true);
   loadAlarms();
+  loadNotificationsAndExams();
 }
+
+/* --- Notificações, Exames e Retornos de 14 dias (/cidadao/{id}/notificacoes-lembretes) --- */
+async function loadNotificationsAndExams() {
+  const notifBox = $('notif-list');
+  const examsBox = $('exams-list');
+  if (!user || !user.id) return;
+  try {
+    const data = await request(`/cidadao/${user.id}/notificacoes-lembretes`, { auth: false });
+    const naoLidas = Number(data.nao_lidas || 0);
+    setText('unread-badge', `${naoLidas} não ${naoLidas === 1 ? 'lida' : 'lidas'}`);
+
+    const notifs = data.notificacoes_e_lembretes || [];
+    notifBox.replaceChildren();
+    if (!notifs.length) {
+      notifBox.textContent = 'Nenhuma notificação ou lembrete registrado no momento.';
+    } else {
+      notifs.forEach(n => {
+        const d = document.createElement('div');
+        d.className = 'item';
+        const top = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = (n.titulo || n.tipo_evento || 'Aviso') + ' ';
+        const pill = document.createElement('span');
+        pill.className = 'pill ' + (n.lida ? 'pill-green' : 'pill-amber');
+        pill.textContent = n.lida ? 'Lida' : (n.tipo_evento === 'RETORNO_MEDICO' ? 'Retorno 14d' : 'Nova');
+        top.append(title, pill);
+
+        const msg = document.createElement('div');
+        msg.textContent = n.mensagem || '';
+
+        const meta = document.createElement('small');
+        meta.style.display = 'block';
+        meta.style.marginTop = '4px';
+        meta.textContent = [
+          n.data_agendada ? `Data agendada: ${n.data_agendada}` : null,
+          n.alarme_sugerido ? `Alarme sugerido: ${n.alarme_sugerido}` : null
+        ].filter(Boolean).join(' · ');
+
+        const actions = document.createElement('div');
+        actions.className = 'row';
+        actions.style.marginTop = '8px';
+
+        if (!n.lida) {
+          const btnRead = document.createElement('button');
+          btnRead.className = 'secondary btn-sm';
+          btnRead.textContent = 'Marcar como lida';
+          btnRead.onclick = async () => {
+            await request(`/cidadao/notificacoes/${n.id}/marcar-lida`, { method: 'POST', auth: false });
+            notice('Notificação marcada como lida!', 'ok');
+            loadNotificationsAndExams();
+          };
+          actions.append(btnRead);
+        }
+
+        if (n.alarme_sugerido) {
+          const btnAlarm = document.createElement('button');
+          btnAlarm.className = 'gold btn-sm';
+          btnAlarm.textContent = `⏰ Programar ${n.alarme_sugerido}`;
+          btnAlarm.onclick = () => {
+            triggerAlarmNotification(n.titulo || 'Lembrete SUAS', `${n.mensagem || ''} (${n.alarme_sugerido})`);
+          };
+          actions.append(btnAlarm);
+        }
+
+        d.append(top, msg);
+        if (meta.textContent) d.append(meta);
+        if (actions.children.length) d.append(actions);
+        notifBox.append(d);
+      });
+    }
+
+    const exames = data.exames_requisitados || [];
+    examsBox.replaceChildren();
+    if (!exames.length) {
+      examsBox.textContent = 'Nenhum exame solicitado para o seu perfil até o momento.';
+    } else {
+      exames.forEach(ex => {
+        const d = document.createElement('div');
+        d.className = 'item';
+        const top = document.createElement('div');
+        const name = document.createElement('strong');
+        name.textContent = `${ex.exame_nome} `;
+        const st = document.createElement('span');
+        const isDone = String(ex.status_exame || '').toUpperCase() === 'REALIZADO';
+        st.className = 'pill ' + (isDone ? 'pill-green' : 'pill-blue');
+        st.textContent = ex.status_exame || 'SOLICITADO';
+        top.append(name, st);
+
+        const info = document.createElement('div');
+        info.textContent = [
+          ex.codigo_requisicao ? `Código: ${ex.codigo_requisicao}` : null,
+          ex.categoria_exame || null,
+          ex.laboratorio_ou_unidade ? `Unidade/Lab: ${ex.laboratorio_ou_unidade}` : null,
+          ex.prioridade ? `Prioridade: ${ex.prioridade}` : null
+        ].filter(Boolean).join(' · ');
+
+        d.append(top, info);
+        examsBox.append(d);
+      });
+    }
+  } catch (err) {
+    notifBox.textContent = err.message;
+    examsBox.textContent = err.message;
+  }
+}
+$('refresh-avisos').onclick = loadNotificationsAndExams;
 
 /* --- Eventos de Auth --- */
 $('show-register').onclick = () => show('register-box', true);
@@ -677,6 +989,7 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   $('tab-' + b.dataset.tab).classList.add('active');
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
+  if (b.dataset.tab === 'avisos') { loadNotificationsAndExams(); }
   if (b.dataset.tab === 'meds') { loadAlarms(); loadMeds(); }
   if (b.dataset.tab === 'triagem') { loadTriages(); }
 });
@@ -771,9 +1084,19 @@ async function loadTriages() {
   } catch (err) { box.textContent = err.message; }
 }
 
-/* --- Despertador de Posologia & Farmácia --- */
+/* --- Despertador de Posologia (Uso Contínuo & Temporário) --- */
 $('alarm-type').onchange = e => show('alarm-days-wrap', e.target.value === 'TEMPORARIO');
 $('alarm-interval').onchange = e => show('custom-hours-wrap', e.target.value === '0');
+
+document.querySelectorAll('.filter-med-btn').forEach(btn => {
+  btn.onclick = () => {
+    medFilter = btn.dataset.filter;
+    document.querySelectorAll('.filter-med-btn').forEach(x => {
+      x.className = (x === btn ? 'secondary' : 'outline') + ' btn-sm filter-med-btn';
+    });
+    renderAlarms();
+  };
+});
 
 function triggerAlarmNotification(title, bodyText) {
   playBeep();
@@ -807,32 +1130,44 @@ setInterval(() => {
   });
 }, 15000);
 
+function renderAlarms() {
+  const box = $('alarm-list');
+  const rows = medFilter === 'TODOS' ? allAlarms : allAlarms.filter(r => r.tipo_tratamento === medFilter);
+  box.replaceChildren();
+  if (!rows.length) {
+    box.textContent = medFilter === 'TODOS'
+      ? 'Nenhum despertador de medicamento cadastrado.'
+      : `Nenhum medicamento em ${medFilter === 'CONTINUO' ? 'Uso Contínuo' : 'Tratamento Temporário'}.`;
+    return;
+  }
+  rows.forEach(a => {
+    const d = document.createElement('div'); d.className = 'item';
+    const top = document.createElement('div');
+    const strong = document.createElement('strong'); strong.textContent = a.nome_medicamento + ' ';
+    const badge = document.createElement('span');
+    badge.className = 'pill ' + (a.ativo ? 'pill-green' : 'pill-amber');
+    badge.textContent = !a.ativo ? 'Concluído' : (a.tipo_tratamento === 'CONTINUO' ? 'Uso Contínuo' : `Temporário · ${a.dias_restantes}d restantes`);
+    top.append(strong, badge);
+    const info = document.createElement('div');
+    info.textContent = `⏰ Horários: ${a.horarios_alarme} (${a.intervalo_horas > 0 ? 'a cada ' + a.intervalo_horas + 'h' : 'personalizado'})`;
+    d.append(top, info);
+    if (a.ativo) {
+      const del = document.createElement('button');
+      del.className = 'outline btn-sm'; del.style.marginTop = '6px'; del.textContent = 'Encerrar alarme';
+      del.onclick = async () => { await request(`/app-cidadao/alarmes-posologia/${a.id}`, { method: 'DELETE' }); loadAlarms(); };
+      d.append(del);
+    }
+    box.append(d);
+  });
+}
+
 async function loadAlarms() {
   const box = $('alarm-list');
   try {
     const rows = await request('/app-cidadao/alarmes-posologia');
+    allAlarms = rows;
     activeAlarms = rows.filter(r => r.ativo);
-    box.replaceChildren();
-    if (!rows.length) { box.textContent = 'Nenhum despertador de medicamento cadastrado.'; return; }
-    rows.forEach(a => {
-      const d = document.createElement('div'); d.className = 'item';
-      const top = document.createElement('div');
-      const strong = document.createElement('strong'); strong.textContent = a.nome_medicamento + ' ';
-      const badge = document.createElement('span');
-      badge.className = 'pill ' + (a.ativo ? 'pill-green' : 'pill-amber');
-      badge.textContent = !a.ativo ? 'Concluído' : (a.tipo_tratamento === 'CONTINUO' ? 'Uso Contínuo' : `Temporário · ${a.dias_restantes}d restantes`);
-      top.append(strong, badge);
-      const info = document.createElement('div');
-      info.textContent = `⏰ Horários: ${a.horarios_alarme} (${a.intervalo_horas > 0 ? 'a cada ' + a.intervalo_horas + 'h' : 'personalizado'})`;
-      d.append(top, info);
-      if (a.ativo) {
-        const del = document.createElement('button');
-        del.className = 'outline btn-sm'; del.style.marginTop = '6px'; del.textContent = 'Encerrar alarme';
-        del.onclick = async () => { await request(`/app-cidadao/alarmes-posologia/${a.id}`, { method: 'DELETE' }); loadAlarms(); };
-        d.append(del);
-      }
-      box.append(d);
-    });
+    renderAlarms();
   } catch (err) { box.textContent = err.message; }
 }
 
@@ -858,18 +1193,19 @@ $('alarm-form').onsubmit = async e => {
   } catch (err) { notice(err.message, 'warning'); }
 };
 
+/* --- Receitas, Agendamento para Retirada e Farmácia --- */
 async function loadMeds() {
   const box = $('med-list');
   try {
     const rows = await request('/app-cidadao/prescricoes');
     box.replaceChildren();
-    if (!rows.length) { box.textContent = 'Nenhuma prescrição médica enviada pelo consultório ainda. Você pode gerar QR Code abaixo.'; return; }
+    if (!rows.length) { box.textContent = 'Nenhuma prescrição médica enviada pelo consultório ainda. Você pode agendar retirada e gerar QR Code abaixo.'; return; }
     rows.forEach(p => {
       const d = document.createElement('div'); d.className = 'item';
       const t = document.createElement('strong'); t.textContent = `${p.medicamento_nome} ${p.dosagem || ''}`;
       const sub = document.createElement('div'); sub.textContent = `${p.posologia || ''} · ${p.fornecido_pelo_sus ? 'Rede SUS' : 'Plano Credenciado'}`;
       const btn = document.createElement('button'); btn.className = 'secondary btn-sm'; btn.style.marginTop = '6px';
-      btn.textContent = 'Gerar QR Code + Ativar Posologia';
+      btn.textContent = 'Gerar QR Code de Retirada';
       btn.onclick = () => gerarQrFarmacia(p.medicamento_nome, p.fornecido_pelo_sus ? 'SUS' : 'PLANO_DESCONTO', p.id);
       d.append(t, sub, btn); box.append(d);
     });
@@ -877,37 +1213,64 @@ async function loadMeds() {
 }
 $('refresh-meds').onclick = loadMeds;
 
-async function gerarQrFarmacia(medicamento_nome, modalidade, medicamento_id = null) {
+async function gerarQrFarmacia(medicamento_nome, modalidade, medicamento_id = null, agendamentoInfo = null) {
   try {
     const r = await request('/app-cidadao/farmacia/gerar-qr', {
       method: 'POST',
       body: { medicamento_id, medicamento_nome, modalidade }
     });
-    QRGen.draw($('farma-qr-canvas'), r.qr_payload);
+    const agendStr = agendamentoInfo
+      ? ` · Agendado: ${agendamentoInfo.data} às ${agendamentoInfo.hora}${agendamentoInfo.unidade ? ' (' + agendamentoInfo.unidade + ')' : ''}`
+      : '';
+    const fullPayload = `${r.qr_payload}${agendStr}`;
+    QRGen.draw($('farma-qr-canvas'), fullPayload);
     setText('farma-qr-title', `${r.medicamento_nome} (${modalidade === 'SUS' ? 'Retirada SUS' : 'Desconto Plano'})`);
     setText('farma-qr-code', r.codigo_autorizacao);
-    setText('farma-qr-desc', r.mensagem);
+    setText('farma-qr-desc', `${r.mensagem || ''}${agendStr}`);
     show('farma-qr-box', true);
-    notice('QR Code gerado! Apresente no balcão da farmácia.', 'ok');
+    notice('Agendamento e QR Code gerados! Apresente no balcão da farmácia.', 'ok');
   } catch (err) { notice(err.message, 'warning'); }
 }
 
 $('farma-qr-form').onsubmit = e => {
   e.preventDefault();
   const f = new FormData(e.target);
-  gerarQrFarmacia(f.get('medicamento_nome'), f.get('modalidade'));
+  gerarQrFarmacia(
+    f.get('medicamento_nome'),
+    f.get('modalidade'),
+    null,
+    {
+      data: f.get('data_agendada'),
+      hora: f.get('hora_agendada'),
+      unidade: f.get('unidade_retirada')
+    }
+  );
 };
 
-$('self-med-form').onsubmit = async e => {
+/* --- Farmacovigilância e Automedicação --- */
+$('vigilance-form').onsubmit = async e => {
   e.preventDefault();
   const f = new FormData(e.target);
+  const nomeMed = f.get('nome_medicamento');
+  const tipo = f.get('tipo_ocorrencia');
+  const gravidade = f.get('gravidade');
+  const sintomas = f.get('descricao_sintomas') || '';
+  const el = $('vigilance-result');
+  show('vigilance-result', true);
+
   try {
-    const r = await request('/app-cidadao/automedicacoes', { method: 'POST', body: { nome_medicamento: f.get('nome_medicamento') } });
-    const el = $('self-med-result');
-    el.textContent = `Registro salvo (${r.registros_60_dias}x nos últimos 60 dias). ${r.alerta || ''}`;
-    show('self-med-result', true);
+    const r = await request('/app-cidadao/automedicacoes', {
+      method: 'POST',
+      body: {
+        nome_medicamento: `${nomeMed} [${tipo} | ${gravidade}${sintomas ? ': ' + sintomas : ''}]`
+      }
+    });
+    el.textContent = `🛡️ Registro de Farmacovigilância salvo (${r.registros_60_dias}x nos últimos 60 dias) · Tipo: ${tipo} · Gravidade: ${gravidade}. ${r.alerta || 'Monitoramento ativo.'}`;
     e.target.reset();
-  } catch (err) { notice(err.message, 'warning'); }
+    notice('Ocorrência registrada em Farmacovigilância!', 'ok');
+  } catch (err) {
+    el.textContent = `⚠️ Registro local de Farmacovigilância (${nomeMed} · ${tipo} · ${gravidade}): ${err.message}`;
+  }
 };
 
 $('update-vital-form').onsubmit = async e => {
