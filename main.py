@@ -1,7 +1,7 @@
-
 from pathlib import Path
 
 from ai_engine import PatientDataSchema, ai_predictor
+import app_cidadao_api_farmacia_integrada
 import cco_cpo_external
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -251,6 +251,8 @@ app.include_router(
 
 app.include_router(cidadao.router)
 
+app.include_router(app_cidadao_api_farmacia_integrada.router)
+
 app.include_router(cco_cpo_external.router)
 
 
@@ -266,6 +268,40 @@ app.include_router(suas_samu.router)
 # =====================================================
 
 app.include_router(samu_integracoes.router)
+
+
+# =====================================================
+# INTERFACE WEB - APP DO CIDADÃO
+# =====================================================
+
+@app.get(
+    "/app-cidadao",
+    include_in_schema=False
+)
+@app.get(
+    "/app-cidadao/",
+    include_in_schema=False
+)
+def abrir_app_cidadao():
+    arquivo = BASE_DIR / "app-cidadao" / "index.html"
+
+    if not arquivo.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Interface do App do Cidadão não encontrada. "
+                "Verifique app-cidadao/index.html."
+            )
+        )
+
+    return FileResponse(
+        path=str(arquivo),
+        media_type="text/html",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff"
+        }
+    )
 
 
 # =====================================================
