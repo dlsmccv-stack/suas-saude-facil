@@ -7,11 +7,18 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { background-color: #f1f5f9; color: #1e293b; display: flex; flex-direction: column; min-height: 100vh; padding-bottom: 40px; }
-    header { background-color: #ffffff; padding: 16px 24px; border-bottom: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+    header { background-color: #ffffff; padding: 16px 24px; border-bottom: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     header h1 { font-size: 1.25rem; color: #0284c7; font-weight: 700; }
     header p { font-size: 0.8rem; color: #64748b; }
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .container { padding: 20px; max-width: 1200px; margin: 0 auto; width: 100%; }
-    
+
+    /* Barra de Conexão API */
+    .api-bar { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .api-bar input { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.82rem; color: #1e293b; }
+    .api-bar .api-url { flex: 1; min-width: 220px; }
+    .api-bar .api-small { width: 170px; }
+
     /* Grelha de Métricas / KPI Cards */
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .kpi-card { background: #ffffff; border-radius: 12px; padding: 16px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
@@ -22,24 +29,27 @@
     /* Secções Principais */
     .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     @media(max-width: 900px) { .section-grid { grid-template-columns: 1fr; } }
-    
+
     .card { background-color: #ffffff; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .card-title { font-size: 1.05rem; font-weight: bold; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
-    
+
     /* Tabelas e Listas Operacionais */
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
     th { color: #475569; font-weight: 600; background-color: #f8fafc; }
     td { color: #334155; }
-    
-    .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; display: inline-block; }
+
+    .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; display: inline-block; text-decoration: none; }
     .badge-red { background: #fee2e2; color: #991b1b; }
     .badge-yellow { background: #fef3c7; color: #92400e; }
     .badge-green { background: #d1fae5; color: #065f46; }
+    .badge-blue { background: #e0f2fe; color: #0369a1; }
 
-    .btn-action { background-color: #0284c7; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+    .btn-action { background-color: #0284c7; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
     .btn-action:hover { background-color: #0369a1; }
-    
+    .btn-secondary { background-color: #0d9488; color: white; border: none; border-radius: 6px; padding: 8px 12px; font-size: 0.8rem; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn-secondary:hover { background-color: #0f766e; }
+
     .radar-box { background: #0f172a; color: #38bdf8; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; margin-bottom: 12px; line-height: 1.5; }
   </style>
 </head>
@@ -50,19 +60,29 @@
       <h1>CCO / CPO • Centro de Controle & Operação</h1>
       <p>SUAS Saúde / Saúde +Fácil • Monitorização em Tempo Real</p>
     </div>
-    <div>
-      <span class="badge badge-green">● Sistema Operacional Online</span>
+    <div class="header-actions">
+      <a id="link-central-samu" href="#samu-url-config" onclick="abrirCentralSamu(event)" class="btn-secondary">🚑 Central SAMU 192</a>
+      <span id="status-api-badge" class="badge badge-green">● Verificando API...</span>
     </div>
   </header>
 
   <div class="container">
-    
+
+    <!-- Barra de Conexão com Render / Central SAMU -->
+    <div class="api-bar">
+      <input id="cco-api-url" class="api-url" type="text" value="https://suas-saude-facil.onrender.com" placeholder="URL da API no Render">
+      <input id="cco-samu-web-url" class="api-small" type="text" placeholder="URL Central SAMU (Vercel)">
+      <input id="cco-profissional" class="api-small" type="text" placeholder="Profissional CCO">
+      <input id="cco-token" class="api-small" type="password" placeholder="Token SAMU (opcional)">
+      <button class="btn-action" onclick="sincronizarAPI()">Sincronizar</button>
+    </div>
+
     <!-- Grelha de KPIs -->
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-title">Chamadas SOS SAMU (Hoje)</div>
-        <div class="kpi-value">14</div>
-        <div class="kpi-sub">⚡ Tempo médio resposta: 6.2 min</div>
+        <div class="kpi-value" id="kpi-samu-total">14</div>
+        <div class="kpi-sub" id="kpi-samu-sub">⚡ Tempo médio resposta: 6.2 min</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-title">Fila Regulação C1/C2/C3</div>
@@ -83,12 +103,12 @@
 
     <!-- Secção Principal Dividida -->
     <div class="section-grid">
-      
+
       <!-- COLUNA 1: Radar de Emergência SOS GPS & Regulação -->
       <div>
         <div class="card">
           <div class="card-title">🚨 Radar de Emergências & SOS GPS (SAMU)</div>
-          <div class="radar-box">
+          <div class="radar-box" id="radar-samu-box">
             [08:42:15] 🛰️ GPS Alerta: Lat -5.0892, Lon -42.8019<br>
             Cidadão: Maria Izabely • Urgência: Cardiovascular<br>
             Status: <span style="color: #4ade80;">Ambulância Alfa-03 em rota</span>
@@ -97,13 +117,13 @@
           <table>
             <thead>
               <tr>
-                <th>Hora</th>
-                <th>Cidadão</th>
+                <th>Protocolo / Hora</th>
+                <th>Origem / Cidadão</th>
                 <th>Coordenadas GPS</th>
                 <th>Estado</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="tabela-sos-samu">
               <tr>
                 <td>23:08</td>
                 <td>João Victor</td>
@@ -230,9 +250,67 @@
   </div>
 
   <script>
+    function getApiBase() {
+      const raw = document.getElementById('cco-api-url').value.trim();
+      return (raw || 'https://suas-saude-facil.onrender.com').replace(/\/+$/, '');
+    }
+
+    function abrirCentralSamu(event) {
+      event.preventDefault();
+      const customUrl = document.getElementById('cco-samu-web-url').value.trim();
+      const targetUrl = customUrl || (getApiBase() + '/samu/status');
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    }
+
+    async function sincronizarAPI() {
+      const base = getApiBase();
+      const badge = document.getElementById('status-api-badge');
+      const token = document.getElementById('cco-token').value.trim();
+      const prof = document.getElementById('cco-profissional').value.trim();
+
+      try {
+        const statusRes = await fetch(base + '/samu/status');
+        if (!statusRes.ok) throw new Error('Falha em /samu/status');
+        const statusData = await statusRes.json();
+
+        badge.className = 'badge badge-green';
+        badge.textContent = '● ' + (statusData.sistema || 'SAMU 192 Online');
+
+        if (token && prof) {
+          const occRes = await fetch(base + '/samu/ocorrencias', {
+            headers: {
+              'X-SAMU-Token': token,
+              'X-SAMU-Profissional': prof
+            }
+          });
+          if (occRes.ok) {
+            const lista = await occRes.json();
+            document.getElementById('kpi-samu-total').textContent = lista.length;
+            document.getElementById('kpi-samu-sub').textContent = '🟢 Sincronizado com /samu/ocorrencias';
+
+            if (lista.length > 0) {
+              const tbody = document.getElementById('tabela-sos-samu');
+              tbody.innerHTML = lista.slice(0, 5).map(o => `
+                <tr>
+                  <td>${o.protocolo || '-'}</td>
+                  <td>${o.origem || 'SAMU'}</td>
+                  <td>${o.latitude ?? '—'}, ${o.longitude ?? '—'}</td>
+                  <td><span class="badge badge-yellow">${o.status || 'ativa'}</span></td>
+                </tr>
+              `).join('');
+            }
+          }
+        }
+      } catch (err) {
+        badge.className = 'badge badge-red';
+        badge.textContent = '● API Indisponível';
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+      sincronizarAPI();
+
       const botoesAcao = document.querySelectorAll('.btn-action');
-      
       botoesAcao.forEach(btn => {
         if (btn.textContent.includes('Emitir Alerta Geral')) {
           btn.addEventListener('click', () => {
@@ -242,7 +320,7 @@
             }
           });
         }
-        
+
         if (btn.textContent.includes('Gerar Relatório Diário')) {
           btn.addEventListener('click', () => {
             alert('📊 Relatório Diário de Operacionalidade gerado com sucesso!\n\n• Status da Rede: 100% Operacional\n• Sincronização FHIR R4: Ativa\n• Logs SHA-256: Verificados.');
