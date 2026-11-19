@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#072B59">
+<title>SUA Saúde +Fácil | App do Cidadão</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f1f5f9;color:#0f172a;font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:linear-gradient(120deg,#072B59 0%,#0369a1 55%,#047857 100%);color:#fff;padding:20px 16px;box-shadow:0 3px 12px rgba(7,43,89,.18)}
+header .top{max-width:560px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:10px}
+header h1{margin:0;font-size:21px;letter-spacing:-.2px}
+header p{margin:4px 0 0;font-size:13px;opacity:.92}
+.badge-live{background:rgba(16,185,129,.22);border:1px solid rgba(167,243,208,.55);color:#ecfdf5;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.wrap{max-width:560px;margin:auto;padding:16px 16px 96px}
+.card{background:#fff;border:1px solid #dbe4ed;border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(15,23,42,.04)}
+h2{font-size:17px;margin:0 0 8px;color:#072B59;display:flex;align-items:center;gap:6px}
+h3{font-size:15px;margin:12px 0 6px;color:#0f172a}
+p{line-height:1.5;margin:6px 0}
+small,.muted{color:#64748b;font-size:13px}
+label{display:block;margin:11px 0 5px;font-weight:600;font-size:13.5px;color:#1e293b}
+input,select,textarea{width:100%;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;background:#fff;color:#0f172a}
+input:focus,select:focus,textarea:focus{outline:2px solid #0284c7;border-color:#0284c7}
+button{cursor:pointer;font:inherit;border:0;border-radius:10px;padding:11px 15px;background:#072B59;color:#fff;font-weight:700;transition:opacity .15s,transform .05s}
+button:active{transform:scale(.99)}
+button:disabled{opacity:.55;cursor:not-allowed}
+.danger{background:#b91c1c;width:100%;padding:15px;font-size:16px}
+.success{background:#047857;color:#fff}
+.secondary{background:#e0f2fe;color:#072B59}
+.gold{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
+.outline{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+.btn-sm{padding:7px 11px;font-size:12.5px;border-radius:8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>*{flex:1}
+.hidden{display:none!important}
+.notice{padding:12px;border-radius:11px;background:#eff6ff;border:1px solid #bfdbfe;margin:10px 0;white-space:pre-wrap;font-size:14px}
+.warning{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+.tab{display:none}
+.tab.active{display:block}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #cbd5e1;display:flex;justify-content:center;z-index:20;padding:6px 8px;gap:4px;box-shadow:0 -2px 10px rgba(0,0,0,.05)}
+nav button{font-size:11.5px;padding:8px 4px;background:#fff;color:#64748b;flex:1;max-width:125px;border-radius:10px}
+nav button.active{background:#e0f2fe;color:#072B59}
+.item{border-top:1px solid #e2e8f0;padding:11px 0}
+.item:first-child{border:0}
+#message{position:sticky;top:8px;z-index:30;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+a{color:#0369a1;text-decoration:none}
+.pill{display:inline-block;background:#e0f2fe;color:#072B59;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:700}
+.pill-green{background:#dcfce7;color:#166534}
+.pill-amber{background:#fef3c7;color:#92400e}
+.qr-box{text-align:center;background:#f8fafc;border:1px dashed #94a3b8;border-radius:14px;padding:14px;margin-top:12px}
+.qr-box canvas{background:#fff;padding:10px;border-radius:10px;border:1px solid #e2e8f0;max-width:210px;height:auto}
+.alarm-banner{position:fixed;top:12px;left:12px;right:12px;max-width:536px;margin:auto;background:#072B59;color:#fff;border:2px solid #38bdf8;border-radius:16px;padding:16px;z-index:50;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div>
+      <h1>✚ SUA Saúde +Fácil</h1>
+      <p>App do Cidadão · SUAS Tecnologia em Saúde</p>
+    </div>
+    <span class="badge-live">● 100% ATIVO</span>
+  </div>
+</header>
+
+<div id="alarm-modal" class="alarm-banner hidden" role="alertdialog" aria-live="assertive">
+  <div style="font-size:13px;color:#7dd3fc;font-weight:700">⏰ DESPERTADOR DE POSOLOGIA SUAS</div>
+  <div id="alarm-modal-text" style="font-size:17px;font-weight:700;margin:6px 0 12px">Hora do seu medicamento!</div>
+  <div class="row">
+    <button class="success" id="alarm-confirm-btn">✅ Confirmar Dose Tomada</button>
+    <button class="outline" id="alarm-close-btn">Fechar</button>
+  </div>
+</div>
+
+<main class="wrap">
+  <div id="message" class="notice hidden" role="status"></div>
+
+  <!-- AUTENTICAÇÃO -->
+  <section id="auth">
+    <div class="card">
+      <h2>Entrar no aplicativo</h2>
+      <p class="muted">Acesse sua jornada digital de saúde, Cartão Vital com QR Code, pré-triagem e despertador de medicamentos.</p>
+      <form id="login-form">
+        <label for="login-cns">Cartão Nacional de Saúde (15 dígitos)</label>
+        <input id="login-cns" inputmode="numeric" autocomplete="username" placeholder="Ex: 700000000000001" maxlength="18" required>
+        <label for="login-password">Senha</label>
+        <input id="login-password" type="password" autocomplete="current-password" placeholder="Sua senha de acesso" required>
+        <button style="width:100%;margin-top:14px">Entrar no SUAS Saúde +Fácil</button>
+      </form>
+      <button class="secondary" style="width:100%;margin-top:10px" id="show-register" type="button">Criar novo cadastro gratuito</button>
+    </div>
+
+    <div class="card hidden" id="register-box">
+      <h2>Cadastro do cidadão</h2>
+      <p class="muted">Preencha seus dados para ativar imediatamente seu Cartão Vital com QR Code, pré-triagem e farmácia digital.</p>
+      <form id="register-form">
+        <label>Cartão SUS (CNS — 15 dígitos)</label>
+        <input name="cns" inputmode="numeric" maxlength="18" placeholder="15 dígitos numéricos" required>
+        <label>Nome completo</label>
+        <input name="nome_completo" autocomplete="name" required>
+        <label>CPF (11 dígitos válidos)</label>
+        <input name="cpf" inputmode="numeric" maxlength="14" placeholder="Somente números" required>
+        <label>Data de nascimento</label>
+        <input name="data_nascimento" type="date" required>
+        <label>Telefone / WhatsApp</label>
+        <input name="telefone" type="tel" autocomplete="tel" placeholder="(86) 99999-9999" required>
+        <div class="row">
+          <div>
+            <label>Tipo sanguíneo (opcional)</label>
+            <select name="tipo_sanguineo">
+              <option value="">Selecionar...</option>
+              <option value="O+">O+</option><option value="O-">O-</option>
+              <option value="A+">A+</option><option value="A-">A-</option>
+              <option value="B+">B+</option><option value="B-">B-</option>
+              <option value="AB+">AB+</option><option value="AB-">AB-</option>
+            </select>
+          </div>
+          <div>
+            <label>Contato de emergência</label>
+            <input name="contacto_responsavel" placeholder="Nome e telefone">
+          </div>
+        </div>
+        <label>Alergias conhecidas (opcional)</label>
+        <input name="alergias" placeholder="Ex: Dipirona, Penicilina, Nenhuma">
+        <label>Condições crônicas (opcional)</label>
+        <input name="condicoes_cronicas" placeholder="Ex: Hipertensão, Diabetes">
+        <label>Senha de acesso (mínimo 8 caracteres)</label>
+        <input name="senha" type="password" minlength="8" autocomplete="new-password" required>
+        <label style="font-weight:400;font-size:13px">
+          <input name="consentimento" type="checkbox" required style="width:auto;margin-right:6px">
+          Confirmo a titularidade dos dados e autorizo o uso para atendimento clínico e emergencial (LGPD).
+        </label>
+        <button class="success" style="width:100%;margin-top:12px">Concluir Cadastro e Ativar Conta</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- APLICATIVO AUTENTICADO -->
+  <section id="app" class="hidden">
+    <div class="card" style="padding:14px 16px">
+      <div class="row">
+        <div>
+          <strong id="hello" style="font-size:16px">Bem-vindo(a)</strong>
+          <div class="muted" id="connection">Sessão autenticada · Ecossistema SUAS</div>
+        </div>
+        <div style="flex:0;display:flex;gap:6px">
+          <button class="secondary btn-sm" id="speak-screen" type="button" title="Ouvir resumo em áudio">🔊 Ouvir</button>
+          <button class="outline btn-sm" id="logout" type="button">Sair</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 1: EMERGÊNCIA E CARTÃO VITAL -->
+    <section id="tab-emergencia" class="tab active">
+      <div class="card">
+        <h2>🚨 Emergência SOS & Ambulância</h2>
+        <p class="muted">Acionamento rápido com geolocalização GPS para central de regulação (CCO/SAMU) e familiares.</p>
+        <a href="tel:192"><button class="danger" type="button">📞 Ligar Agora para SAMU 192</button></a>
+        <div class="row" style="margin-top:10px">
+          <button class="secondary" id="gps" type="button">📍 Acionar SOS + GPS</button>
+          <button class="gold hidden" id="whatsapp-sos" type="button">📲 Avisar Familiar</button>
+        </div>
+        <div id="gps-result" class="notice ok hidden"></div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <h2 style="margin:0">🪪 Cartão Vital de Emergência</h2>
+          <button class="outline btn-sm" id="download-vital-qr" type="button" style="flex:0;white-space:nowrap">⬇️ Baixar QR</button>
+        </div>
+        <p class="muted">Compatível com pulseiras infantis/idosos, chaveiros adultos e adesivos escolares.</p>
+        <div id="vital">Carregando...</div>
+        <div class="qr-box">
+          <canvas id="vital-qr-canvas" width="200" height="200"></canvas>
+          <div style="margin-top:8px"><span class="pill" id="vital-code-label">SUAS-VITAL</span></div>
+          <small style="display:block;margin-top:4px">Escaneie com qualquer câmera para leitura emergencial</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 2: PRÉ-TRIAGEM INTELIGENTE -->
+    <section id="tab-triagem" class="tab">
+      <div class="card">
+        <h2>🩺 Pré-triagem Digital (Sem Ficha Física)</h2>
+        <p class="muted">Informe seus sintomas antes de sair de casa para saber a unidade indicada, o tempo médio de espera e gerar seu QR Code de check-in.</p>
+        <form id="triage-form">
+          <div class="row" style="margin-top:8px">
+            <label style="margin:0">Descreva os sintomas principais</label>
+            <button type="button" class="secondary btn-sm" id="voice-triage-btn" style="flex:0;white-space:nowrap">🎙️ Ditar por Voz</button>
+          </div>
+          <textarea id="triage-symptoms" name="queixa_principal" rows="3" placeholder="Ex: Febre há 2 dias, dor de cabeça e dor no corpo..." required maxlength="1500" style="margin-top:6px"></textarea>
+          <label>Intensidade / Gravidade percebida</label>
+          <select name="gravidade">
+            <option value="LEVE">Leve (Sintomas iniciais / rotina)</option>
+            <option value="MODERADO">Moderada (Desconforto importante / febre persistente)</option>
+            <option value="GRAVE">Grave (Dor intensa, falta de ar, urgência)</option>
+          </select>
+          <button class="success" style="width:100%;margin-top:12px">Gerar Pré-triagem e QR Check-in</button>
+        </form>
+
+        <div id="triage-result" class="notice ok hidden"></div>
+        <div id="triage-qr-box" class="qr-box hidden">
+          <strong>QR Code de Check-in na Unidade</strong>
+          <div style="margin:8px 0"><canvas id="triage-qr-canvas" width="190" height="190"></canvas></div>
+          <small id="triage-qr-caption">Apresente este código na recepção da UBS/UPA.</small>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📋 Histórico de Pré-triagens</h2>
+        <div id="triage-history" class="notice">Carregando histórico...</div>
+      </div>
+    </section>
+
+    <!-- ABA 3: MEDICAMENTOS, FARMÁCIA E DESPERTADOR -->
+    <section id="tab-meds" class="tab">
+      <div class="card">
+        <div class="row">
+          <h2 style="margin:0">⏰ Despertador de Posologia</h2>
+          <button class="gold btn-sm" id="test-alarm-btn" type="button" style="flex:0;white-space:nowrap">🔔 Testar Alarme</button>
+        </div>
+        <p class="muted">Alertas sonoros e por voz para tratamentos temporários (6/6h, 8/8h, 12/12h) ou uso contínuo.</p>
+
+        <form id="alarm-form">
+          <div class="row">
+            <label style="margin:0">Nome do medicamento</label>
+            <button type="button" class="secondary btn-sm" id="voice-med-btn" style="flex:0;white-space:nowrap">🎙️ Ditar</button>
+          </div>
+          <input id="alarm-med-name" name="nome_medicamento" placeholder="Ex: Amoxicilina 500mg ou Losartana 50mg" required maxlength="180" style="margin-top:6px">
+
+          <div class="row">
+            <div>
+              <label>Tipo de tratamento</label>
+              <select id="alarm-type" name="tipo_tratamento">
+                <option value="TEMPORARIO">Temporário (por dias)</option>
+                <option value="CONTINUO">Uso Contínuo</option>
+              </select>
+            </div>
+            <div id="alarm-days-wrap">
+              <label>Duração (dias)</label>
+              <input name="duracao_dias" type="number" min="1" max="365" value="7">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Intervalo de horário</label>
+              <select id="alarm-interval" name="intervalo_horas">
+                <option value="6">De 6 em 6 horas (4x/dia)</option>
+                <option value="8" selected>De 8 em 8 horas (3x/dia)</option>
+                <option value="12">De 12 em 12 horas (2x/dia)</option>
+                <option value="24">1x ao dia (24h)</option>
+                <option value="0">Horários personalizados</option>
+              </select>
+            </div>
+            <div>
+              <label>Primeira dose</label>
+              <input name="hora_inicial" type="time" value="08:00">
+            </div>
+          </div>
+
+          <div id="custom-hours-wrap" class="hidden">
+            <label>Horários personalizados (separados por vírgula)</label>
+            <input name="horarios_personalizados" placeholder="Ex: 07:30, 13:30, 21:00">
+          </div>
+
+          <button class="success" style="width:100%;margin-top:12px">Ativar Despertador de Posologia</button>
+        </form>
+
+        <div id="alarm-list" class="notice" style="margin-top:12px">Carregando alarmes ativos...</div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <h2 style="margin:0">💊 Receitas & Farmácia Digital</h2>
+          <button id="refresh-meds" class="secondary btn-sm" type="button" style="flex:0">Atualizar</button>
+        </div>
+        <p class="muted">Gere seu QR Code para retirada agendada no SUS ou desconto nas farmácias credenciadas do plano.</p>
+        <div id="med-list" class="notice">Consultando prescrições...</div>
+
+        <div style="border-top:1px solid #e2e8f0;padding-top:12px;margin-top:12px">
+          <h3>Gerar QR Code de Retirada / Desconto</h3>
+          <form id="farma-qr-form">
+            <label>Medicamento prescrito</label>
+            <input name="medicamento_nome" placeholder="Ex: Dipirona 500mg ou Insulina NPH" required>
+            <label>Modalidade de atendimento</label>
+            <select name="modalidade">
+              <option value="SUS">Rede Pública (SUS — Retirada Agendada)</option>
+              <option value="PLANO_DESCONTO">Plano de Saúde (Desconto Farmácia Credenciada)</option>
+            </select>
+            <button style="width:100%;margin-top:10px">Gerar QR Code da Farmácia</button>
+          </form>
+          <div id="farma-qr-box" class="qr-box hidden">
+            <strong id="farma-qr-title">QR Code Autorizado</strong>
+            <div style="margin:8px 0"><canvas id="farma-qr-canvas" width="190" height="190"></canvas></div>
+            <div id="farma-qr-code" class="pill pill-green"></div>
+            <small id="farma-qr-desc" style="display:block;margin-top:6px"></small>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🛡️ Controle Preventivo de Automedicação</h2>
+        <p class="muted">Registre medicamentos tomados sem receita para alerta automático de recorrência.</p>
+        <form id="self-med-form">
+          <input name="nome_medicamento" placeholder="Nome do medicamento utilizado sem receita" required maxlength="180">
+          <button class="outline" style="width:100%;margin-top:10px">Registrar Uso Avulso</button>
+        </form>
+        <div id="self-med-result" class="notice warning hidden"></div>
+      </div>
+    </section>
+
+    <!-- ABA 4: PERFIL E ATUALIZAÇÃO VITAL -->
+    <section id="tab-perfil" class="tab">
+      <div class="card">
+        <h2>👤 Meus Dados Cadastrais</h2>
+        <div id="profile"></div>
+      </div>
+
+      <div class="card">
+        <h2>✏️ Atualizar Cartão Vital e Emergência</h2>
+        <p class="muted">Mantenha seus dados clínicos atualizados. Eles são refletidos imediatamente no seu QR Code de Emergência.</p>
+        <form id="update-vital-form">
+          <label>Telefone / WhatsApp</label>
+          <input id="upd-tel" name="telefone" type="tel">
+          <label>Tipo sanguíneo</label>
+          <select id="upd-blood" name="tipo_sanguineo">
+            <option value="">Não informado</option>
+            <option value="O+">O+</option><option value="O-">O-</option>
+            <option value="A+">A+</option><option value="A-">A-</option>
+            <option value="B+">B+</option><option value="B-">B-</option>
+            <option value="AB+">AB+</option><option value="AB-">AB-</option>
+          </select>
+          <label>Alergias</label>
+          <input id="upd-allergies" name="alergias" placeholder="Ex: Dipirona, Sulfa, Nenhuma">
+          <label>Condições crônicas / Uso contínuo</label>
+          <input id="upd-chronic" name="condicoes_cronicas" placeholder="Ex: Hipertensão, Asma">
+          <label>Contato de emergência (Nome e Telefone)</label>
+          <input id="upd-contact" name="contacto_responsavel" placeholder="Ex: Maria (86) 99999-0000">
+          <button class="success" style="width:100%;margin-top:12px">Salvar Alterações no Cartão Vital</button>
+        </form>
+      </div>
+    </section>
+
+    <nav aria-label="Navegação principal">
+      <button data-tab="emergencia" class="active" type="button">🚨<br>Emergência</button>
+      <button data-tab="triagem" type="button">🩺<br>Triagem</button>
+      <button data-tab="meds" type="button">💊<br>Remédios</button>
+      <button data-tab="perfil" type="button">👤<br>Perfil</button>
+    </nav>
+  </section>
+</main>
+
+<script>
+'use strict';
+const API = 'https://suas-saude-facil.onrender.com';
+let token = sessionStorage.getItem('suas_token') || null;
+let user = null;
+let activeAlarms = [];
+let triggeredLog = {};
+let lastMapsUrl = null;
+const $ = id => document.getElementById(id);
+
+/* --- Gerador QR Code Nativo (Byte-mode Versões 1-8, ECC Level L, Mask 0) --- */
+const QRGen = (() => {
+  const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+  let v = 1;
+  for (let i = 0; i < 255; i++) { EXP[i] = v; LOG[v] = i; v <<= 1; if (v & 0x100) v ^= 0x11d; }
+  for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+  const gfMul = (x, y) => (x === 0 || y === 0) ? 0 : EXP[LOG[x] + LOG[y]];
+  const rsGen = n => {
+    let g = [1];
+    for (let i = 0; i < n; i++) {
+      let ng = new Array(g.length + 1).fill(0);
+      for (let j = 0; j < g.length; j++) { ng[j] ^= g[j]; ng[j + 1] ^= gfMul(g[j], EXP[i]); }
+      g = ng;
+    }
+    return g;
+  };
+  const rsEncode = (data, nsym) => {
+    const gen = rsGen(nsym), res = data.concat(new Array(nsym).fill(0));
+    for (let i = 0; i < data.length; i++) {
+      const c = res[i];
+      if (c !== 0) for (let j = 1; j < gen.length; j++) res[i + j] ^= gfMul(gen[j], c);
+    }
+    return res.slice(data.length);
+  };
+  const SPECS = [
+    [1, 21, 19, 7, 1, []],
+    [2, 25, 34, 10, 1, [6, 18]],
+    [3, 29, 55, 15, 1, [6, 22]],
+    [4, 33, 80, 20, 1, [6, 26]],
+    [5, 37, 108, 26, 1, [6, 30]],
+    [6, 41, 136, 18, 2, [6, 34]],
+    [7, 45, 156, 20, 2, [6, 22, 38]],
+    [8, 49, 194, 24, 2, [6, 24, 42]]
+  ];
+  function draw(canvas, text) {
+    if (!canvas) return;
+    const raw = Array.from(new TextEncoder().encode(text));
+    let spec = SPECS.find(s => 12 + raw.length * 8 <= s[2] * 8);
+    if (!spec) { raw.length = 190; spec = SPECS[SPECS.length - 1]; }
+    const [ver, size, dataCw, ecCw, blocks, align] = spec;
+    const bits = [0, 1, 0, 0];
+    for (let i = 7; i >= 0; i--) bits.push((raw.length >> i) & 1);
+    raw.forEach(b => { for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1); });
+    const term = Math.min(4, dataCw * 8 - bits.length);
+    for (let i = 0; i < term; i++) bits.push(0);
+    while (bits.length % 8 !== 0) bits.push(0);
+    const cw = [];
+    for (let i = 0; i < bits.length; i += 8) {
+      let b = 0; for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j]; cw.push(b);
+    }
+    const pads = [0xEC, 0x11]; let pi = 0;
+    while (cw.length < dataCw) cw.push(pads[pi++ % 2]);
+    const bSize = Math.floor(dataCw / blocks), rem = dataCw % blocks;
+    const dBlocks = [], eBlocks = []; let pos = 0;
+    for (let b = 0; b < blocks; b++) {
+      const ln = bSize + (b >= blocks - rem ? 1 : 0);
+      const blk = cw.slice(pos, pos + ln); pos += ln;
+      dBlocks.push(blk); eBlocks.push(rsEncode(blk, ecCw));
+    }
+    const finalCw = [];
+    const maxD = Math.max(...dBlocks.map(b => b.length));
+    for (let i = 0; i < maxD; i++) dBlocks.forEach(b => { if (i < b.length) finalCw.push(b[i]); });
+    for (let i = 0; i < ecCw; i++) eBlocks.forEach(e => finalCw.push(e[i]));
+    const mat = Array.from({ length: size }, () => new Array(size).fill(0));
+    const func = Array.from({ length: size }, () => new Array(size).fill(false));
+    const setF = (r, c, val) => { if (r >= 0 && r < size && c >= 0 && c < size) { mat[r][c] = val ? 1 : 0; func[r][c] = true; } };
+    const finder = (r0, c0) => {
+      for (let r = -1; r <= 7; r++) for (let c = -1; c <= 7; c++) {
+        const out = r >= 0 && r <= 6 && c >= 0 && c <= 6;
+        const brd = r === 0 || r === 6 || c === 0 || c === 6;
+        const ctr = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+        setF(r0 + r, c0 + c, out && (brd || ctr));
+      }
+    };
+    finder(0, 0); finder(0, size - 7); finder(size - 7, 0);
+    for (let i = 8; i < size - 8; i++) { setF(6, i, i % 2 === 0); setF(i, 6, i % 2 === 0); }
+    align.forEach(r => align.forEach(c => {
+      if ((r === 6 && c === 6) || (r === 6 && c === size - 7) || (r === size - 7 && c === 6)) return;
+      for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) setF(r + dr, c + dc, Math.max(Math.abs(dr), Math.abs(dc)) !== 1);
+    }));
+    for (let i = 0; i < 9; i++) if (i !== 6) { setF(8, i, false); setF(i, 8, false); }
+    for (let i = 0; i < 8; i++) { setF(8, size - 1 - i, false); setF(size - 1 - i, 8, false); }
+    setF(size - 8, 8, true);
+    if (ver >= 7) {
+      const vb = ver === 7 ? 0x07C94 : 0x085BC;
+      for (let i = 0; i < 18; i++) {
+        const bit = (vb >> i) & 1, a = size - 11 + (i % 3), b = Math.floor(i / 3);
+        setF(a, b, bit); setF(b, a, bit);
+      }
+    }
+    const stream = [];
+    finalCw.forEach(byte => { for (let i = 7; i >= 0; i--) stream.push((byte >> i) & 1); });
+    let bi = 0, up = true, c = size - 1;
+    while (c > 0) {
+      if (c === 6) c--;
+      for (let step = 0; step < size; step++) {
+        const r = up ? (size - 1 - step) : step;
+        for (const dc of [0, -1]) {
+          const cc = c + dc;
+          if (!func[r][cc]) {
+            let bit = bi < stream.length ? stream[bi++] : 0;
+            if ((r + cc) % 2 === 0) bit ^= 1;
+            mat[r][cc] = bit;
+          }
+        }
+      }
+      up = !up; c -= 2;
+    }
+    const fmt = 0x77C4;
+    const c1 = [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+    const c2 = [[size-1,8],[size-2,8],[size-3,8],[size-4,8],[size-5,8],[size-6,8],[size-7,8],[8,size-8],[8,size-7],[8,size-6],[8,size-5],[8,size-4],[8,size-3],[8,size-2],[8,size-1]];
+    for (let i = 0; i < 15; i++) {
+      const fb = (fmt >> (14 - i)) & 1;
+      mat[c1[i][0]][c1[i][1]] = fb;
+      mat[c2[i][0]][c2[i][1]] = fb;
+    }
+    const ctx = canvas.getContext('2d');
+    const pad = 4, total = size + pad * 2;
+    const scale = Math.max(4, Math.floor(canvas.width / total));
+    canvas.width = canvas.height = total * scale;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#072B59';
+    for (let r = 0; r < size; r++) for (let col = 0; col < size; col++) {
+      if (mat[r][col]) ctx.fillRect((col + pad) * scale, (r + pad) * scale, scale, scale);
+    }
+  }
+  return { draw };
+})();
+
+/* --- Utilitários de UI, Voz e Som --- */
+function notice(msg, kind = 'ok') {
+  const el = $('message');
+  el.textContent = msg;
+  el.className = 'notice ' + kind;
+  setTimeout(() => { if (el.textContent === msg) el.classList.add('hidden'); }, 7500);
+}
+function show(id, yes) { $(id).classList.toggle('hidden', !yes); }
+function setText(id, v) { $(id).textContent = v ?? 'Não informado'; }
+function digits(v) { return String(v || '').replace(/\D/g, ''); }
+
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'pt-BR';
+  u.rate = 1.0;
+  window.speechSynthesis.speak(u);
+}
+
+function playBeep() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.18, ctx.currentTime + idx * 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.16 + 0.35);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.16);
+      osc.stop(ctx.currentTime + idx * 0.16 + 0.36);
+    });
+  } catch (e) {}
+  if (navigator.vibrate) navigator.vibrate([250, 120, 250]);
+}
+
+function bindVoiceInput(btnId, targetInputId) {
+  const btn = $(btnId);
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { btn.onclick = () => notice('Reconhecimento de voz não suportado neste navegador.', 'warning'); return; }
+  btn.onclick = () => {
+    const rec = new SR();
+    rec.lang = 'pt-BR';
+    rec.interimResults = false;
+    btn.textContent = '🎙️ Ouvindo...';
+    rec.onresult = ev => {
+      const txt = ev.results[0][0].transcript;
+      const el = $(targetInputId);
+      el.value = el.value ? (el.value + ' ' + txt) : txt;
+      notice('Texto capturado por voz!', 'ok');
+    };
+    rec.onerror = () => notice('Não foi possível captar áudio. Tente novamente.', 'warning');
+    rec.onend = () => { btn.textContent = btnId === 'voice-triage-btn' ? '🎙️ Ditar por Voz' : '🎙️ Ditar'; };
+    rec.start();
+  };
+}
+
+async function request(path, { method = 'GET', body, auth = true } = {}) {
+  const headers = { 'Accept': 'application/json' };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (auth && token) headers['Authorization'] = 'Bearer ' + token;
+  let r;
+  try {
+    r = await fetch(API + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store' });
+  } catch (e) {
+    throw Error('Não foi possível conectar ao servidor SUAS. Verifique sua internet.');
+  }
+  let data = {};
+  try { data = await r.json(); } catch {}
+  if (!r.ok) {
+    const detail = data.detail;
+    throw Error(typeof detail === 'string' ? detail : `Erro na solicitação (HTTP ${r.status})`);
+  }
+  return data;
+}
+
+function showApp(yes) { show('auth', !yes); show('app', yes); }
+
+function fillProfile(p) {
+  user = p;
+  setText('hello', p.nome_completo || 'Cidadão');
+  setText('connection', `CNS: ${p.cns || 'Ativo'} · Sessão protegida`);
+  const safe = v => document.createTextNode(v || 'Não informado');
+  const pairs = [
+    ['vital', [
+      ['Titular', p.nome_completo],
+      ['Tipo sanguíneo', p.tipo_sanguineo],
+      ['Alergias', p.alergias],
+      ['Condições crônicas', p.condicoes_cronicas],
+      ['Contato de emergência', p.contacto_responsavel]
+    ]],
+    ['profile', [
+      ['Nome completo', p.nome_completo],
+      ['Cartão SUS (CNS)', p.cns],
+      ['CPF', p.cpf ? ('***.***.***-' + p.cpf.slice(-2)) : null],
+      ['Telefone', p.telefone],
+      ['Tipo sanguíneo', p.tipo_sanguineo],
+      ['Contato de emergência', p.contacto_responsavel]
+    ]]
+  ];
+  for (const [id, fields] of pairs) {
+    const box = $(id);
+    box.replaceChildren();
+    fields.forEach(([label, value]) => {
+      const d = document.createElement('div'); d.className = 'item';
+      const b = document.createElement('strong'); b.textContent = label + ': ';
+      d.append(b, safe(value)); box.append(d);
+    });
+  }
+  $('upd-tel').value = p.telefone || '';
+  $('upd-blood').value = p.tipo_sanguineo || '';
+  $('upd-allergies').value = p.alergias || '';
+  $('upd-chronic').value = p.condicoes_cronicas || '';
+  $('upd-contact').value = p.contacto_responsavel || '';
+
+  const vCode = p.vital_code || ('SUAS-VITAL-' + p.id);
+  setText('vital-code-label', vCode);
+  const qrPayload = `SUAS-SOS|${vCode}|NOME:${p.nome_completo || ''}|SANGUE:${p.tipo_sanguineo || 'N/I'}|ALERGIAS:${p.alergias || 'Nenhuma'}|CONTATO:${p.contacto_responsavel || '192'}`;
+  QRGen.draw($('vital-qr-canvas'), qrPayload);
+}
+
+async function loadProfile() {
+  const p = await request('/app-cidadao/me');
+  fillProfile(p);
+  showApp(true);
+  loadAlarms();
+}
+
+/* --- Eventos de Auth --- */
+$('show-register').onclick = () => show('register-box', true);
+$('register-form').onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const obj = Object.fromEntries(f.entries());
+  obj.cns = digits(obj.cns);
+  obj.cpf = digits(obj.cpf);
+  delete obj.consentimento;
+  try {
+    await request('/app-cidadao/cadastro', { method: 'POST', body: obj, auth: false });
+    notice('Cadastro realizado com sucesso! Entre com seu Cartão SUS e senha.', 'ok');
+    $('login-cns').value = obj.cns;
+    show('register-box', false);
+    e.target.reset();
+  } catch (err) {
+    notice(err.message, 'warning');
+  }
+};
+
+$('login-form').onsubmit = async e => {
+  e.preventDefault();
+  try {
+    const r = await request('/app-cidadao/login', {
+      method: 'POST',
+      body: { cns: digits($('login-cns').value), senha: $('login-password').value },
+      auth: false
+    });
+    token = r.access_token;
+    sessionStorage.setItem('suas_token', token);
+    await loadProfile();
+    $('login-password').value = '';
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+  } catch (err) {
+    token = null;
+    sessionStorage.removeItem('suas_token');
+    notice(err.message, 'warning');
+  }
+};
+
+$('logout').onclick = () => {
+  token = null; user = null;
+  sessionStorage.removeItem('suas_token');
+  showApp(false);
+  notice('Sessão encerrada com segurança.', 'ok');
+};
+
+/* --- Navegação --- */
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  $('tab-' + b.dataset.tab).classList.add('active');
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
+  if (b.dataset.tab === 'meds') { loadAlarms(); loadMeds(); }
+  if (b.dataset.tab === 'triagem') { loadTriages(); }
+});
+
+/* --- Voz e Emergência --- */
+bindVoiceInput('voice-triage-btn', 'triage-symptoms');
+bindVoiceInput('voice-med-btn', 'alarm-med-name');
+
+$('speak-screen').onclick = () => {
+  if (!user) return;
+  const resumo = `Olá ${user.nome_completo}. Cartão Vital ativo. Tipo sanguíneo ${user.tipo_sanguineo || 'não informado'}. Alergias: ${user.alergias || 'nenhuma registrada'}. Você possui ${activeAlarms.length} alarmes de medicamentos ativos.`;
+  speak(resumo);
+  notice('Lendo resumo do seu Cartão Vital em áudio...', 'ok');
+};
+
+$('download-vital-qr').onclick = () => {
+  const c = $('vital-qr-canvas');
+  const link = document.createElement('a');
+  link.download = `QR_Vital_${(user && user.vital_code) || 'SUAS'}.png`;
+  link.href = c.toDataURL('image/png');
+  link.click();
+};
+
+$('gps').onclick = () => {
+  if (!navigator.geolocation) { notice('Geolocalização não suportada neste aparelho.', 'warning'); return; }
+  setText('gps-result', 'Obtendo coordenadas GPS e registrando alerta SOS...');
+  show('gps-result', true);
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const { latitude, longitude } = pos.coords;
+    try {
+      const r = await request('/app-cidadao/sos', {
+        method: 'POST',
+        body: { latitude: String(latitude), longitude: String(longitude), observacao: 'SOS acionado pelo App do Cidadão' }
+      });
+      lastMapsUrl = r.maps_url || `https://www.google.com/maps?q=${latitude},${longitude}`;
+      const el = $('gps-result');
+      el.replaceChildren(document.createTextNode(`🚨 Protocolo ${r.protocolo} registrado! Localização pronta: `));
+      const a = document.createElement('a');
+      a.href = lastMapsUrl; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = 'Abrir no Google Maps';
+      el.append(a);
+      show('whatsapp-sos', true);
+      playBeep();
+    } catch (err) {
+      setText('gps-result', err.message);
+    }
+  }, () => setText('gps-result', 'Permita o acesso à localização no navegador para enviar coordenadas GPS.'), { enableHighAccuracy: true, timeout: 12000 });
+};
+
+$('whatsapp-sos').onclick = () => {
+  const msg = encodeURIComponent(`🚨 ALERTA DE EMERGÊNCIA SUAS SAÚDE +FÁCIL! Preciso de ajuda. Minha localização exata: ${lastMapsUrl || ''}`);
+  window.open(`https://wa.me/?text=${msg}`, '_blank', 'noopener,noreferrer');
+};
+
+/* --- Pré-triagem --- */
+$('triage-form').onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const result = $('triage-result');
+  show('triage-result', true);
+  result.textContent = 'Processando pré-triagem...';
+  try {
+    const r = await request('/app-cidadao/triagens', {
+      method: 'POST',
+      body: { queixa_principal: f.get('queixa_principal'), gravidade: f.get('gravidade') }
+    });
+    result.textContent = `✅ Protocolo: ${r.protocolo}
+🏥 Unidade indicada: ${r.unidade_indicada}
+⏱️ Tempo médio estimado: ~${r.tempo_estimado_min} min
+Status: ${r.status}`;
+    QRGen.draw($('triage-qr-canvas'), r.qr_checkin);
+    setText('triage-qr-caption', `${r.protocolo} · Apresente na recepção (sem ficha física)`);
+    show('triage-qr-box', true);
+    e.target.reset();
+    loadTriages();
+  } catch (err) {
+    result.textContent = err.message;
+  }
+};
+
+async function loadTriages() {
+  const box = $('triage-history');
+  try {
+    const rows = await request('/app-cidadao/triagens');
+    box.replaceChildren();
+    if (!rows.length) { box.textContent = 'Nenhuma pré-triagem registrada ainda.'; return; }
+    rows.forEach(t => {
+      const d = document.createElement('div'); d.className = 'item';
+      const b = document.createElement('strong'); b.textContent = `${t.protocolo} · ${t.gravidade} (~${t.tempo_estimado_min} min)`;
+      const p = document.createElement('div'); p.textContent = `${t.unidade_indicada} — ${t.queixa_principal}`;
+      d.append(b, p); box.append(d);
+    });
+  } catch (err) { box.textContent = err.message; }
+}
+
+/* --- Despertador de Posologia & Farmácia --- */
+$('alarm-type').onchange = e => show('alarm-days-wrap', e.target.value === 'TEMPORARIO');
+$('alarm-interval').onchange = e => show('custom-hours-wrap', e.target.value === '0');
+
+function triggerAlarmNotification(title, bodyText) {
+  playBeep();
+  speak(`Atenção! Hora do seu medicamento: ${bodyText}`);
+  setText('alarm-modal-text', `${title} — ${bodyText}`);
+  show('alarm-modal', true);
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try { new Notification('⏰ SUAS Saúde +Fácil', { body: `${title}: ${bodyText}` }); } catch {}
+  }
+}
+
+$('test-alarm-btn').onclick = () => {
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+  triggerAlarmNotification('Despertador de Posologia Ativo', 'Exemplo: Amoxicilina 500mg (Ciclo de 8 em 8 horas)');
+};
+$('alarm-confirm-btn').onclick = () => { show('alarm-modal', false); notice('Dose confirmada no histórico do cidadão!', 'ok'); };
+$('alarm-close-btn').onclick = () => show('alarm-modal', false);
+
+setInterval(() => {
+  if (!activeAlarms.length) return;
+  const now = new Date();
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const dayKey = now.toISOString().slice(0, 10) + '_' + hhmm;
+  activeAlarms.forEach(a => {
+    if (!a.ativo) return;
+    const times = (a.horarios_alarme || '').split(',').map(x => x.trim());
+    if (times.includes(hhmm) && !triggeredLog[a.id + '_' + dayKey]) {
+      triggeredLog[a.id + '_' + dayKey] = true;
+      triggerAlarmNotification(a.nome_medicamento, `Horário ${hhmm} (${a.tipo_tratamento === 'CONTINUO' ? 'Uso Contínuo' : 'Tratamento Temporário'})`);
+    }
+  });
+}, 15000);
+
+async function loadAlarms() {
+  const box = $('alarm-list');
+  try {
+    const rows = await request('/app-cidadao/alarmes-posologia');
+    activeAlarms = rows.filter(r => r.ativo);
+    box.replaceChildren();
+    if (!rows.length) { box.textContent = 'Nenhum despertador de medicamento cadastrado.'; return; }
+    rows.forEach(a => {
+      const d = document.createElement('div'); d.className = 'item';
+      const top = document.createElement('div');
+      const strong = document.createElement('strong'); strong.textContent = a.nome_medicamento + ' ';
+      const badge = document.createElement('span');
+      badge.className = 'pill ' + (a.ativo ? 'pill-green' : 'pill-amber');
+      badge.textContent = !a.ativo ? 'Concluído' : (a.tipo_tratamento === 'CONTINUO' ? 'Uso Contínuo' : `Temporário · ${a.dias_restantes}d restantes`);
+      top.append(strong, badge);
+      const info = document.createElement('div');
+      info.textContent = `⏰ Horários: ${a.horarios_alarme} (${a.intervalo_horas > 0 ? 'a cada ' + a.intervalo_horas + 'h' : 'personalizado'})`;
+      d.append(top, info);
+      if (a.ativo) {
+        const del = document.createElement('button');
+        del.className = 'outline btn-sm'; del.style.marginTop = '6px'; del.textContent = 'Encerrar alarme';
+        del.onclick = async () => { await request(`/app-cidadao/alarmes-posologia/${a.id}`, { method: 'DELETE' }); loadAlarms(); };
+        d.append(del);
+      }
+      box.append(d);
+    });
+  } catch (err) { box.textContent = err.message; }
+}
+
+$('alarm-form').onsubmit = async e => {
+  e.preventDefault();
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+  const f = new FormData(e.target);
+  const payload = {
+    nome_medicamento: f.get('nome_medicamento'),
+    tipo_tratamento: f.get('tipo_tratamento'),
+    intervalo_horas: Number(f.get('intervalo_horas')),
+    duracao_dias: f.get('tipo_tratamento') === 'TEMPORARIO' ? Number(f.get('duracao_dias') || 7) : null,
+    hora_inicial: f.get('hora_inicial') || '08:00',
+    horarios_personalizados: f.get('horarios_personalizados') || null
+  };
+  try {
+    const r = await request('/app-cidadao/alarmes-posologia', { method: 'POST', body: payload });
+    notice(`✅ ${r.mensagem}`, 'ok');
+    e.target.reset();
+    show('alarm-days-wrap', true);
+    show('custom-hours-wrap', false);
+    loadAlarms();
+  } catch (err) { notice(err.message, 'warning'); }
+};
+
+async function loadMeds() {
+  const box = $('med-list');
+  try {
+    const rows = await request('/app-cidadao/prescricoes');
+    box.replaceChildren();
+    if (!rows.length) { box.textContent = 'Nenhuma prescrição médica enviada pelo consultório ainda. Você pode gerar QR Code abaixo.'; return; }
+    rows.forEach(p => {
+      const d = document.createElement('div'); d.className = 'item';
+      const t = document.createElement('strong'); t.textContent = `${p.medicamento_nome} ${p.dosagem || ''}`;
+      const sub = document.createElement('div'); sub.textContent = `${p.posologia || ''} · ${p.fornecido_pelo_sus ? 'Rede SUS' : 'Plano Credenciado'}`;
+      const btn = document.createElement('button'); btn.className = 'secondary btn-sm'; btn.style.marginTop = '6px';
+      btn.textContent = 'Gerar QR Code + Ativar Posologia';
+      btn.onclick = () => gerarQrFarmacia(p.medicamento_nome, p.fornecido_pelo_sus ? 'SUS' : 'PLANO_DESCONTO', p.id);
+      d.append(t, sub, btn); box.append(d);
+    });
+  } catch (err) { box.textContent = err.message; }
+}
+$('refresh-meds').onclick = loadMeds;
+
+async function gerarQrFarmacia(medicamento_nome, modalidade, medicamento_id = null) {
+  try {
+    const r = await request('/app-cidadao/farmacia/gerar-qr', {
+      method: 'POST',
+      body: { medicamento_id, medicamento_nome, modalidade }
+    });
+    QRGen.draw($('farma-qr-canvas'), r.qr_payload);
+    setText('farma-qr-title', `${r.medicamento_nome} (${modalidade === 'SUS' ? 'Retirada SUS' : 'Desconto Plano'})`);
+    setText('farma-qr-code', r.codigo_autorizacao);
+    setText('farma-qr-desc', r.mensagem);
+    show('farma-qr-box', true);
+    notice('QR Code gerado! Apresente no balcão da farmácia.', 'ok');
+  } catch (err) { notice(err.message, 'warning'); }
+}
+
+$('farma-qr-form').onsubmit = e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  gerarQrFarmacia(f.get('medicamento_nome'), f.get('modalidade'));
+};
+
+$('self-med-form').onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  try {
+    const r = await request('/app-cidadao/automedicacoes', { method: 'POST', body: { nome_medicamento: f.get('nome_medicamento') } });
+    const el = $('self-med-result');
+    el.textContent = `Registro salvo (${r.registros_60_dias}x nos últimos 60 dias). ${r.alerta || ''}`;
+    show('self-med-result', true);
+    e.target.reset();
+  } catch (err) { notice(err.message, 'warning'); }
+};
+
+$('update-vital-form').onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  try {
+    await request('/app-cidadao/me', { method: 'PUT', body: Object.fromEntries(f.entries()) });
+    await loadProfile();
+    notice('✅ Cartão Vital e QR Code atualizados com sucesso!', 'ok');
+  } catch (err) { notice(err.message, 'warning'); }
+};
+
+/* --- Restauração automática de sessão --- */
+if (token) {
+  loadProfile().catch(() => {
+    token = null;
+    sessionStorage.removeItem('suas_token');
+    showApp(false);
+  });
+}
+</script>
+</body>
+</html>
