@@ -1,9 +1,9 @@
 """API Integrada e 100% Ativa do App do Cidadão — SUAS Saúde +Fácil.
 Compatível com main.py, models.py e database.py existentes sem alterá-los.
-Inclui: Cadastro/Login seguros (PBKDF2 + SHA-256), Cartão Vital editável com QR Code,
-SOS Geolocalizado com registo permanente em samu_ocorrencias, Pré-Triagem Inteligente
-com Check-in QR, Farmácia Digital (SUS e Plano), Despertador de Posologia
-(Temporário 6/6h, 8/8h, 12/12h e Uso Contínuo) e Acionamento SAMU via QR Code.
+Inclui: Cadastro/Login/Recuperação de Senha seguros (PBKDF2 + SHA-256),
+Cartão Vital editável com QR Code, SOS Geolocalizado com registo permanente
+em samu_ocorrencias, Pré-Triagem Inteligente com Check-in QR, Farmácia Digital
+(SUS e Plano), Despertador de Posologia e Acionamento SAMU via QR Code.
 """
 import os
 import re
@@ -25,7 +25,7 @@ import models
 router = APIRouter(prefix="/app-cidadao", tags=["App do Cidadão"])
 
 
-# --- Modelos Complementares (criados automaticamente se não existirem) ---
+# --- Modelos Complementares ---
 class CitizenAuth(models.Base):
     __tablename__ = "app_cidadao_auth"
     id = Column(Integer, primary_key=True)
@@ -64,10 +64,10 @@ class CitizenMedicationSchedule(models.Base):
     cidadao_id = Column(Integer, ForeignKey("cidadaos_perfil.id"), nullable=False, index=True)
     nome_medicamento = Column(String(180), nullable=False)
     dosagem = Column(String(80), nullable=True)
-    tipo_tratamento = Column(String(20), default="TEMPORARIO")  # TEMPORARIO ou CONTINUO
-    intervalo_horas = Column(Integer, default=8)  # 6, 8, 12, 24 ou 0 (personalizado)
-    duracao_dias = Column(Integer, nullable=True)  # Ex: 5, 7, 10, 14 dias
-    horarios_alarme = Column(String(200), nullable=False)  # Ex: "08:00, 16:00, 00:00"
+    tipo_tratamento = Column(String(20), default="TEMPORARIO")
+    intervalo_horas = Column(Integer, default=8)
+    duracao_dias = Column(Integer, nullable=True)
+    horarios_alarme = Column(String(200), nullable=False)
     origem = Column(String(40), default="Prescrição / Cidadão")
     ativo = Column(Boolean, default=True)
     inicio_em = Column(DateTime, default=datetime.utcnow)
@@ -84,6 +84,14 @@ class CitizenEmergencyLog(models.Base):
     observacao = Column(String(300), nullable=True)
     status = Column(String(60), default="Alerta SOS registrado · Geolocalização ativa")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# Garante criação das tabelas complementares no arranque
+try:
+    if hasattr(database, "engine") and database.engine is not None:
+        models.Base.metadata.create_all(bind=database.engine)
+except Exception:
+    pass
 
 
 def get_db():
@@ -154,7 +162,6 @@ def _registrar_ocorrencia_samu(
     longitude: str | None,
     observacao: str,
 ) -> tuple[bool, str | None, dict | None]:
-    """Grava permanentemente a ocorrência na tabela samu_ocorrencias e evento em samu_eventos."""
     if db.bind is None:
         return False, None, None
 
@@ -306,6 +313,12 @@ class LoginIn(BaseModel):
     senha: str
 
 
+class RecuperarSenhaIn(BaseModel):
+    cns: str
+    cpf: str
+    nova_senha: str = Field(min_length=8, max_length=128)
+
+
 class PerfilUpdateIn(BaseModel):
     telefone: str | None = Field(default=None, max_length=30)
     tipo_sanguineo: str | None = Field(default=None, max_length=10)
@@ -322,8 +335,8 @@ class TriageIn(BaseModel):
 class AlarmePosologiaIn(BaseModel):
     nome_medicamento: str = Field(min_length=2, max_length=180)
     dosagem: str | None = Field(default=None, max_length=80)
-    tipo_tratamento: str = Field(default="TEMPORARIO")  # TEMPORARIO ou CONTINUO
-    intervalo_horas: int = Field(default=8)  # 6, 8, 12, 24 ou 0
+    tipo_tratamento: str = Field(default="TEMPORARIO")
+    intervalo_horas: int = Field(default=8)
     duracao_dias: int | None = Field(default=7, ge=1, le=365)
     hora_inicial: str = Field(default="08:00", max_length=10)
     horarios_personalizados: str | None = Field(default=None, max_length=200)
@@ -338,7 +351,7 @@ class AutomedicacaoIn(BaseModel):
 class FarmaciaQrIn(BaseModel):
     medicamento_id: int | None = None
     medicamento_nome: str = Field(min_length=2, max_length=180)
-    modalidade: str = Field(default="SUS")  # SUS ou PLANO_DESCONTO
+    modalidade: str = Field(default="SUS")
 
 
 class SosIn(BaseModel):
@@ -445,7 +458,7 @@ async def acionar_samu_por_qr(payload: QrSamuAcionarIn, db: Session = Depends(ge
     }
 
 
-# --- Endpoints 100% Ativos ---
+# --- Cadastro, Login e Recuperação de Senha ---
 @router.post("/cadastro", status_code=201)
 def cadastro(data: CadastroIn, db: Session = Depends(get_db)):
     cns = only_digits(data.cns)
@@ -456,11 +469,13 @@ def cadastro(data: CadastroIn, db: Session = Depends(get_db)):
         raise HTTPException(422, "CPF inválido. Verifique os 11 dígitos informados.")
 
     if db.query(CitizenAuth).filter_by(cns=cns).first():
-        raise HTTPException(409, "Este Cartão SUS (CNS) já possui cadastro ativo. Faça login.")
+        raise HTTPException(409, "Este Cartão SUS (CNS) já possui cadastro ativo. Faça login ou recupere sua senha.")
 
     citizen = db.query(models.CidadaoPerfil).filter_by(cpf=cpf).first()
     if citizen and db.query(CitizenAuth).filter_by(cidadao_id=citizen.id).first():
-        raise HTTPException(409, "Este CPF já possui conta cadastrada. Faça login com seu CNS.")
+        raise HTTPException(409, "Este CPF já possui conta cadastrada. Faça login com seu CNS ou recupere sua senha.")
+
+    contacto_limpo = (data.contacto_responsavel or "").strip() or (data.telefone or "").strip() or "Não informado"
 
     if not citizen:
         perfil_kwargs = {}
@@ -470,10 +485,10 @@ def cadastro(data: CadastroIn, db: Session = Depends(get_db)):
             "cns": cns,
             "data_nascimento": data.data_nascimento,
             "telefone": data.telefone.strip(),
-            "tipo_sanguineo": (data.tipo_sanguineo or "").strip() or None,
+            "tipo_sanguineo": (data.tipo_sanguineo or "").strip() or "N/I",
             "alergias": (data.alergias or "").strip() or None,
             "condicoes_cronicas": (data.condicoes_cronicas or "").strip() or None,
-            "contacto_responsavel": (data.contacto_responsavel or "").strip() or None,
+            "contacto_responsavel": contacto_limpo,
         }
         for k, v in candidatos.items():
             if hasattr(models.CidadaoPerfil, k):
@@ -495,10 +510,35 @@ def cadastro(data: CadastroIn, db: Session = Depends(get_db)):
 
     return {
         "status": "ativo",
-        "mensagem": "Cadastro concluído com sucesso! Acesso liberado.",
+        "mensagem": "Cadastro salvo permanentemente! Acesso liberado.",
         "cidadao_id": citizen.id,
         "cns": cns,
         "vital_code": vital_code,
+    }
+
+
+@router.post("/recuperar-senha")
+def recuperar_senha(data: RecuperarSenhaIn, db: Session = Depends(get_db)):
+    cns = only_digits(data.cns)
+    cpf = only_digits(data.cpf)
+    if len(cns) != 15 or not validar_cpf(cpf):
+        raise HTTPException(422, "Informe o Cartão SUS (15 dígitos) e o CPF (11 dígitos) válidos.")
+
+    auth = db.query(CitizenAuth).filter_by(cns=cns).first()
+    if not auth:
+        raise HTTPException(404, "Nenhum cadastro encontrado para este Cartão SUS.")
+
+    citizen = db.query(models.CidadaoPerfil).filter_by(id=auth.cidadao_id).first()
+    if not citizen or only_digits(getattr(citizen, "cpf", "")) != cpf:
+        raise HTTPException(403, "Os dados de CPF e Cartão SUS não conferem.")
+
+    auth.password_hash = password_hash(data.nova_senha)
+    db.query(CitizenSession).filter_by(cidadao_id=auth.cidadao_id).delete()
+    db.commit()
+
+    return {
+        "status": "redefinida",
+        "mensagem": "Nova senha salva com sucesso! Já pode entrar com seu Cartão SUS.",
     }
 
 
@@ -513,7 +553,7 @@ def login(data: LoginIn, db: Session = Depends(get_db)):
         auth.vital_code = "SUAS-VITAL-" + secrets.token_hex(6).upper()
 
     token = secrets.token_urlsafe(40)
-    ttl = 86400  # 24 horas
+    ttl = 86400
     db.add(
         CitizenSession(
             cidadao_id=auth.cidadao_id,
@@ -548,7 +588,10 @@ def atualizar_perfil(data: PerfilUpdateIn, c=Depends(current_citizen), db: Sessi
     updates = data.model_dump(exclude_unset=True)
     for k, v in updates.items():
         if hasattr(c, k):
-            setattr(c, k, v.strip() if isinstance(v, str) and v.strip() else None)
+            val = v.strip() if isinstance(v, str) and v.strip() else None
+            if k == "contacto_responsavel" and not val:
+                val = "Não informado"
+            setattr(c, k, val)
     db.commit()
     db.refresh(c)
     return {"status": "atualizado", "mensagem": "Cartão Vital e dados de emergência atualizados."}
@@ -745,7 +788,6 @@ def farmacia_gerar_qr(data: FarmaciaQrIn, c=Depends(current_citizen)):
     }
 
 
-# --- Despertador Inteligente de Posologia (Temporário 6/6h, 8/8h, 12/12h e Uso Contínuo) ---
 @router.get("/alarmes-posologia")
 def listar_alarmes_posologia(c=Depends(current_citizen), db: Session = Depends(get_db)):
     agora = datetime.utcnow()
@@ -844,7 +886,6 @@ def desativar_alarme_posologia(alarme_id: int, c=Depends(current_citizen), db: S
     return {"status": "desativado", "id": alarme_id}
 
 
-# --- Compatibilidade com rotas anteriores ---
 @router.get("/medicamentos-pessoais")
 def meus_medicamentos(c=Depends(current_citizen), db: Session = Depends(get_db)):
     rows = db.query(models.MedicamentoCidadao).filter_by(cidadao_id=c.id).limit(100).all()
