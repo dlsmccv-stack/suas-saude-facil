@@ -2,8 +2,8 @@
 Compatível com main.py, models.py e database.py existentes sem alterá-los.
 Inclui: Cadastro/Login seguros (PBKDF2 + SHA-256), Cartão Vital editável com QR Code,
 SOS Geolocalizado com registo permanente em samu_ocorrencias, Pré-Triagem Inteligente
-com Check-in QR, Farmácia Digital (SUS e Plano) e Despertador de Posologia
-(Temporário 6/6h, 8/8h, 12/12h e Uso Contínuo).
+com Check-in QR, Farmácia Digital (SUS e Plano), Despertador de Posologia
+(Temporário 6/6h, 8/8h, 12/12h e Uso Contínuo) e Acionamento SAMU via QR Code.
 """
 import os
 import re
@@ -13,6 +13,7 @@ import secrets
 import hashlib
 import hmac
 import time
+from urllib.parse import quote as url_quote
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel, Field
@@ -147,7 +148,7 @@ def _to_float_or_none(val: str | float | int | None) -> float | None:
 def _registrar_ocorrencia_samu(
     db: Session,
     protocolo: str,
-    cidadao_id: int,
+    cidadao_id: int | None,
     nome_cidadao: str | None,
     latitude: str | None,
     longitude: str | None,
@@ -175,7 +176,7 @@ def _registrar_ocorrencia_samu(
         valores["protocolo"] = protocolo
     if "origem" in colunas:
         valores["origem"] = "app_cidadao"
-    if "cidadao_id" in colunas:
+    if "cidadao_id" in colunas and cidadao_id is not None:
         valores["cidadao_id"] = cidadao_id
     if "descricao" in colunas:
         valores["descricao"] = descricao_completa
@@ -248,6 +249,44 @@ async def _notificar_central_ws(alerta_ws: dict | None) -> None:
         pass
 
 
+def _extrair_codigo_qr(codigo_bruto: str) -> str:
+    val = (codigo_bruto or "").strip()
+    if "|" in val:
+        partes = [p.strip() for p in val.split("|") if p.strip()]
+        for p in partes:
+            if p.upper().startswith(("SUAS-VITAL-", "QR-EMERG-")):
+                return p
+        if len(partes) > 1:
+            return partes[1]
+    return val
+
+
+def _resolver_familiar_por_qr(db: Session, codigo_bruto: str) -> tuple[int | None, str | None, str | None]:
+    codigo = _extrair_codigo_qr(codigo_bruto)
+    if not codigo:
+        return None, None, None
+
+    if hasattr(models, "EmergencyItem"):
+        emerg = db.query(models.EmergencyItem).filter(models.EmergencyItem.qr_code_token == codigo).first()
+        if emerg:
+            telefone = only_digits(emerg.contacto_emergencia_telefone)
+            cidadao = None
+            if emerg.cidadao_id:
+                cidadao = db.query(models.CidadaoPerfil).filter(models.CidadaoPerfil.id == emerg.cidadao_id).first()
+            if not telefone and cidadao:
+                telefone = only_digits(getattr(cidadao, "contacto_responsavel", None))
+            return emerg.cidadao_id, emerg.cidadao_nome, telefone or None
+
+    auth = db.query(CitizenAuth).filter(CitizenAuth.vital_code == codigo).first()
+    if auth:
+        cidadao = db.query(models.CidadaoPerfil).filter(models.CidadaoPerfil.id == auth.cidadao_id).first()
+        if cidadao:
+            telefone = only_digits(getattr(cidadao, "contacto_responsavel", None))
+            return cidadao.id, getattr(cidadao, "nome_completo", None), telefone or None
+
+    return None, None, None
+
+
 # --- Schemas Pydantic ---
 class CadastroIn(BaseModel):
     cns: str
@@ -308,6 +347,13 @@ class SosIn(BaseModel):
     observacao: str | None = Field(default=None, max_length=300)
 
 
+class QrSamuAcionarIn(BaseModel):
+    qr_code: str = Field(min_length=1, max_length=160)
+    latitude: float | None = None
+    longitude: float | None = None
+    observacao: str | None = Field(default="Acionamento SAMU via leitura de QR Code", max_length=300)
+
+
 # --- Autenticação ---
 def current_citizen(authorization: str | None = Header(default=None), db: Session = Depends(get_db)):
     if not authorization or not authorization.startswith("Bearer "):
@@ -321,6 +367,82 @@ def current_citizen(authorization: str | None = Header(default=None), db: Sessio
     if not citizen:
         raise HTTPException(401, "Cadastro do cidadão não encontrado")
     return citizen
+
+
+# --- Endpoints Públicos de Emergência via QR ---
+@router.get("/qr-emergencia/resolver")
+def resolver_qr_emergencia(qr_code: str, db: Session = Depends(get_db)):
+    cidadao_id, _, telefone_familiar = _resolver_familiar_por_qr(db, qr_code)
+    return {
+        "valido": bool(cidadao_id or telefone_familiar),
+        "tem_familiar_cadastrado": bool(telefone_familiar),
+        "telefone_familiar": telefone_familiar,
+    }
+
+
+@router.post("/qr-emergencia/acionar", status_code=201)
+async def acionar_samu_por_qr(payload: QrSamuAcionarIn, db: Session = Depends(get_db)):
+    cidadao_id, nome_cidadao, telefone_familiar = _resolver_familiar_por_qr(db, payload.qr_code)
+    protocolo = f"SAMU-{datetime.utcnow().strftime('%Y%m%d')}-{secrets.token_hex(2).upper()}"
+    lat_str = str(payload.latitude) if payload.latitude is not None else None
+    lon_str = str(payload.longitude) if payload.longitude is not None else None
+    obs = payload.observacao or f"Acionamento SAMU via QR ({_extrair_codigo_qr(payload.qr_code)})"
+
+    alerta_ws = None
+    registrado_samu = False
+    ocorrencia_id = None
+
+    if cidadao_id:
+        log = CitizenEmergencyLog(
+            cidadao_id=cidadao_id,
+            protocolo=protocolo,
+            latitude=lat_str,
+            longitude=lon_str,
+            observacao=obs,
+        )
+        db.add(log)
+        registrado_samu, ocorrencia_id, alerta_ws = _registrar_ocorrencia_samu(
+            db=db,
+            protocolo=protocolo,
+            cidadao_id=cidadao_id,
+            nome_cidadao=nome_cidadao,
+            latitude=lat_str,
+            longitude=lon_str,
+            observacao=obs,
+        )
+        db.commit()
+        await _notificar_central_ws(alerta_ws)
+
+    maps_url = (
+        f"https://www.google.com/maps?q={payload.latitude},{payload.longitude}"
+        if payload.latitude is not None and payload.longitude is not None
+        else None
+    )
+    ddd_phone = (
+        telefone_familiar
+        if (not telefone_familiar or telefone_familiar.startswith("55"))
+        else f"55{telefone_familiar}"
+    )
+    mensagem = (
+        f"🚨 ALERTA DE EMERGÊNCIA (SAMU) — Protocolo {protocolo}. "
+        f"Emergência registrada via QR."
+        + (f" Localização: {maps_url}" if maps_url else "")
+    )
+    wa_url = (
+        f"https://wa.me/{ddd_phone}?text={url_quote(mensagem)}"
+        if ddd_phone
+        else f"https://wa.me/?text={url_quote(mensagem)}"
+    )
+
+    return {
+        "protocolo": protocolo,
+        "registrado_samu": registrado_samu,
+        "ocorrencia_samu_id": ocorrencia_id,
+        "maps_url": maps_url,
+        "telefone_familiar": telefone_familiar,
+        "whatsapp_url": wa_url,
+        "mensagem_familiar": mensagem,
+    }
 
 
 # --- Endpoints 100% Ativos ---
@@ -436,13 +558,7 @@ def atualizar_perfil(data: PerfilUpdateIn, c=Depends(current_citizen), db: Sessi
 def cartao_vital(c=Depends(current_citizen), db: Session = Depends(get_db)):
     auth = db.query(CitizenAuth).filter_by(cidadao_id=c.id).first()
     vital_code = auth.vital_code if auth and auth.vital_code else f"SUAS-VITAL-{c.id}"
-    payload_qr = (
-        f"SUAS-SOS|{vital_code}|"
-        f"NOME:{getattr(c, 'nome_completo', 'Cidadão')}|"
-        f"SANGUE:{getattr(c, 'tipo_sanguineo', None) or 'N/I'}|"
-        f"ALERGIAS:{getattr(c, 'alergias', None) or 'Nenhuma informada'}|"
-        f"CONTATO:{getattr(c, 'contacto_responsavel', None) or '192'}"
-    )
+    payload_qr = f"https://app-cidadao.vercel.app/?qr={vital_code}"
     return {
         "vital_code": vital_code,
         "qr_payload": payload_qr,
