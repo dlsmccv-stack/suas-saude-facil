@@ -26,8 +26,8 @@ small,.muted{color:#64748b;font-size:13px}
 label{display:block;margin:11px 0 5px;font-weight:600;font-size:13.5px;color:#1e293b}
 input,select,textarea{width:100%;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;background:#fff;color:#0f172a}
 input:focus,select:focus,textarea:focus{outline:2px solid #0284c7;border-color:#0284c7}
-button{cursor:pointer;font:inherit;border:0;border-radius:10px;padding:11px 15px;background:#072B59;color:#fff;font-weight:700;transition:opacity .15s,transform .05s}
-button:active{transform:scale(.99)}
+button{cursor:pointer;font:inherit;border:0;border-radius:10px;padding:11px 15px;background:#072B59;color:#fff;font-weight:700;touch-action:manipulation}
+button:active{opacity:.85}
 button:disabled{opacity:.55;cursor:not-allowed}
 .danger{background:#b91c1c;width:100%;padding:15px;font-size:16px}
 .success{background:#047857;color:#fff}
@@ -59,6 +59,22 @@ a{color:#0369a1;text-decoration:none}
 .alarm-banner{position:fixed;top:12px;left:12px;right:12px;max-width:536px;margin:auto;background:#072B59;color:#fff;border:2px solid #38bdf8;border-radius:16px;padding:16px;z-index:50;box-shadow:0 12px 30px rgba(0,0,0,.35)}
 video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-fit:cover;margin-top:8px}
 </style>
+<script>
+function abrirBoxAuth(boxId) {
+  var reg = document.getElementById('register-box');
+  var rec = document.getElementById('recover-box');
+  if (reg) reg.classList.toggle('hidden', boxId !== 'register-box');
+  if (rec) rec.classList.toggle('hidden', boxId !== 'recover-box');
+  var alvo = document.getElementById(boxId);
+  if (alvo) alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function fecharBoxesAuth() {
+  var reg = document.getElementById('register-box');
+  var rec = document.getElementById('recover-box');
+  if (reg) reg.classList.add('hidden');
+  if (rec) rec.classList.add('hidden');
+}
+</script>
 </head>
 <body>
 <header>
@@ -67,7 +83,7 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
       <h1>✚ SUA Saúde +Fácil</h1>
       <p>App do Cidadão · SUAS Tecnologia em Saúde</p>
     </div>
-    <span class="badge-live">● 100% ATIVO</span>
+    <span class="badge-live" id="status-pill">● 100% ATIVO</span>
   </div>
 </header>
 
@@ -75,8 +91,8 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
   <div style="font-size:13px;color:#7dd3fc;font-weight:700">⏰ DESPERTADOR DE POSOLOGIA SUAS</div>
   <div id="alarm-modal-text" style="font-size:17px;font-weight:700;margin:6px 0 12px">Hora do seu medicamento!</div>
   <div class="row">
-    <button class="success" id="alarm-confirm-btn">✅ Confirmar Dose Tomada</button>
-    <button class="outline" id="alarm-close-btn">Fechar</button>
+    <button class="success" id="alarm-confirm-btn" type="button">✅ Confirmar Dose Tomada</button>
+    <button class="outline" id="alarm-close-btn" type="button">Fechar</button>
   </div>
 </div>
 
@@ -121,11 +137,11 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
         <input id="login-cns" inputmode="numeric" autocomplete="username" placeholder="Ex: 700000000000001" maxlength="18" required>
         <label for="login-password">Senha</label>
         <input id="login-password" type="password" autocomplete="current-password" placeholder="Sua senha de acesso" required>
-        <button type="submit" style="width:100%;margin-top:14px">Entrar no SUAS Saúde +Fácil</button>
+        <button type="submit" id="login-submit-btn" style="width:100%;margin-top:14px">Entrar no SUAS Saúde +Fácil</button>
       </form>
       <div class="row" style="margin-top:10px">
-        <button class="secondary" id="show-register" type="button">Criar novo cadastro gratuito</button>
-        <button class="outline" id="show-recover" type="button">Esqueci minha senha</button>
+        <button class="secondary" id="show-register" type="button" onclick="abrirBoxAuth('register-box')">Criar novo cadastro gratuito</button>
+        <button class="outline" id="show-recover" type="button" onclick="abrirBoxAuth('recover-box')">Esqueci minha senha</button>
       </div>
     </div>
 
@@ -133,7 +149,7 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
     <div class="card hidden" id="recover-box">
       <div class="row">
         <h2 style="margin:0">🔑 Recuperar Senha</h2>
-        <button class="outline btn-sm" id="close-recover" type="button" style="flex:0">Fechar</button>
+        <button class="outline btn-sm" id="close-recover" type="button" onclick="fecharBoxesAuth()" style="flex:0">Fechar</button>
       </div>
       <p class="muted">Confirme seu Cartão SUS (CNS) e seu CPF cadastrado para definir uma nova senha imediatamente.</p>
       <form id="recover-form">
@@ -143,7 +159,7 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
         <input name="cpf" inputmode="numeric" maxlength="14" placeholder="Somente números" required>
         <label>Nova senha (mínimo 8 caracteres)</label>
         <input name="nova_senha" type="password" minlength="8" autocomplete="new-password" placeholder="Digite a nova senha" required>
-        <button class="success" type="submit" style="width:100%;margin-top:12px">Salvar Nova Senha</button>
+        <button class="success" id="recover-submit-btn" type="submit" style="width:100%;margin-top:12px">Salvar Nova Senha</button>
       </form>
     </div>
 
@@ -151,7 +167,7 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
     <div class="card hidden" id="register-box">
       <div class="row">
         <h2 style="margin:0">Cadastro do cidadão</h2>
-        <button class="outline btn-sm" id="close-register" type="button" style="flex:0">Fechar</button>
+        <button class="outline btn-sm" id="close-register" type="button" onclick="fecharBoxesAuth()" style="flex:0">Fechar</button>
       </div>
       <p class="muted">Preencha seus dados para ativar imediatamente seu Cartão Vital com QR Code, pré-triagem e farmácia digital.</p>
       <form id="register-form">
@@ -277,7 +293,7 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
             <option value="MODERADO">Moderada (Desconforto importante / febre persistente)</option>
             <option value="GRAVE">Grave (Dor intensa, falta de ar, urgência)</option>
           </select>
-          <button class="success" style="width:100%;margin-top:12px">Gerar Pré-triagem e QR Check-in</button>
+          <button class="success" type="submit" style="width:100%;margin-top:12px">Gerar Pré-triagem e QR Check-in</button>
         </form>
 
         <div id="triage-result" class="notice ok hidden"></div>
@@ -352,7 +368,7 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
             <input name="horarios_personalizados" placeholder="Ex: 07:30, 13:30, 21:00">
           </div>
 
-          <button class="success" style="width:100%;margin-top:12px">Ativar Despertador de Posologia</button>
+          <button class="success" type="submit" style="width:100%;margin-top:12px">Ativar Despertador de Posologia</button>
         </form>
 
         <div id="alarm-list" class="notice" style="margin-top:12px">Carregando alarmes ativos...</div>
@@ -390,7 +406,7 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
             </div>
           </div>
 
-          <button class="success" style="width:100%;margin-top:12px">Confirmar Agendamento de Retirada</button>
+          <button class="success" type="submit" style="width:100%;margin-top:12px">Confirmar Agendamento de Retirada</button>
         </form>
 
         <div id="pickup-schedule-list" class="notice" style="margin-top:12px">Nenhum agendamento de retirada registrado ainda.</div>
@@ -414,7 +430,7 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
               <option value="SUS">Rede Pública (SUS — Retirada Agendada)</option>
               <option value="PLANO_DESCONTO">Plano de Saúde (Desconto Farmácia Credenciada)</option>
             </select>
-            <button style="width:100%;margin-top:10px">Gerar QR Code da Farmácia</button>
+            <button type="submit" style="width:100%;margin-top:10px">Gerar QR Code da Farmácia</button>
           </form>
           <div id="farma-qr-box" class="qr-box hidden">
             <strong id="farma-qr-title">QR Code Autorizado</strong>
@@ -445,7 +461,7 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
           </select>
           <label>Sintomas ou observações clínicas</label>
           <textarea name="descricao_sintomas" rows="2" placeholder="Ex: Tontura, náusea, erupção na pele ou uso recorrente..."></textarea>
-          <button class="gold" style="width:100%;margin-top:10px">Registrar em Farmacovigilância</button>
+          <button class="gold" type="submit" style="width:100%;margin-top:10px">Registrar em Farmacovigilância</button>
         </form>
         <div id="vigilance-result" class="notice warning hidden"></div>
       </div>
@@ -478,7 +494,7 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
           <input id="upd-chronic" name="condicoes_cronicas" placeholder="Ex: Hipertensão, Asma">
           <label>Contato de emergência (Nome e Telefone)</label>
           <input id="upd-contact" name="contacto_responsavel" placeholder="Ex: Maria (86) 99999-0000">
-          <button class="success" style="width:100%;margin-top:12px">Salvar Alterações no Cartão Vital</button>
+          <button class="success" type="submit" style="width:100%;margin-top:12px">Salvar Alterações no Cartão Vital</button>
         </form>
       </div>
     </section>
@@ -511,7 +527,6 @@ let qrStream = null;
 let qrScanTimer = null;
 const $ = id => document.getElementById(id);
 
-/* --- Gerador QR Code Nativo --- */
 const QRGen = (() => {
   const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
   let v = 1;
@@ -640,13 +655,13 @@ const QRGen = (() => {
   return { draw };
 })();
 
-/* --- Utilitários de UI, Voz e Som --- */
 function notice(msg, kind = 'ok') {
   const el = $('message');
+  if (!el) return;
   el.textContent = msg;
   el.className = 'notice ' + kind;
   el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  setTimeout(() => { if (el.textContent === msg) el.classList.add('hidden'); }, 8000);
+  setTimeout(() => { if (el.textContent === msg) el.classList.add('hidden'); }, 9000);
 }
 function show(id, yes) { const el = $(id); if (el) el.classList.toggle('hidden', !yes); }
 function setText(id, v) { const el = $(id); if (el) el.textContent = v ?? 'Não informado'; }
@@ -705,4 +720,779 @@ function bindVoiceInput(btnId, targetInputId) {
 async function request(path, { method = 'GET', body, auth = true } = {}) {
   const headers = { 'Accept': 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (auth && token) headers['Authorization']
+  if (auth && token) headers['Authorization'] = 'Bearer ' + token;
+  let r;
+  try {
+    r = await fetch(API + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store' });
+  } catch (e) {
+    throw Error('Não foi possível conectar ao servidor SUAS. Aguarde 15s (servidor Render acordando) e tente novamente.');
+  }
+  let data = {};
+  try { data = await r.json(); } catch {}
+  if (!r.ok) {
+    const detail = data.detail;
+    throw Error(typeof detail === 'string' ? detail : `Erro na solicitação (HTTP ${r.status})`);
+  }
+  return data;
+}
+
+function extractQrCodeFromScan(rawValue) {
+  const clean = String(rawValue || '').trim();
+  if (!clean) return '';
+  try {
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      const u = new URL(clean);
+      const paramQr = u.searchParams.get('qr') || u.searchParams.get('token');
+      if (paramQr) return paramQr.trim();
+    }
+  } catch {}
+  if (clean.includes('|')) {
+    const parts = clean.split('|').map(p => p.trim()).filter(Boolean);
+    const known = parts.find(p => /^SUAS[-_]VITAL[-_]|^QR[-_]EMERG[-_]/i.test(p));
+    if (known) return known;
+    if (parts[1]) return parts[1];
+  }
+  return clean.slice(0, 120);
+}
+
+function stopQrScanner() {
+  if (qrScanTimer) { clearInterval(qrScanTimer); qrScanTimer = null; }
+  if (qrStream) {
+    qrStream.getTracks().forEach(t => t.stop());
+    qrStream = null;
+  }
+  show('qr-scanner-box', false);
+}
+
+async function prepararQrParaSamu(rawValue) {
+  const code = extractQrCodeFromScan(rawValue);
+  if (!code) return;
+  detectedQrCode = code;
+  resolvedFamilyPhone = '';
+  show('qr-ready-badge', true);
+  show('third-party-samu-btn', true);
+  $('qr-ready-badge').textContent = '✅ QR Code lido. Localizando familiar cadastrado...';
+
+  try {
+    const info = await request(`/app-cidadao/qr-emergencia/resolver?qr_code=${encodeURIComponent(code)}`, { auth: false });
+    if (info.telefone_familiar) resolvedFamilyPhone = digits(info.telefone_familiar);
+    $('qr-ready-badge').textContent = info.tem_familiar_cadastrado
+      ? '✅ QR Code lido. Botão ACIONAR SAMU liberado com familiar cadastrado.'
+      : '✅ QR Code lido. Botão ACIONAR SAMU liberado.';
+  } catch {
+    $('qr-ready-badge').textContent = '✅ QR Code lido. Botão ACIONAR SAMU liberado.';
+  }
+}
+
+$('stop-qr-scanner-btn').onclick = stopQrScanner;
+
+$('toggle-qr-scanner-btn').onclick = async () => {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    notice('Câmera não disponível neste navegador. Use a câmera nativa do celular para ler o QR Code.', 'warning');
+    return;
+  }
+  try {
+    show('qr-scanner-box', true);
+    qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = $('qr-video');
+    video.srcObject = qrStream;
+    await video.play();
+
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      qrScanTimer = setInterval(async () => {
+        if (video.readyState < 2) return;
+        try {
+          const codes = await detector.detect(video);
+          if (codes && codes.length && codes[0].rawValue) {
+            stopQrScanner();
+            await prepararQrParaSamu(codes[0].rawValue);
+          }
+        } catch {}
+      }, 400);
+    } else {
+      notice('Câmera aberta. Aponte para o QR Code.', 'ok');
+    }
+  } catch {
+    stopQrScanner();
+    notice('Permita o acesso à câmera no navegador para ler o QR Code.', 'warning');
+  }
+};
+
+$('third-party-samu-btn').onclick = () => {
+  if (!detectedQrCode) {
+    notice('Leia o QR Code primeiro para liberar o acionamento do SAMU.', 'warning');
+    return;
+  }
+  const resBox = $('third-party-result');
+  show('third-party-result', true);
+  resBox.textContent = 'Obtendo GPS, registrando SAMU e preparando mensagem para o familiar...';
+
+  const enviarChamado = async (lat = null, lon = null) => {
+    const mapsUrl = (lat !== null && lon !== null) ? `https://www.google.com/maps?q=${lat},${lon}` : null;
+    const protocol = 'SAMU-' + Date.now().toString().slice(-6);
+    const fallbackMsg = `🚨 ALERTA DE EMERGÊNCIA (SAMU) — Protocolo ${protocol}. Ocorrência via QR.${mapsUrl ? ' Localização: ' + mapsUrl : ''}`;
+    const ddd = resolvedFamilyPhone ? (resolvedFamilyPhone.startsWith('55') ? resolvedFamilyPhone : '55' + resolvedFamilyPhone) : '';
+    let waUrl = ddd
+      ? `https://wa.me/${ddd}?text=${encodeURIComponent(fallbackMsg)}`
+      : `https://wa.me/?text=${encodeURIComponent(fallbackMsg)}`;
+    let finalProtocol = protocol;
+
+    try {
+      const r = await request('/app-cidadao/qr-emergencia/acionar', {
+        method: 'POST',
+        auth: false,
+        body: {
+          qr_code: detectedQrCode,
+          latitude: lat,
+          longitude: lon,
+          observacao: 'Acionamento SAMU via QR Code'
+        }
+      });
+      if (r.protocolo) finalProtocol = r.protocolo;
+      if (r.whatsapp_url) waUrl = r.whatsapp_url;
+    } catch {}
+
+    lastThirdPartyWaUrl = waUrl;
+    resBox.innerHTML = `🚨 <strong>SAMU acionado (${finalProtocol})</strong>` +
+      (mapsUrl ? `<br>📍 Localização: <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Abrir no Google Maps</a>` : '<br>📍 GPS não disponível.') +
+      `<br>📲 Mensagem pronta para o familiar cadastrado.`;
+    show('third-party-actions', true);
+    playBeep();
+    window.open(lastThirdPartyWaUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  if (!navigator.geolocation) {
+    enviarChamado(null, null);
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    pos => enviarChamado(pos.coords.latitude, pos.coords.longitude),
+    () => enviarChamado(null, null),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+};
+
+$('third-party-wa-btn').onclick = () => {
+  if (!lastThirdPartyWaUrl) return;
+  window.open(lastThirdPartyWaUrl, '_blank', 'noopener,noreferrer');
+};
+
+function showApp(yes) { show('auth', !yes); show('app', yes); }
+
+function fillProfile(p) {
+  user = p;
+  setText('hello', p.nome_completo || 'Cidadão');
+  setText('connection', `ID #${p.id || '-'} · CNS: ${p.cns || 'Ativo'}`);
+  const safe = v => document.createTextNode(v || 'Não informado');
+  const pairs = [
+    ['vital', [
+      ['Titular', p.nome_completo],
+      ['Tipo sanguíneo', p.tipo_sanguineo],
+      ['Alergias', p.alergias],
+      ['Condições crônicas', p.condicoes_cronicas],
+      ['Contato de emergência', p.contacto_responsavel]
+    ]],
+    ['profile', [
+      ['ID do Cidadão', p.id],
+      ['Nome completo', p.nome_completo],
+      ['Cartão SUS (CNS)', p.cns],
+      ['CPF', p.cpf ? ('***.***.***-' + p.cpf.slice(-2)) : null],
+      ['Telefone', p.telefone],
+      ['Tipo sanguíneo', p.tipo_sanguineo],
+      ['Contato de emergência', p.contacto_responsavel]
+    ]]
+  ];
+  for (const [id, fields] of pairs) {
+    const box = $(id);
+    box.replaceChildren();
+    fields.forEach(([label, value]) => {
+      const d = document.createElement('div'); d.className = 'item';
+      const b = document.createElement('strong'); b.textContent = label + ': ';
+      d.append(b, safe(value)); box.append(d);
+    });
+  }
+  $('upd-tel').value = p.telefone || '';
+  $('upd-blood').value = p.tipo_sanguineo || '';
+  $('upd-allergies').value = p.alergias || '';
+  $('upd-chronic').value = p.condicoes_cronicas || '';
+  $('upd-contact').value = p.contacto_responsavel || '';
+
+  const vCode = p.vital_code || ('SUAS-VITAL-' + p.id);
+  setText('vital-code-label', vCode);
+  const qrUrl = `${window.location.origin}/?qr=${encodeURIComponent(vCode)}`;
+  QRGen.draw($('vital-qr-canvas'), qrUrl);
+}
+
+async function loadProfile() {
+  const p = await request('/app-cidadao/me');
+  fillProfile(p);
+  showApp(true);
+  loadAlarms();
+  loadNotificationsAndExams();
+}
+
+async function loadNotificationsAndExams() {
+  const notifBox = $('notif-list');
+  const examsBox = $('exams-list');
+  if (!user || !user.id) return;
+  try {
+    const data = await request(`/cidadao/${user.id}/notificacoes-lembretes`, { auth: false });
+    const naoLidas = Number(data.nao_lidas || 0);
+    setText('unread-badge', `${naoLidas} não ${naoLidas === 1 ? 'lida' : 'lidas'}`);
+
+    const notifs = data.notificacoes_e_lembretes || [];
+    notifBox.replaceChildren();
+    if (!notifs.length) {
+      notifBox.textContent = 'Nenhuma notificação ou lembrete registrado no momento.';
+    } else {
+      notifs.forEach(n => {
+        const d = document.createElement('div');
+        d.className = 'item';
+        const top = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = (n.titulo || n.tipo_evento || 'Aviso') + ' ';
+        const pill = document.createElement('span');
+        pill.className = 'pill ' + (n.lida ? 'pill-green' : 'pill-amber');
+        pill.textContent = n.lida ? 'Lida' : (n.tipo_evento === 'RETORNO_MEDICO' ? 'Retorno 14d' : 'Nova');
+        top.append(title, pill);
+
+        const msg = document.createElement('div');
+        msg.textContent = n.mensagem || '';
+
+        const meta = document.createElement('small');
+        meta.style.display = 'block';
+        meta.style.marginTop = '4px';
+        meta.textContent = [
+          n.data_agendada ? `Data agendada: ${n.data_agendada}` : null,
+          n.alarme_sugerido ? `Alarme sugerido: ${n.alarme_sugerido}` : null
+        ].filter(Boolean).join(' · ');
+
+        const actions = document.createElement('div');
+        actions.className = 'row';
+        actions.style.marginTop = '8px';
+
+        if (!n.lida) {
+          const btnRead = document.createElement('button');
+          btnRead.className = 'secondary btn-sm';
+          btnRead.textContent = 'Marcar como lida';
+          btnRead.onclick = async () => {
+            await request(`/cidadao/notificacoes/${n.id}/marcar-lida`, { method: 'POST', auth: false });
+            notice('Notificação marcada como lida!', 'ok');
+            loadNotificationsAndExams();
+          };
+          actions.append(btnRead);
+        }
+
+        if (n.alarme_sugerido) {
+          const btnAlarm = document.createElement('button');
+          btnAlarm.className = 'gold btn-sm';
+          btnAlarm.textContent = `⏰ Programar ${n.alarme_sugerido}`;
+          btnAlarm.onclick = () => {
+            triggerAlarmNotification(n.titulo || 'Lembrete SUAS', `${n.mensagem || ''} (${n.alarme_sugerido})`);
+          };
+          actions.append(btnAlarm);
+        }
+
+        d.append(top, msg);
+        if (meta.textContent) d.append(meta);
+        if (actions.children.length) d.append(actions);
+        notifBox.append(d);
+      });
+    }
+
+    const exames = data.exames_requisitados || [];
+    examsBox.replaceChildren();
+    if (!exames.length) {
+      examsBox.textContent = 'Nenhum exame solicitado para o seu perfil até o momento.';
+    } else {
+      exames.forEach(ex => {
+        const d = document.createElement('div');
+        d.className = 'item';
+        const top = document.createElement('div');
+        const name = document.createElement('strong');
+        name.textContent = `${ex.exame_nome} `;
+        const st = document.createElement('span');
+        const isDone = String(ex.status_exame || '').toUpperCase() === 'REALIZADO';
+        st.className = 'pill ' + (isDone ? 'pill-green' : 'pill-blue');
+        st.textContent = ex.status_exame || 'SOLICITADO';
+        top.append(name, st);
+
+        const info = document.createElement('div');
+        info.textContent = [
+          ex.codigo_requisicao ? `Código: ${ex.codigo_requisicao}` : null,
+          ex.categoria_exame || null,
+          ex.laboratorio_ou_unidade ? `Unidade/Lab: ${ex.laboratorio_ou_unidade}` : null,
+          ex.prioridade ? `Prioridade: ${ex.prioridade}` : null
+        ].filter(Boolean).join(' · ');
+
+        d.append(top, info);
+        examsBox.append(d);
+      });
+    }
+  } catch (err) {
+    notifBox.textContent = err.message;
+    examsBox.textContent = err.message;
+  }
+}
+$('refresh-avisos').onclick = loadNotificationsAndExams;
+
+$('recover-form').onsubmit = async e => {
+  e.preventDefault();
+  const btn = $('recover-submit-btn');
+  const f = new FormData(e.target);
+  const cns = digits(f.get('cns'));
+  const cpf = digits(f.get('cpf'));
+  const nova_senha = String(f.get('nova_senha') || '');
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando nova senha...'; }
+  try {
+    const r = await request('/app-cidadao/recuperar-senha', {
+      method: 'POST',
+      body: { cns, cpf, nova_senha },
+      auth: false
+    });
+    notice(r.mensagem || 'Senha redefinida com sucesso!', 'ok');
+    $('login-cns').value = cns;
+    fecharBoxesAuth();
+    e.target.reset();
+  } catch (err) {
+    notice(err.message, 'warning');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Salvar Nova Senha'; }
+  }
+};
+
+$('register-form').onsubmit = async e => {
+  e.preventDefault();
+  const btn = $('register-submit-btn');
+  const f = new FormData(e.target);
+  const obj = Object.fromEntries(f.entries());
+  obj.cns = digits(obj.cns);
+  obj.cpf = digits(obj.cpf);
+  delete obj.consentimento;
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando cadastro...'; }
+  try {
+    const r = await request('/app-cidadao/cadastro', { method: 'POST', body: obj, auth: false });
+    notice(r.mensagem || 'Cadastro realizado com sucesso! Entre com seu Cartão SUS e senha.', 'ok');
+    $('login-cns').value = obj.cns;
+    fecharBoxesAuth();
+    e.target.reset();
+  } catch (err) {
+    notice(err.message, 'warning');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Concluir Cadastro e Ativar Conta'; }
+  }
+};
+
+$('login-form').onsubmit = async e => {
+  e.preventDefault();
+  const btn = $('login-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
+  try {
+    const r = await request('/app-cidadao/login', {
+      method: 'POST',
+      body: { cns: digits($('login-cns').value), senha: $('login-password').value },
+      auth: false
+    });
+    token = r.access_token;
+    sessionStorage.setItem('suas_token', token);
+    await loadProfile();
+    $('login-password').value = '';
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+  } catch (err) {
+    token = null;
+    sessionStorage.removeItem('suas_token');
+    notice(err.message, 'warning');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Entrar no SUAS Saúde +Fácil'; }
+  }
+};
+
+$('logout').onclick = () => {
+  token = null; user = null;
+  sessionStorage.removeItem('suas_token');
+  showApp(false);
+  notice('Sessão encerrada com segurança.', 'ok');
+};
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  $('tab-' + b.dataset.tab).classList.add('active');
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
+  if (b.dataset.tab === 'avisos') { loadNotificationsAndExams(); }
+  if (b.dataset.tab === 'meds') { loadAlarms(); loadMeds(); renderPickupSchedules(); }
+  if (b.dataset.tab === 'triagem') { loadTriages(); }
+});
+
+bindVoiceInput('voice-triage-btn', 'triage-symptoms');
+bindVoiceInput('voice-med-btn', 'alarm-med-name');
+
+$('speak-screen').onclick = () => {
+  if (!user) return;
+  const resumo = `Olá ${user.nome_completo}. Cartão Vital ativo. Tipo sanguíneo ${user.tipo_sanguineo || 'não informado'}. Alergias: ${user.alergias || 'nenhuma registrada'}. Você possui ${activeAlarms.length} alarmes de medicamentos ativos.`;
+  speak(resumo);
+  notice('Lendo resumo do seu Cartão Vital em áudio...', 'ok');
+};
+
+$('download-vital-qr').onclick = () => {
+  const c = $('vital-qr-canvas');
+  const link = document.createElement('a');
+  link.download = `QR_Vital_${(user && user.vital_code) || 'SUAS'}.png`;
+  link.href = c.toDataURL('image/png');
+  link.click();
+};
+
+$('gps').onclick = () => {
+  if (!navigator.geolocation) { notice('Geolocalização não suportada neste aparelho.', 'warning'); return; }
+  setText('gps-result', 'Obtendo coordenadas GPS e registrando alerta SOS...');
+  show('gps-result', true);
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const { latitude, longitude } = pos.coords;
+    try {
+      const r = await request('/app-cidadao/sos', {
+        method: 'POST',
+        body: { latitude: String(latitude), longitude: String(longitude), observacao: 'SOS acionado pelo App do Cidadão' }
+      });
+      lastMapsUrl = r.maps_url || `https://www.google.com/maps?q=${latitude},${longitude}`;
+      const el = $('gps-result');
+      el.replaceChildren(document.createTextNode(`🚨 Protocolo ${r.protocolo} registrado! Localização pronta: `));
+      const a = document.createElement('a');
+      a.href = lastMapsUrl; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = 'Abrir no Google Maps';
+      el.append(a);
+      show('whatsapp-sos', true);
+      playBeep();
+    } catch (err) {
+      setText('gps-result', err.message);
+    }
+  }, () => setText('gps-result', 'Permita o acesso à localização no navegador para enviar coordenadas GPS.'), { enableHighAccuracy: true, timeout: 12000 });
+};
+
+$('whatsapp-sos').onclick = () => {
+  const famDigits = digits(user && user.contacto_responsavel);
+  const ddd = famDigits ? (famDigits.startsWith('55') ? famDigits : '55' + famDigits) : '';
+  const msg = encodeURIComponent(`🚨 ALERTA DE EMERGÊNCIA SUAS SAÚDE +FÁCIL! Preciso de ajuda. Minha localização exata: ${lastMapsUrl || ''}`);
+  const target = ddd ? `https://wa.me/${ddd}?text=${msg}` : `https://wa.me/?text=${msg}`;
+  window.open(target, '_blank', 'noopener,noreferrer');
+};
+
+$('triage-form').onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const result = $('triage-result');
+  show('triage-result', true);
+  result.textContent = 'Processando pré-triagem...';
+  try {
+    const r = await request('/app-cidadao/triagens', {
+      method: 'POST',
+      body: { queixa_principal: f.get('queixa_principal'), gravidade: f.get('gravidade') }
+    });
+    result.textContent = `✅ Protocolo: ${r.protocolo}
+🏥 Unidade indicada: ${r.unidade_indicada}
+⏱️ Tempo médio estimado: ~${r.tempo_estimado_min} min
+Status: ${r.status}`;
+    QRGen.draw($('triage-qr-canvas'), r.qr_checkin);
+    setText('triage-qr-caption', `${r.protocolo} · Apresente na recepção (sem ficha física)`);
+    show('triage-qr-box', true);
+    e.target.reset();
+    loadTriages();
+  } catch (err) {
+    result.textContent = err.message;
+  }
+};
+
+async function loadTriages() {
+  const box = $('triage-history');
+  try {
+    const rows = await request('/app-cidadao/triagens');
+    box.replaceChildren();
+    if (!rows.length) { box.textContent = 'Nenhuma pré-triagem registrada ainda.'; return; }
+    rows.forEach(t => {
+      const d = document.createElement('div'); d.className = 'item';
+      const b = document.createElement('strong'); b.textContent = `${t.protocolo} · ${t.gravidade} (~${t.tempo_estimado_min} min)`;
+      const p = document.createElement('div'); p.textContent = `${t.unidade_indicada} — ${t.queixa_principal}`;
+      d.append(b, p); box.append(d);
+    });
+  } catch (err) { box.textContent = err.message; }
+}
+
+$('alarm-type').onchange = e => show('alarm-days-wrap', e.target.value === 'TEMPORARIO');
+$('alarm-interval').onchange = e => show('custom-hours-wrap', e.target.value === '0');
+
+document.querySelectorAll('.filter-med-btn').forEach(btn => {
+  btn.onclick = () => {
+    medFilter = btn.dataset.filter;
+    document.querySelectorAll('.filter-med-btn').forEach(x => {
+      x.className = (x === btn ? 'secondary' : 'outline') + ' btn-sm filter-med-btn';
+    });
+    renderAlarms();
+  };
+});
+
+function triggerAlarmNotification(title, bodyText) {
+  playBeep();
+  speak(`Atenção! Hora do seu medicamento: ${bodyText}`);
+  setText('alarm-modal-text', `${title} — ${bodyText}`);
+  show('alarm-modal', true);
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try { new Notification('⏰ SUAS Saúde +Fácil', { body: `${title}: ${bodyText}` }); } catch {}
+  }
+}
+
+$('test-alarm-btn').onclick = () => {
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+  triggerAlarmNotification('Despertador de Posologia Ativo', 'Exemplo: Amoxicilina 500mg (Ciclo de 8 em 8 horas)');
+};
+$('alarm-confirm-btn').onclick = () => { show('alarm-modal', false); notice('Dose confirmada no histórico do cidadão!', 'ok'); };
+$('alarm-close-btn').onclick = () => show('alarm-modal', false);
+
+setInterval(() => {
+  if (!activeAlarms.length) return;
+  const now = new Date();
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const dayKey = now.toISOString().slice(0, 10) + '_' + hhmm;
+  activeAlarms.forEach(a => {
+    if (!a.ativo) return;
+    const times = (a.horarios_alarme || '').split(',').map(x => x.trim());
+    if (times.includes(hhmm) && !triggeredLog[a.id + '_' + dayKey]) {
+      triggeredLog[a.id + '_' + dayKey] = true;
+      triggerAlarmNotification(a.nome_medicamento, `Horário ${hhmm} (${a.tipo_tratamento === 'CONTINUO' ? 'Uso Contínuo' : 'Tratamento Temporário'})`);
+    }
+  });
+}, 15000);
+
+function renderAlarms() {
+  const box = $('alarm-list');
+  const rows = medFilter === 'TODOS' ? allAlarms : allAlarms.filter(r => r.tipo_tratamento === medFilter);
+  box.replaceChildren();
+  if (!rows.length) {
+    box.textContent = medFilter === 'TODOS'
+      ? 'Nenhum despertador de medicamento cadastrado.'
+      : `Nenhum medicamento em ${medFilter === 'CONTINUO' ? 'Uso Contínuo' : 'Tratamento Temporário'}.`;
+    return;
+  }
+  rows.forEach(a => {
+    const d = document.createElement('div'); d.className = 'item';
+    const top = document.createElement('div');
+    const strong = document.createElement('strong'); strong.textContent = a.nome_medicamento + ' ';
+    const badge = document.createElement('span');
+    badge.className = 'pill ' + (a.ativo ? 'pill-green' : 'pill-amber');
+    badge.textContent = !a.ativo ? 'Concluído' : (a.tipo_tratamento === 'CONTINUO' ? 'Uso Contínuo' : `Temporário · ${a.dias_restantes}d restantes`);
+    top.append(strong, badge);
+    const info = document.createElement('div');
+    info.textContent = `⏰ Horários: ${a.horarios_alarme} (${a.intervalo_horas > 0 ? 'a cada ' + a.intervalo_horas + 'h' : 'personalizado'})`;
+    d.append(top, info);
+    if (a.ativo) {
+      const del = document.createElement('button');
+      del.className = 'outline btn-sm'; del.style.marginTop = '6px'; del.textContent = 'Encerrar alarme';
+      del.onclick = async () => { await request(`/app-cidadao/alarmes-posologia/${a.id}`, { method: 'DELETE' }); loadAlarms(); };
+      d.append(del);
+    }
+    box.append(d);
+  });
+}
+
+async function loadAlarms() {
+  const box = $('alarm-list');
+  try {
+    const rows = await request('/app-cidadao/alarmes-posologia');
+    allAlarms = rows;
+    activeAlarms = rows.filter(r => r.ativo);
+    renderAlarms();
+  } catch (err) { box.textContent = err.message; }
+}
+
+$('alarm-form').onsubmit = async e => {
+  e.preventDefault();
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+  const f = new FormData(e.target);
+  const payload = {
+    nome_medicamento: f.get('nome_medicamento'),
+    tipo_tratamento: f.get('tipo_tratamento'),
+    intervalo_horas: Number(f.get('intervalo_horas')),
+    duracao_dias: f.get('tipo_tratamento') === 'TEMPORARIO' ? Number(f.get('duracao_dias') || 7) : null,
+    hora_inicial: f.get('hora_inicial') || '08:00',
+    horarios_personalizados: f.get('horarios_personalizados') || null
+  };
+  try {
+    const r = await request('/app-cidadao/alarmes-posologia', { method: 'POST', body: payload });
+    notice(`✅ ${r.mensagem}`, 'ok');
+    e.target.reset();
+    show('alarm-days-wrap', true);
+    show('custom-hours-wrap', false);
+    loadAlarms();
+  } catch (err) { notice(err.message, 'warning'); }
+};
+
+function renderPickupSchedules() {
+  const box = $('pickup-schedule-list');
+  box.replaceChildren();
+  if (!pickupSchedules.length) {
+    box.textContent = 'Nenhum agendamento de retirada registrado ainda.';
+    return;
+  }
+  pickupSchedules.forEach((ag, idx) => {
+    const d = document.createElement('div');
+    d.className = 'item';
+    const top = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = `${ag.medicamento_nome} `;
+    const pill = document.createElement('span');
+    pill.className = 'pill pill-green';
+    pill.textContent = 'AGENDADO';
+    top.append(title, pill);
+    const info = document.createElement('div');
+    info.textContent = `📅 ${ag.data_retirada} às ${ag.hora_retirada} · ${ag.unidade_retirada} (${ag.modalidade === 'SUS' ? 'SUS' : 'Credenciada'})`;
+    const actions = document.createElement('div');
+    actions.className = 'row';
+    actions.style.marginTop = '8px';
+    const btnQr = document.createElement('button');
+    btnQr.className = 'secondary btn-sm';
+    btnQr.type = 'button';
+    btnQr.textContent = 'Ver QR Code de Retirada';
+    btnQr.onclick = () => {
+      gerarQrFarmacia(ag.medicamento_nome, ag.modalidade, null, {
+        data: ag.data_retirada,
+        hora: ag.hora_retirada,
+        unidade: ag.unidade_retirada
+      });
+    };
+    const btnCancel = document.createElement('button');
+    btnCancel.className = 'outline btn-sm';
+    btnCancel.type = 'button';
+    btnCancel.textContent = 'Cancelar';
+    btnCancel.onclick = () => {
+      pickupSchedules.splice(idx, 1);
+      renderPickupSchedules();
+      notice('Agendamento de retirada cancelado.', 'warning');
+    };
+    actions.append(btnQr, btnCancel);
+    d.append(top, info, actions);
+    box.append(d);
+  });
+}
+
+$('pickup-schedule-form').onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const novo = {
+    medicamento_nome: f.get('medicamento_nome'),
+    modalidade: f.get('modalidade'),
+    unidade_retirada: f.get('unidade_retirada'),
+    data_retirada: f.get('data_retirada'),
+    hora_retirada: f.get('hora_retirada')
+  };
+  pickupSchedules.unshift(novo);
+  renderPickupSchedules();
+  await gerarQrFarmacia(novo.medicamento_nome, novo.modalidade, null, {
+    data: novo.data_retirada,
+    hora: novo.hora_retirada,
+    unidade: novo.unidade_retirada
+  });
+  e.target.reset();
+  notice('✅ Retirada de medicamento agendada e QR Code gerado!', 'ok');
+};
+
+async function loadMeds() {
+  const box = $('med-list');
+  try {
+    const rows = await request('/app-cidadao/prescricoes');
+    box.replaceChildren();
+    if (!rows.length) { box.textContent = 'Nenhuma prescrição médica enviada pelo consultório ainda. Você pode gerar QR Code abaixo.'; return; }
+    rows.forEach(p => {
+      const d = document.createElement('div'); d.className = 'item';
+      const t = document.createElement('strong'); t.textContent = `${p.medicamento_nome} ${p.dosagem || ''}`;
+      const sub = document.createElement('div'); sub.textContent = `${p.posologia || ''} · ${p.fornecido_pelo_sus ? 'Rede SUS' : 'Plano Credenciado'}`;
+      const btn = document.createElement('button'); btn.className = 'secondary btn-sm'; btn.style.marginTop = '6px';
+      btn.textContent = 'Gerar QR Code de Retirada';
+      btn.onclick = () => gerarQrFarmacia(p.medicamento_nome, p.fornecido_pelo_sus ? 'SUS' : 'PLANO_DESCONTO', p.id);
+      d.append(t, sub, btn); box.append(d);
+    });
+  } catch (err) { box.textContent = err.message; }
+}
+$('refresh-meds').onclick = loadMeds;
+
+async function gerarQrFarmacia(medicamento_nome, modalidade, medicamento_id = null, agendamentoInfo = null) {
+  try {
+    const r = await request('/app-cidadao/farmacia/gerar-qr', {
+      method: 'POST',
+      body: { medicamento_id, medicamento_nome, modalidade }
+    });
+    const agendStr = agendamentoInfo
+      ? ` · Agendado: ${agendamentoInfo.data} às ${agendamentoInfo.hora}${agendamentoInfo.unidade ? ' (' + agendamentoInfo.unidade + ')' : ''}`
+      : '';
+    const fullPayload = `${r.qr_payload}${agendStr}`;
+    QRGen.draw($('farma-qr-canvas'), fullPayload);
+    setText('farma-qr-title', `${r.medicamento_nome} (${modalidade === 'SUS' ? 'Retirada SUS' : 'Desconto Plano'})`);
+    setText('farma-qr-code', r.codigo_autorizacao);
+    setText('farma-qr-desc', `${r.mensagem || ''}${agendStr}`);
+    show('farma-qr-box', true);
+    notice('QR Code gerado! Apresente no balcão da farmácia.', 'ok');
+  } catch (err) { notice(err.message, 'warning'); }
+}
+
+$('farma-qr-form').onsubmit = e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  gerarQrFarmacia(f.get('medicamento_nome'), f.get('modalidade'));
+};
+
+$('vigilance-form').onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const nomeMed = f.get('nome_medicamento');
+  const tipo = f.get('tipo_ocorrencia');
+  const gravidade = f.get('gravidade');
+  const sintomas = f.get('descricao_sintomas') || '';
+  const el = $('vigilance-result');
+  show('vigilance-result', true);
+
+  try {
+    const r = await request('/app-cidadao/automedicacoes', {
+      method: 'POST',
+      body: {
+        nome_medicamento: `${nomeMed} [${tipo} | ${gravidade}${sintomas ? ': ' + sintomas : ''}]`
+      }
+    });
+    el.textContent = `🛡️ Registro de Farmacovigilância salvo (${r.registros_60_dias}x nos últimos 60 dias) · Tipo: ${tipo} · Gravidade: ${gravidade}. ${r.alerta || 'Monitoramento ativo.'}`;
+    e.target.reset();
+    notice('Ocorrência registrada em Farmacovigilância!', 'ok');
+  } catch (err) {
+    el.textContent = `⚠️ Registro local de Farmacovigilância (${nomeMed} · ${tipo} · ${gravidade}): ${err.message}`;
+  }
+};
+
+$('update-vital-form').onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  try {
+    await request('/app-cidadao/me', { method: 'PUT', body: Object.fromEntries(f.entries()) });
+    await loadProfile();
+    notice('✅ Cartão Vital e QR Code atualizados com sucesso!', 'ok');
+  } catch (err) { notice(err.message, 'warning'); }
+};
+
+const urlParams = new URLSearchParams(window.location.search);
+const initialQr = urlParams.get('qr') || urlParams.get('token');
+if (initialQr) {
+  prepararQrParaSamu(initialQr);
+}
+
+if (token) {
+  loadProfile().catch(() => {
+    token = null;
+    sessionStorage.removeItem('suas_token');
+    showApp(false);
+  });
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
+
