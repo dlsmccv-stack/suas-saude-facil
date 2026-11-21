@@ -398,7 +398,7 @@ function fecharBoxesAuth() {
           <div class="row">
             <div>
               <label>Data da retirada</label>
-              <input name="data_retirada" type="date" required>
+              <input id="pickup-date" name="data_retirada" type="date" required>
             </div>
             <div>
               <label>Horário agendado</label>
@@ -514,6 +514,7 @@ function fecharBoxesAuth() {
 const API = 'https://suas-saude-facil.onrender.com';
 let token = sessionStorage.getItem('suas_token') || null;
 let user = null;
+let currentTab = 'emergencia';
 let allAlarms = [];
 let activeAlarms = [];
 let medFilter = 'TODOS';
@@ -558,13 +559,15 @@ const QRGen = (() => {
     [5, 37, 108, 26, 1, [6, 30]],
     [6, 41, 136, 18, 2, [6, 34]],
     [7, 45, 156, 20, 2, [6, 22, 38]],
-    [8, 49, 194, 24, 2, [6, 24, 42]]
+    [8, 49, 194, 24, 2, [6, 24, 42]],
+    [9, 53, 232, 30, 2, [6, 26, 46]],
+    [10, 57, 274, 18, 4, [6, 28, 50]]
   ];
   function draw(canvas, text) {
     if (!canvas) return;
-    const raw = Array.from(new TextEncoder().encode(text));
+    const raw = Array.from(new TextEncoder().encode(String(text || 'SUAS')));
     let spec = SPECS.find(s => 12 + raw.length * 8 <= s[2] * 8);
-    if (!spec) { raw.length = 190; spec = SPECS[SPECS.length - 1]; }
+    if (!spec) { raw.length = 270; spec = SPECS[SPECS.length - 1]; }
     const [ver, size, dataCw, ecCw, blocks, align] = spec;
     const bits = [0, 1, 0, 0];
     for (let i = 7; i >= 0; i--) bits.push((raw.length >> i) & 1);
@@ -610,7 +613,7 @@ const QRGen = (() => {
     for (let i = 0; i < 8; i++) { setF(8, size - 1 - i, false); setF(size - 1 - i, 8, false); }
     setF(size - 8, 8, true);
     if (ver >= 7) {
-      const vb = ver === 7 ? 0x07C94 : 0x085BC;
+      const vb = { 7: 0x07C94, 8: 0x085BC, 9: 0x09A99, 10: 0x0A4D3 }[ver] || 0x07C94;
       for (let i = 0; i < 18; i++) {
         const bit = (vb >> i) & 1, a = size - 11 + (i % 3), b = Math.floor(i / 3);
         setF(a, b, bit); setF(b, a, bit);
@@ -644,7 +647,7 @@ const QRGen = (() => {
     }
     const ctx = canvas.getContext('2d');
     const pad = 4, total = size + pad * 2;
-    const scale = Math.max(4, Math.floor(canvas.width / total));
+    const scale = Math.max(4, Math.floor(220 / total));
     canvas.width = canvas.height = total * scale;
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#072B59';
@@ -666,6 +669,47 @@ function notice(msg, kind = 'ok') {
 function show(id, yes) { const el = $(id); if (el) el.classList.toggle('hidden', !yes); }
 function setText(id, v) { const el = $(id); if (el) el.textContent = v ?? 'Não informado'; }
 function digits(v) { return String(v || '').replace(/\D/g, ''); }
+
+function isValidCPF(cpfRaw) {
+  const cpf = digits(cpfRaw);
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += Number(cpf[i]) * (10 - i);
+  let d1 = (sum * 10) % 11;
+  if (d1 === 10) d1 = 0;
+  if (d1 !== Number(cpf[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += Number(cpf[i]) * (11 - i);
+  let d2 = (sum * 10) % 11;
+  if (d2 === 10) d2 = 0;
+  return d2 === Number(cpf[10]);
+}
+
+function isValidCNS(cnsRaw) {
+  const cns = digits(cnsRaw);
+  return cns.length === 15;
+}
+
+function getStorageKey(suffix) {
+  const uid = (user && user.id) ? String(user.id) : 'anon';
+  return `suas_${suffix}_${uid}`;
+}
+
+function loadLocalPickupSchedules() {
+  try {
+    const raw = localStorage.getItem(getStorageKey('pickups'));
+    pickupSchedules = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(pickupSchedules)) pickupSchedules = [];
+  } catch {
+    pickupSchedules = [];
+  }
+}
+
+function saveLocalPickupSchedules() {
+  try {
+    localStorage.setItem(getStorageKey('pickups'), JSON.stringify(pickupSchedules));
+  } catch {}
+}
 
 function speak(text) {
   if (!('speechSynthesis' in window)) return;
@@ -927,6 +971,8 @@ function fillProfile(p) {
 async function loadProfile() {
   const p = await request('/app-cidadao/me');
   fillProfile(p);
+  loadLocalPickupSchedules();
+  renderPickupSchedules();
   showApp(true);
   loadAlarms();
   loadNotificationsAndExams();
@@ -937,7 +983,7 @@ async function loadNotificationsAndExams() {
   const examsBox = $('exams-list');
   if (!user || !user.id) return;
   try {
-    const data = await request(`/cidadao/${user.id}/notificacoes-lembretes`, { auth: false });
+    const data = await request(`/cidadao/${user.id}/notificacoes-lembretes`, { auth: true });
     const naoLidas = Number(data.nao_lidas || 0);
     setText('unread-badge', `${naoLidas} não ${naoLidas === 1 ? 'lida' : 'lidas'}`);
 
@@ -977,7 +1023,7 @@ async function loadNotificationsAndExams() {
           btnRead.className = 'secondary btn-sm';
           btnRead.textContent = 'Marcar como lida';
           btnRead.onclick = async () => {
-            await request(`/cidadao/notificacoes/${n.id}/marcar-lida`, { method: 'POST', auth: false });
+            await request(`/cidadao/notificacoes/${n.id}/marcar-lida`, { method: 'POST', auth: true });
             notice('Notificação marcada como lida!', 'ok');
             loadNotificationsAndExams();
           };
@@ -1044,6 +1090,8 @@ $('recover-form').onsubmit = async e => {
   const cns = digits(f.get('cns'));
   const cpf = digits(f.get('cpf'));
   const nova_senha = String(f.get('nova_senha') || '');
+  if (!isValidCNS(cns)) { notice('Informe um Cartão SUS (CNS) válido com 15 dígitos.', 'warning'); return; }
+  if (!isValidCPF(cpf)) { notice('Informe um CPF válido com 11 dígitos.', 'warning'); return; }
   if (btn) { btn.disabled = true; btn.textContent = 'Salvando nova senha...'; }
   try {
     const r = await request('/app-cidadao/recuperar-senha', {
@@ -1070,6 +1118,9 @@ $('register-form').onsubmit = async e => {
   obj.cns = digits(obj.cns);
   obj.cpf = digits(obj.cpf);
   delete obj.consentimento;
+  if (!isValidCNS(obj.cns)) { notice('O Cartão SUS (CNS) deve conter exatamente 15 dígitos numéricos.', 'warning'); return; }
+  if (!isValidCPF(obj.cpf)) { notice('CPF inválido. Verifique os 11 dígitos informados.', 'warning'); return; }
+  if (digits(obj.telefone).length < 10) { notice('Informe um telefone/WhatsApp válido com DDD.', 'warning'); return; }
   if (btn) { btn.disabled = true; btn.textContent = 'Salvando cadastro...'; }
   try {
     const r = await request('/app-cidadao/cadastro', { method: 'POST', body: obj, auth: false });
@@ -1086,12 +1137,14 @@ $('register-form').onsubmit = async e => {
 
 $('login-form').onsubmit = async e => {
   e.preventDefault();
+  const cns = digits($('login-cns').value);
+  if (!isValidCNS(cns)) { notice('Digite os 15 dígitos do seu Cartão Nacional de Saúde (CNS).', 'warning'); return; }
   const btn = $('login-submit-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
   try {
     const r = await request('/app-cidadao/login', {
       method: 'POST',
-      body: { cns: digits($('login-cns').value), senha: $('login-password').value },
+      body: { cns, senha: $('login-password').value },
       auth: false
     });
     token = r.access_token;
@@ -1118,12 +1171,13 @@ $('logout').onclick = () => {
 };
 
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  currentTab = b.dataset.tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  $('tab-' + b.dataset.tab).classList.add('active');
+  $('tab-' + currentTab).classList.add('active');
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
-  if (b.dataset.tab === 'avisos') { loadNotificationsAndExams(); }
-  if (b.dataset.tab === 'meds') { loadAlarms(); loadMeds(); renderPickupSchedules(); }
-  if (b.dataset.tab === 'triagem') { loadTriages(); }
+  if (currentTab === 'avisos') { loadNotificationsAndExams(); }
+  if (currentTab === 'meds') { loadAlarms(); loadMeds(); renderPickupSchedules(); }
+  if (currentTab === 'triagem') { loadTriages(); }
 });
 
 bindVoiceInput('voice-triage-btn', 'triage-symptoms');
@@ -1131,9 +1185,21 @@ bindVoiceInput('voice-med-btn', 'alarm-med-name');
 
 $('speak-screen').onclick = () => {
   if (!user) return;
-  const resumo = `Olá ${user.nome_completo}. Cartão Vital ativo. Tipo sanguíneo ${user.tipo_sanguineo || 'não informado'}. Alergias: ${user.alergias || 'nenhuma registrada'}. Você possui ${activeAlarms.length} alarmes de medicamentos ativos.`;
-  speak(resumo);
-  notice('Lendo resumo do seu Cartão Vital em áudio...', 'ok');
+  let texto = '';
+  if (currentTab === 'emergencia') {
+    texto = `Olá ${user.nome_completo}. Cartão Vital ativo. Tipo sanguíneo ${user.tipo_sanguineo || 'não informado'}. Alergias: ${user.alergias || 'nenhuma registrada'}. Condições crônicas: ${user.condicoes_cronicas || 'nenhuma'}.`;
+  } else if (currentTab === 'avisos') {
+    const unread = $('unread-badge') ? $('unread-badge').textContent : '';
+    texto = `Aba de notificações e exames. Você tem ${unread}. Verifique os detalhes na tela.`;
+  } else if (currentTab === 'triagem') {
+    texto = 'Aba de pré-triagem digital. Descreva seus sintomas ou toque em ditar por voz para gerar o QR Code de check-in sem ficha física.';
+  } else if (currentTab === 'meds') {
+    texto = `Aba de medicamentos. Você possui ${activeAlarms.length} alarmes de posologia ativos e ${pickupSchedules.length} agendamentos de retirada.`;
+  } else {
+    texto = `Perfil de ${user.nome_completo}. Cartão SUS ${user.cns || 'ativo'}. Telefone ${user.telefone || 'não informado'}.`;
+  }
+  speak(texto);
+  notice('Lendo resumo da aba atual em áudio...', 'ok');
 };
 
 $('download-vital-qr').onclick = () => {
@@ -1364,6 +1430,7 @@ function renderPickupSchedules() {
     btnCancel.textContent = 'Cancelar';
     btnCancel.onclick = () => {
       pickupSchedules.splice(idx, 1);
+      saveLocalPickupSchedules();
       renderPickupSchedules();
       notice('Agendamento de retirada cancelado.', 'warning');
     };
@@ -1377,6 +1444,7 @@ $('pickup-schedule-form').onsubmit = async e => {
   e.preventDefault();
   const f = new FormData(e.target);
   const novo = {
+    id: Date.now(),
     medicamento_nome: f.get('medicamento_nome'),
     modalidade: f.get('modalidade'),
     unidade_retirada: f.get('unidade_retirada'),
@@ -1384,6 +1452,7 @@ $('pickup-schedule-form').onsubmit = async e => {
     hora_retirada: f.get('hora_retirada')
   };
   pickupSchedules.unshift(novo);
+  saveLocalPickupSchedules();
   renderPickupSchedules();
   await gerarQrFarmacia(novo.medicamento_nome, novo.modalidade, null, {
     data: novo.data_retirada,
@@ -1391,7 +1460,7 @@ $('pickup-schedule-form').onsubmit = async e => {
     unidade: novo.unidade_retirada
   });
   e.target.reset();
-  notice('✅ Retirada de medicamento agendada e QR Code gerado!', 'ok');
+  notice('✅ Retirada de medicamento agendada e salva no dispositivo!', 'ok');
 };
 
 async function loadMeds() {
@@ -1422,8 +1491,10 @@ async function gerarQrFarmacia(medicamento_nome, modalidade, medicamento_id = nu
     const agendStr = agendamentoInfo
       ? ` · Agendado: ${agendamentoInfo.data} às ${agendamentoInfo.hora}${agendamentoInfo.unidade ? ' (' + agendamentoInfo.unidade + ')' : ''}`
       : '';
-    const fullPayload = `${r.qr_payload}${agendStr}`;
-    QRGen.draw($('farma-qr-canvas'), fullPayload);
+    const qrCompact = agendamentoInfo
+      ? `${r.codigo_autorizacao}|${agendamentoInfo.data}|${agendamentoInfo.hora}`
+      : (r.qr_payload || r.codigo_autorizacao);
+    QRGen.draw($('farma-qr-canvas'), qrCompact);
     setText('farma-qr-title', `${r.medicamento_nome} (${modalidade === 'SUS' ? 'Retirada SUS' : 'Desconto Plano'})`);
     setText('farma-qr-code', r.codigo_autorizacao);
     setText('farma-qr-desc', `${r.mensagem || ''}${agendStr}`);
@@ -1473,6 +1544,11 @@ $('update-vital-form').onsubmit = async e => {
   } catch (err) { notice(err.message, 'warning'); }
 };
 
+const pickupDateInput = $('pickup-date');
+if (pickupDateInput) {
+  pickupDateInput.min = new Date().toISOString().slice(0, 10);
+}
+
 const urlParams = new URLSearchParams(window.location.search);
 const initialQr = urlParams.get('qr') || urlParams.get('token');
 if (initialQr) {
@@ -1495,4 +1571,3 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
-
