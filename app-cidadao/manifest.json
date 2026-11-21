@@ -1,53 +1,25 @@
-const CACHE_NAME = 'suas-saude-facil-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json'
-];
-
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(STATIC_ASSETS))
-      .catch(() => {})
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => k !== CACHE_NAME)
-          .map(k => caches.delete(k))
-      )
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', event => {
-  const req = event.request;
-  if (req.method !== 'GET') return;
-
-  const url = new URL(req.url);
-  // Nunca faz cache de chamadas da API para evitar dados antigos na emergência/triagem
-  if (url.origin !== self.location.origin) return;
-
-  event.respondWith(
-    fetch(req)
-      .then(res => {
-        if (res && res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE_NAME)
-            .then(cache => cache.put(req, clone))
-            .catch(() => {});
-        }
-        return res;
-      })
-      .catch(() =>
-        caches.match(req).then(cached => cached || caches.match('/index.html'))
-      )
-  );
-});
+{
+  "name": "SUAS Saúde +Fácil — App do Cidadão",
+  "short_name": "SUAS Saúde",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1f5f9",
+  "theme_color": "#072B59",
+  "description": "App do Cidadão para emergências SAMU, triagem e gestão de saúde.",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%23072B59'/%3E%3Cpath fill='%23ffffff' d='M80 44h32v36h36v32h-36v36H80v-36H44V80h36z'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%23072B59'/%3E%3Cpath fill='%23ffffff' d='M214 118h84v96h96v84h-96v96h-84v-96h-96v-84h96z'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
