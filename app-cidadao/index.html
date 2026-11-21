@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#072B59">
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SUAS Saúde">
 <title>SUA Saúde +Fácil | App do Cidadão</title>
 <style>
 *{box-sizing:border-box}
@@ -117,13 +121,38 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
         <input id="login-cns" inputmode="numeric" autocomplete="username" placeholder="Ex: 700000000000001" maxlength="18" required>
         <label for="login-password">Senha</label>
         <input id="login-password" type="password" autocomplete="current-password" placeholder="Sua senha de acesso" required>
-        <button style="width:100%;margin-top:14px">Entrar no SUAS Saúde +Fácil</button>
+        <button type="submit" style="width:100%;margin-top:14px">Entrar no SUAS Saúde +Fácil</button>
       </form>
-      <button class="secondary" style="width:100%;margin-top:10px" id="show-register" type="button">Criar novo cadastro gratuito</button>
+      <div class="row" style="margin-top:10px">
+        <button class="secondary" id="show-register" type="button">Criar novo cadastro gratuito</button>
+        <button class="outline" id="show-recover" type="button">Esqueci minha senha</button>
+      </div>
     </div>
 
+    <!-- RECUPERAR SENHA -->
+    <div class="card hidden" id="recover-box">
+      <div class="row">
+        <h2 style="margin:0">🔑 Recuperar Senha</h2>
+        <button class="outline btn-sm" id="close-recover" type="button" style="flex:0">Fechar</button>
+      </div>
+      <p class="muted">Confirme seu Cartão SUS (CNS) e seu CPF cadastrado para definir uma nova senha imediatamente.</p>
+      <form id="recover-form">
+        <label>Cartão SUS (CNS — 15 dígitos)</label>
+        <input name="cns" inputmode="numeric" maxlength="18" placeholder="15 dígitos numéricos" required>
+        <label>CPF cadastrado (11 dígitos)</label>
+        <input name="cpf" inputmode="numeric" maxlength="14" placeholder="Somente números" required>
+        <label>Nova senha (mínimo 8 caracteres)</label>
+        <input name="nova_senha" type="password" minlength="8" autocomplete="new-password" placeholder="Digite a nova senha" required>
+        <button class="success" type="submit" style="width:100%;margin-top:12px">Salvar Nova Senha</button>
+      </form>
+    </div>
+
+    <!-- NOVO CADASTRO -->
     <div class="card hidden" id="register-box">
-      <h2>Cadastro do cidadão</h2>
+      <div class="row">
+        <h2 style="margin:0">Cadastro do cidadão</h2>
+        <button class="outline btn-sm" id="close-register" type="button" style="flex:0">Fechar</button>
+      </div>
       <p class="muted">Preencha seus dados para ativar imediatamente seu Cartão Vital com QR Code, pré-triagem e farmácia digital.</p>
       <form id="register-form">
         <label>Cartão SUS (CNS — 15 dígitos)</label>
@@ -162,7 +191,7 @@ video{width:100%;max-height:260px;border-radius:12px;background:#0f172a;object-f
           <input name="consentimento" type="checkbox" required style="width:auto;margin-right:6px">
           Confirmo a titularidade dos dados e autorizo o uso para atendimento clínico e emergencial (LGPD).
         </label>
-        <button class="success" style="width:100%;margin-top:12px">Concluir Cadastro e Ativar Conta</button>
+        <button class="success" id="register-submit-btn" type="submit" style="width:100%;margin-top:12px">Concluir Cadastro e Ativar Conta</button>
       </form>
     </div>
   </section>
@@ -482,7 +511,7 @@ let qrStream = null;
 let qrScanTimer = null;
 const $ = id => document.getElementById(id);
 
-/* --- Gerador QR Code Nativo (Byte-mode Versões 1-8, ECC Level L, Mask 0) --- */
+/* --- Gerador QR Code Nativo --- */
 const QRGen = (() => {
   const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
   let v = 1;
@@ -616,10 +645,11 @@ function notice(msg, kind = 'ok') {
   const el = $('message');
   el.textContent = msg;
   el.className = 'notice ' + kind;
-  setTimeout(() => { if (el.textContent === msg) el.classList.add('hidden'); }, 7500);
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  setTimeout(() => { if (el.textContent === msg) el.classList.add('hidden'); }, 8000);
 }
-function show(id, yes) { $(id).classList.toggle('hidden', !yes); }
-function setText(id, v) { $(id).textContent = v ?? 'Não informado'; }
+function show(id, yes) { const el = $(id); if (el) el.classList.toggle('hidden', !yes); }
+function setText(id, v) { const el = $(id); if (el) el.textContent = v ?? 'Não informado'; }
 function digits(v) { return String(v || '').replace(/\D/g, ''); }
 
 function speak(text) {
@@ -652,6 +682,7 @@ function playBeep() {
 
 function bindVoiceInput(btnId, targetInputId) {
   const btn = $(btnId);
+  if (!btn) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { btn.onclick = () => notice('Reconhecimento de voz não suportado neste navegador.', 'warning'); return; }
   btn.onclick = () => {
@@ -674,169 +705,4 @@ function bindVoiceInput(btnId, targetInputId) {
 async function request(path, { method = 'GET', body, auth = true } = {}) {
   const headers = { 'Accept': 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (auth && token) headers['Authorization'] = 'Bearer ' + token;
-  let r;
-  try {
-    r = await fetch(API + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store' });
-  } catch (e) {
-    throw Error('Não foi possível conectar ao servidor SUAS. Verifique sua internet.');
-  }
-  let data = {};
-  try { data = await r.json(); } catch {}
-  if (!r.ok) {
-    const detail = data.detail;
-    throw Error(typeof detail === 'string' ? detail : `Erro na solicitação (HTTP ${r.status})`);
-  }
-  return data;
-}
-
-/* --- Fluxo Direto: Câmera / Link ?qr= -> Botão Acionar SAMU -> Familiar Cadastrado --- */
-function extractQrCodeFromScan(rawValue) {
-  const clean = String(rawValue || '').trim();
-  if (!clean) return '';
-  try {
-    if (clean.startsWith('http://') || clean.startsWith('https://')) {
-      const u = new URL(clean);
-      const paramQr = u.searchParams.get('qr') || u.searchParams.get('token');
-      if (paramQr) return paramQr.trim();
-    }
-  } catch {}
-  if (clean.includes('|')) {
-    const parts = clean.split('|').map(p => p.trim()).filter(Boolean);
-    const known = parts.find(p => /^SUAS[-_]VITAL[-_]|^QR[-_]EMERG[-_]/i.test(p));
-    if (known) return known;
-    if (parts[1]) return parts[1];
-  }
-  return clean.slice(0, 120);
-}
-
-function stopQrScanner() {
-  if (qrScanTimer) { clearInterval(qrScanTimer); qrScanTimer = null; }
-  if (qrStream) {
-    qrStream.getTracks().forEach(t => t.stop());
-    qrStream = null;
-  }
-  show('qr-scanner-box', false);
-}
-
-async function prepararQrParaSamu(rawValue) {
-  const code = extractQrCodeFromScan(rawValue);
-  if (!code) return;
-  detectedQrCode = code;
-  resolvedFamilyPhone = '';
-  show('qr-ready-badge', true);
-  show('third-party-samu-btn', true);
-  $('qr-ready-badge').textContent = '✅ QR Code lido. Localizando familiar cadastrado...';
-
-  try {
-    const info = await request(`/app-cidadao/qr-emergencia/resolver?qr_code=${encodeURIComponent(code)}`, { auth: false });
-    if (info.telefone_familiar) resolvedFamilyPhone = digits(info.telefone_familiar);
-    $('qr-ready-badge').textContent = info.tem_familiar_cadastrado
-      ? '✅ QR Code lido. Botão ACIONAR SAMU liberado com familiar cadastrado.'
-      : '✅ QR Code lido. Botão ACIONAR SAMU liberado.';
-  } catch {
-    $('qr-ready-badge').textContent = '✅ QR Code lido. Botão ACIONAR SAMU liberado.';
-  }
-}
-
-$('stop-qr-scanner-btn').onclick = stopQrScanner;
-
-$('toggle-qr-scanner-btn').onclick = async () => {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    notice('Câmera não disponível neste navegador.', 'warning');
-    return;
-  }
-  try {
-    show('qr-scanner-box', true);
-    qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    const video = $('qr-video');
-    video.srcObject = qrStream;
-    await video.play();
-
-    if ('BarcodeDetector' in window) {
-      const detector = new BarcodeDetector({ formats: ['qr_code'] });
-      qrScanTimer = setInterval(async () => {
-        if (video.readyState < 2) return;
-        try {
-          const codes = await detector.detect(video);
-          if (codes && codes.length && codes[0].rawValue) {
-            stopQrScanner();
-            await prepararQrParaSamu(codes[0].rawValue);
-          }
-        } catch {}
-      }, 400);
-    } else {
-      notice('Câmera aberta. Aponte para o QR Code.', 'ok');
-    }
-  } catch {
-    stopQrScanner();
-    notice('Permita o acesso à câmera para ler o QR Code.', 'warning');
-  }
-};
-
-$('third-party-samu-btn').onclick = () => {
-  if (!detectedQrCode) {
-    notice('Leia o QR Code primeiro para liberar o acionamento do SAMU.', 'warning');
-    return;
-  }
-  const resBox = $('third-party-result');
-  show('third-party-result', true);
-  resBox.textContent = 'Obtendo GPS, registrando SAMU e preparando mensagem para o familiar...';
-
-  const enviarChamado = async (lat = null, lon = null) => {
-    const mapsUrl = (lat !== null && lon !== null) ? `https://www.google.com/maps?q=${lat},${lon}` : null;
-    const protocol = 'SAMU-' + Date.now().toString().slice(-6);
-    const fallbackMsg = `🚨 ALERTA DE EMERGÊNCIA (SAMU) — Protocolo ${protocol}. Ocorrência via QR.${mapsUrl ? ' Localização: ' + mapsUrl : ''}`;
-    const ddd = resolvedFamilyPhone ? (resolvedFamilyPhone.startsWith('55') ? resolvedFamilyPhone : '55' + resolvedFamilyPhone) : '';
-    let waUrl = ddd
-      ? `https://wa.me/${ddd}?text=${encodeURIComponent(fallbackMsg)}`
-      : `https://wa.me/?text=${encodeURIComponent(fallbackMsg)}`;
-    let finalProtocol = protocol;
-
-    try {
-      const r = await request('/app-cidadao/qr-emergencia/acionar', {
-        method: 'POST',
-        auth: false,
-        body: {
-          qr_code: detectedQrCode,
-          latitude: lat,
-          longitude: lon,
-          observacao: 'Acionamento SAMU via QR Code'
-        }
-      });
-      if (r.protocolo) finalProtocol = r.protocolo;
-      if (r.whatsapp_url) waUrl = r.whatsapp_url;
-    } catch {}
-
-    lastThirdPartyWaUrl = waUrl;
-    resBox.innerHTML = `🚨 <strong>SAMU acionado (${finalProtocol})</strong>` +
-      (mapsUrl ? `<br>📍 Localização: <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Abrir no Google Maps</a>` : '<br>📍 GPS não disponível.') +
-      `<br>📲 Mensagem pronta para o familiar cadastrado.`;
-    show('third-party-actions', true);
-    playBeep();
-    window.open(lastThirdPartyWaUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  if (!navigator.geolocation) {
-    enviarChamado(null, null);
-    return;
-  }
-  navigator.geolocation.getCurrentPosition(
-    pos => enviarChamado(pos.coords.latitude, pos.coords.longitude),
-    () => enviarChamado(null, null),
-    { enableHighAccuracy: true, timeout: 10000 }
-  );
-};
-
-$('third-party-wa-btn').onclick = () => {
-  if (!lastThirdPartyWaUrl) return;
-  window.open(lastThirdPartyWaUrl, '_blank', 'noopener,noreferrer');
-};
-
-/* --- App Principal --- */
-function showApp(yes) { show('auth', !yes); show('app', yes); }
-
-function fillProfile(p) {
-  user = p;
-  setText('hello', p.nome_completo || 'Cidadão');
-  setText('connection', `ID #${p.id || '-'} · CNS: ${p.cns || 'Ativo'}`);
+  if (auth && token) headers['Authorization']
