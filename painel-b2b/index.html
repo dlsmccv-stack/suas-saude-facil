@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel B2B &amp; Interoperabilidade | SUA Saúde +Fácil</title>
+  <style>
+    :root {
+      --primary: #072B59;
+      --primary-light: #0F4C81;
+      --accent: #0D9488;
+      --accent-soft: #CCFBF1;
+      --bg: #F1F5F9;
+      --card: #FFFFFF;
+      --text: #0F172A;
+      --muted: #64748B;
+      --border: #E2E8F0;
+      --danger: #DC2626;
+      --danger-bg: #FEE2E2;
+      --warn: #D97706;
+      --warn-bg: #FEF3C7;
+      --ok: #16A34A;
+      --ok-bg: #DCFCE7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { background: var(--bg); color: var(--text); line-height: 1.5; }
+
+    /* Topbar */
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: #fff;
+      padding: 18px 28px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 4px 12px rgba(7, 43, 89, 0.18);
+    }
+    .brand h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
+    .brand p { font-size: 0.82rem; opacity: 0.85; }
+
+    .tenant-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.12);
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .tenant-bar label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .tenant-bar select, .tenant-bar input {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.85rem;
+      color: var(--text);
+      background: #fff;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      background: rgba(16, 185, 129, 0.2);
+      color: #A7F3D0;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #34D399; }
+
+    /* Container */
+    .container { max-width: 1280px; margin: 24px auto; padding: 0 20px; }
+
+    /* KPI Row */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+    .kpi-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 16px 20px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .kpi-card span { font-size: 0.78rem; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+    .kpi-card strong { display: block; font-size: 1.75rem; color: var(--primary); margin-top: 4px; }
+    .kpi-card small { font-size: 0.78rem; color: var(--accent); font-weight: 600; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 11px 18px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 3px 8px rgba(7, 43, 89, 0.2);
+    }
+
+    .panel-section { display: none; }
+    .panel-section.active { display: block; }
+
+    /* Layout Grid */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1.35fr;
+      gap: 20px;
+    }
+    @media (max-width: 920px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 22px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    }
+    .card h2 { font-size: 1.08rem; color: var(--primary); margin-bottom: 4px; }
+    .card p.desc { font-size: 0.84rem; color: var(--muted); margin-bottom: 16px; }
+
+    /* Forms */
+    .form-group { margin-bottom: 13px; }
+    .form-group label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 5px; color: var(--text); }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      background: #F8FAFC;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary-light);
+      background: #fff;
+    }
+
+    .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+    .btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.92; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-outline { background: #fff; border: 1px solid #CBD5E1; color: var(--text); }
+    .btn-sm { padding: 6px 10px; font-size: 0.78rem; }
+
+    /* Table / Queue */
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      background: #F8FAFC;
+      color: var(--muted);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+    .b-grave, .b-alto, .b-critico { background: var(--danger-bg); color: var(--danger); }
+    .b-moderado { background: var(--warn-bg); color: var(--warn); }
+    .b-leve, .b-baixo, .b-ok { background: var(--ok-bg); color: var(--ok); }
+
+    /* Alert box & JSON viewer */
+    .result-box {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #F8FAFC;
+      border: 1px solid var(--border);
+      font-size: 0.84rem;
+    }
+    pre.json-view {
+      background: #0F172A;
+      color: #E2E8F0;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      overflow-x: auto;
+      margin-top: 10px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <h1>SUA Saúde +Fácil — Painel Operacional B2B</h1>
+      <p>Sistema Unificado Aprimorado à Saúde | SUAS Tecnologia de Saúde Ltda</p>
+    </div>
+
+    <div class="tenant-bar">
+      <label for="unidadeSelect">Unidade (Tenant):</label>
+      <select id="unidadeSelect" onchange="carregarEventosUnidade()">
+        <option value="hsm-the">Hospital São Marcos — Teresina</option>
+        <option value="prontomed-the">Hospital Prontomed — Teresina</option>
+        <option value="unimed-cis">Centro Integrado de Saúde — Unimed</option>
+        <option value="neoclinica-the">Neoclínica Teresina</option>
+        <option value="santa-maria-the">Hospital Santa Maria</option>
+        <option value="sesapi-sandbox">SESAPI — Sandbox Piloto</option>
+      </select>
+
+      <label for="apiKeyInput">API Key:</label>
+      <input type="password" id="apiKeyInput" value="suas_b2b_sandbox_2026" style="width: 175px;" />
+
+      <span class="status-pill"><span class="dot"></span> API v1 Ativa</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- KPIs da Unidade -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <span>Check-ins Digitais (Fila)</span>
+        <strong id="kpiTotal">0</strong>
+        <small>Sem ficha física (QR Code)</small>
+      </div>
+      <div class="kpi-card">
+        <span>Prioridade Alta / Grave</span>
+        <strong id="kpiGraves">0</strong>
+        <small>Triagem preliminar estruturada</small>
+      </div>
+      <div class="kpi-card">
+        <span>Alertas Clínicos / Alergias</span>
+        <strong id="kpiAlertas">0</strong>
+        <small>Checagem automática Cartão Vital</small>
+      </div>
+      <div class="kpi-card">
+        <span>Tempo Médio de Check-in</span>
+        <strong>~38s</strong>
+        <small>Redução estimada de 42% na recepção</small>
+      </div>
+    </div>
+
+    <!-- Navegação dos 3 Pacotes B2B -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="trocarAba('pacote1', this)">Pacote 1: Check-in &amp; Triagem (Recepção)</button>
+      <button class="tab-btn" onclick="trocarAba('pacote2', this)">Pacote 2: Farma &amp; Segurança Clínica</button>
+      <button class="tab-btn" onclick="trocarAba('pacote3', this)">Pacote 3: APIs REST &amp; Gatilhos Operacionais</button>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- ABA 1: PACOTE 1 — CHECK-IN & TRIAGEM                  -->
+    <!-- ===================================================== -->
+    <section id="pacote1" class="panel-section active">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Leitura de QR Code / Novo Check-in</h2>
+          <p class="desc">Simule a chegada do paciente com pré-triagem digital ou cole o conteúdo lido do QR Code do App do Cidadão.</p>
+
+          <div class="form-group">
+            <label>Paciente (Nome ou Identificador)</label>
+            <input type="text" id="p1Nome" value="Maria Clara Sousa" />
+          </div>
+
+          <div class="form-group">
+            <label>Hash CNS / CPF (LGPD)</label>
+            <input type="text" id="p1Hash" value="cns_hash_84920a" />
+          </div>
+
+          <div class="form-group">
+            <label>Classificação Preliminar</label>
+            <select id="p1Gravidade">
+              <option value="LEVE">LEVE — Atendimento Eletivo / Pouco Urgente</option>
+              <option value="MODERADO" selected>MODERADO — Urgência Relativa</option>
+              <option value="GRAVE">GRAVE — Prioridade Imediata</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Queixa Principal / Pré-triagem</label>
+            <textarea id="p1Queixa" rows="2">Dor abdominal intensa há 4 horas e febre de 38,5°C.</textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Alergias Registradas no Cartão Vital (separadas por vírgula)</label>
+            <input type="text" id="p1Alergias" value="Dipirona, Penicilina" />
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="registrarCheckin()">Registrar Check-in na Fila</button>
+            <button class="btn btn-outline" onclick="preencherDemoUrgencia()">Simular Caso Crítico</button>
+          </div>
+
+          <div id="p1Feedback" class="result-box" style="display:none;"></div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div>
+              <h2>Fila de Acolhimento — Tempo Real</h2>
+              <p class="desc" style="margin-bottom:0;">Eventos recebidos via <code>POST /api/v1/clinical-events</code> para a unidade selecionada.</p>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="carregarEventosUnidade()">Atualizar Fila</button>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Protocolo</th>
+                  <th>Paciente &amp; Queixa</th>
+                  <th>Gravidade</th>
+                  <th>Cartão Vital / Alergias</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaFilaBody">
+                <tr><td colspan="5" style="color:var(--muted);">Carregando fila da unidade...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- ABA 2: PACOTE 2 — FARMA & PREDIÇÃO DE EVENTOS         -->
+    <!-- ===================================================== -->
+    <section id="pacote2" class="panel-section">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Análise Preditiva de Prescrição / Dispensa</h2>
+          <p class="desc">Endpoint <code>POST /api/v1/predict-adverse-events</code>: cruza medicamentos prescritos com alergias, doenças crônicas e automedicação.</p>
+
+          <div class="form-group">
+            <label>Medicamentos Prescritos (separados por vírgula)</label>
+            <input type="text" id="p2Meds" value="Dipirona 500mg, Ibuprofeno 600mg" />
+          </div>
+
+          <div class="form-group">
+            <label>Alergias Cadastradas no Cartão Vital</label>
+            <input type="text" id="p2Alergias" value="Dipirona" />
+          </div>
+
+          <div class="form-group">
+            <label>Condições Crônicas</label>
+            <input type="text" id="p2Cronicas" value="Hipertensão Arterial" />
+          </div>
+
+          <div class="form-group">
+            <label>Histórico Recente de Automedicação (App Cidadão)</label>
+            <input type="text" id="p2Auto" value="Ibuprofeno" />
+          </div>
+
+          <button class="btn btn-accent" onclick="executarPredicao()">Executar Checagem de Segurança Clínica</button>
+        </div>
+
+        <div class="card">
+          <h2>Resultado do Motor Preditivo (IA / Regras Clínicas)</h2>
+          <p class="desc">Resposta em tempo real para apoio à decisão médica e farmacêutica antes da dispensa.</p>
+
+          <div id="p2ResultadoVisual" class="result-box">
+            Clique em <strong>Executar Checagem de Segurança Clínica</strong> para testar o cruzamento de risco.
+          </div>
+          <pre id="p2Json" class="json-view">{ "aguardando": "Envie uma prescrição para análise..." }</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- ABA 3: PACOTE 3 — GATILHOS DE TREINAMENTO & API LOG   -->
+    <!-- ===================================================== -->
+    <section id="pacote3" class="panel-section">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Disparar Gatilho de Protocolo / Treinamento</h2>
+          <p class="desc">Endpoint <code>POST /api/v1/training-triggers</code>: aciona alertas de educação continuada quando há recorrência de risco assistencial.</p>
+
+          <div class="form-group">
+            <label>Setor Hospitalar</label>
+            <select id="p3Setor">
+              <option value="PRONTO_SOCORRO">Pronto-Socorro / Urgência</option>
+              <option value="RECEPCAO_TRIAGEM">Recepção &amp; Triagem</option>
+              <option value="FARMACIA_CLINICA">Farmácia Clínica / Dispensa</option>
+              <option value="ENFERMARIA">Enfermaria / Internação</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Motivo do Gatilho</label>
+            <input type="text" id="p3Motivo" value="ALERTA_ALERGIA_CRUZADA_ANALGESIA" />
+          </div>
+
+          <div class="form-group">
+            <label>Protocolo Recomendado</label>
+            <textarea id="p3Protocolo" rows="2">Conferência obrigatória do Cartão Vital antes da prescrição/administração de analgésicos e AINEs.</textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Equipe Alvo</label>
+            <input type="text" id="p3Equipe" value="Enfermagem, Triagem e Corpo Clínico" />
+          </div>
+
+          <button class="btn btn-primary" onclick="dispararTreinamento()">Disparar Gatilho Operacional</button>
+        </div>
+
+        <div class="card">
+          <h2>Gatilhos Disparados &amp; Contratos REST</h2>
+          <p class="desc">Histórico de acionamentos da unidade e endpoints ativos para integração com PEP/ERP hospitalar.</p>
+
+          <div id="p3ListaGatilhos" class="result-box">
+            Nenhum gatilho disparado nesta sessão.
+          </div>
+
+          <pre class="json-view">Endpoints B2B Ativos (Base URL: mesma origem do servidor):
+POST /api/v1/clinical-events
+GET  /api/v1/clinical-events
+POST /api/v1/predict-adverse-events
+POST /api/v1/training-triggers
+GET  /api/v1/training-triggers
+
+Headers Obrigatórios:
+Authorization: Bearer &lt;SUAS_B2B_API_KEY&gt;
+X-Unidade-ID: &lt;id-do-hospital-ou-clinica&gt;</pre>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    SUAS Tecnologia de Saúde Ltda — Sistema Unificado Aprimorado à Saúde (SUA Saúde +Fácil) • Arquitetura B2B Multi-Tenant &amp; LGPD
+  </footer>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let eventosLocais = [];
+
+    function getHeaders() {
+      return {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + document.getElementById("apiKeyInput").value.trim(),
+        "X-Unidade-ID": document.getElementById("unidadeSelect").value,
+        "X-Request-ID": "req-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7)
+      };
+    }
+
+    function trocarAba(id, btn) {
+      document.querySelectorAll(".panel-section").forEach(el => el.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+      btn.classList.add("active");
+    }
+
+    function preencherDemoUrgencia() {
+      document.getElementById("p1Nome").value = "Carlos Eduardo Lima";
+      document.getElementById("p1Hash").value = "cns_hash_77102f";
+      document.getElementById("p1Gravidade").value = "GRAVE";
+      document.getElementById("p1Queixa").value = "Dor torácica opressiva irradiando para braço esquerdo e sudorese.";
+      document.getElementById("p1Alergias").value = "AAS, Dipirona";
+    }
+
+    async function registrarCheckin() {
+      const payload = {
+        event_type: "CHECKIN_TRIAGEM",
+        patient_hash: document.getElementById("p1Hash").value.trim(),
+        patient_name: document.getElementById("p1Nome").value.trim(),
+        gravidade: document.getElementById("p1Gravidade").value,
+        queixa_ou_descricao: document.getElementById("p1Queixa").value.trim(),
+        alergias_conhecidas: document.getElementById("p1Alergias").value.split(",").map(s => s.trim()).filter(Boolean),
+        metadata: { origem: "PAINEL_B2B_QR_CHECKIN" }
+      };
+
+      const fb = document.getElementById("p1Feedback");
+      fb.style.display = "block";
+      fb.innerHTML = "Registrando check-in na API...";
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/clinical-events`, {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Erro ao registrar check-in");
+
+        fb.innerHTML = `<strong>Check-in confirmado!</strong> Protocolo: <code>${data.event_id}</code> (${data.latency_ms} ms)` +
+          (data.alerta_imediato ? `<br><span style="color:var(--danger);font-weight:700;">${data.alerta_imediato}</span>` : "");
+        carregarEventosUnidade();
+      } catch (err) {
+        // Fallback de demonstração offline caso abra o HTML localmente sem servidor
+        const fakeEvt = {
+          event_id: "EVT-DEMO-" + Math.floor(1000 + Math.random() * 9000),
+          unidade_id: document.getElementById("unidadeSelect").value,
+          patient_name: payload.patient_name,
+          gravidade: payload.gravidade,
+          queixa_ou_descricao: payload.queixa_ou_descricao,
+          alergias_conhecidas: payload.alergias_conhecidas,
+          status_fluxo: "AGUARDANDO_ACOLHIMENTO"
+        };
+        eventosLocais.unshift(fakeEvt);
+        renderizarFila(eventosLocais);
+        fb.innerHTML = `<strong>Modo Demonstração Local:</strong> Protocolo <code>${fakeEvt.event_id}</code> adicionado à fila.`;
+      }
+    }
+
+    async function carregarEventosUnidade() {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/clinical-events`, { headers: getHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Erro ao carregar fila");
+        eventosLocais = data.eventos || [];
+        renderizarFila(eventosLocais);
+      } catch (err) {
+        renderizarFila(eventosLocais);
+      }
+    }
+
+    function renderizarFila(lista) {
+      const tbody = document.getElementById("tabelaFilaBody");
+      document.getElementById("kpiTotal").textContent = lista.length;
+      document.getElementById("kpiGraves").textContent = lista.filter(i => i.gravidade === "GRAVE").length;
+      document.getElementById("kpiAlertas").textContent = lista.filter(i => (i.alergias_conhecidas || []).length > 0).length;
+
+      if (!lista.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted);">Nenhum check-in registrado para esta unidade ainda. Use o formulário ao lado para simular.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = lista.map((item, idx) => {
+        const grav = (item.gravidade || "LEVE").toUpperCase();
+        const badgeClass = grav === "GRAVE" ? "b-grave" : (grav === "MODERADO" ? "b-moderado" : "b-leve");
+        const alergias = (item.alergias_conhecidas || []).length
+          ? `<span class="badge b-critico">Alergia: ${item.alergias_conhecidas.join(", ")}</span>`
+          : `<span style="color:var(--muted);">Sem alergias relatadas</span>`;
+
+        return `
+          <tr>
+            <td><strong>${item.event_id}</strong></td>
+            <td><strong>${item.patient_name || "Cidadão SUAS"}</strong><br><small style="color:var(--muted);">${item.queixa_ou_descricao || "-"}</small></td>
+            <td><span class="badge ${badgeClass}">${grav}</span></td>
+            <td>${alergias}</td>
+            <td><button class="btn btn-accent btn-sm" onclick="chamarPaciente(${idx})">Chamar</button></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function chamarPaciente(idx) {
+      const item = eventosLocais[idx];
+      if (!item) return;
+      alert(`Paciente ${item.patient_name} (${item.event_id}) chamado para acolhimento/triagem!`);
+      eventosLocais.splice(idx, 1);
+      renderizarFila(eventosLocais);
+    }
+
+    async function executarPredicao() {
+      const payload = {
+        patient_hash: document.getElementById("p1Hash").value.trim() || "cns_hash_demo",
+        medicamentos_prescritos: document.getElementById("p2Meds").value.split(",").map(s => s.trim()).filter(Boolean),
+        alergias_cadastradas: document.getElementById("p2Alergias").value.split(",").map(s => s.trim()).filter(Boolean),
+        condicoes_cronicas: document.getElementById("p2Cronicas").value.split(",").map(s => s.trim()).filter(Boolean),
+        historico_automedicacao: document.getElementById("p2Auto").value.split(",").map(s => s.trim()).filter(Boolean)
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/predict-adverse-events`, {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Erro na predição");
+
+        document.getElementById("p2Json").textContent = JSON.stringify(data, null, 2);
+        const cor = data.risk_level === "ALTO" ? "b-alto" : (data.risk_level === "MODERADO" ? "b-moderado" : "b-baixo");
+        const listaAlertas = (data.alertas || []).map(a =>
+          `<li style="margin-top:6px;"><strong>[${a.nivel}] ${a.medicamento}:</strong> ${a.detalhe} <em>(${a.conduta_sugerida})</em></li>`
+        ).join("");
+
+        document.getElementById("p2ResultadoVisual").innerHTML = `
+          <div>Risco Calculado: <span class="badge ${cor}">${data.risk_level} (Score: ${data.risk_score})</span> • Latência: <strong>${data.latency_ms} ms</strong></div>
+          <ul style="margin-left:18px; margin-top:8px;">${listaAlertas || "<li>Nenhuma interação ou alergia crítica detectada.</li>"}</ul>
+        `;
+      } catch (err) {
+        document.getElementById("p2ResultadoVisual").innerHTML = `<span style="color:var(--danger);">Erro ao conectar na API: ${err.message}</span>`;
+      }
+    }
+
+    async function dispararTreinamento() {
+      const payload = {
+        setor: document.getElementById("p3Setor").value,
+        motivo_gatilho: document.getElementById("p3Motivo").value.trim(),
+        gravidade: "ALTA",
+        protocolo_recomendado: document.getElementById("p3Protocolo").value.trim(),
+        equipe_alvo: document.getElementById("p3Equipe").value.trim()
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/training-triggers`, {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Erro ao disparar gatilho");
+
+        const box = document.getElementById("p3ListaGatilhos");
+        box.innerHTML = `<strong>Gatilho Ativado (${data.trigger_id}):</strong> ${data.mensagem}<br><small style="color:var(--muted);">${data.timestamp}</small>`;
+      } catch (err) {
+        document.getElementById("p3ListaGatilhos").innerHTML = `<span style="color:var(--danger);">Erro: ${err.message}</span>`;
+      }
+    }
+
+    // Carrega dados ao abrir
+    carregarEventosUnidade();
+  </script>
+</body>
+</html>
+
