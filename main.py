@@ -2,6 +2,7 @@ from pathlib import Path
 
 from ai_engine import PatientDataSchema, ai_predictor
 import app_cidadao_api_farmacia_integrada
+from b2b_api import b2b_router
 import cco_cpo_external
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -146,6 +147,11 @@ app = FastAPI(
     * **Interface Central SAMU 192**:
       Painel web de acompanhamento operacional,
       regulação e gestão de ocorrências.
+
+    * **SUAS B2B & Interoperabilidade**:
+      Endpoints comerciais e de integração para hospitais,
+      clínicas, farmácias e parceiros (/api/v1/clinical-events,
+      /api/v1/predict-adverse-events e /api/v1/training-triggers).
     """,
     version="1.0.0",
     docs_url="/docs",
@@ -194,7 +200,8 @@ def read_root():
             "CCO / CPO - Setor Externo Isolado",
             "SUAS SAMU 192 - API de Regulação de Urgências",
             "SUAS SAMU - Integração com QR Code e Ficha Clínica",
-            "SUAS SAMU 192 - Interface Web da Central"
+            "SUAS SAMU 192 - Interface Web da Central",
+            "SUAS B2B & Interoperabilidade"
         ]
     }
 
@@ -254,6 +261,8 @@ app.include_router(cidadao.router)
 app.include_router(app_cidadao_api_farmacia_integrada.router)
 
 app.include_router(cco_cpo_external.router)
+
+app.include_router(b2b_router)
 
 
 # =====================================================
@@ -332,6 +341,40 @@ def abrir_central_samu():
             detail=(
                 "Interface da Central SAMU não encontrada. "
                 "Verifique central-samu/index.html."
+            )
+        )
+
+    return FileResponse(
+        path=str(arquivo),
+        media_type="text/html",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff"
+        }
+    )
+
+
+# =====================================================
+# INTERFACE WEB - PAINEL B2B (HOSPITAIS / CLÍNICAS)
+# =====================================================
+
+@app.get(
+    "/painel-b2b",
+    include_in_schema=False
+)
+@app.get(
+    "/painel-b2b/",
+    include_in_schema=False
+)
+def abrir_painel_b2b():
+    arquivo = BASE_DIR / "painel-b2b" / "index.html"
+
+    if not arquivo.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Interface do Painel B2B não encontrada. "
+                "Verifique painel-b2b/index.html."
             )
         )
 
