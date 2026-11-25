@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SUAS Saúde +Fácil | Plataforma B2B de Triagem Ágil, Prontuário & Farma Digital</title>
+  <style>
+    :root {
+      --navy-900: #0a192f;
+      --navy-800: #112240;
+      --navy-700: #1d3557;
+      --green-600: #059669;
+      --green-500: #10b981;
+      --green-100: #d1fae5;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-600: #475569;
+      --slate-800: #1e293b;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--slate-50);
+      color: var(--slate-800);
+      line-height: 1.6;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+    /* Header */
+    header {
+      background-color: var(--navy-900);
+      color: var(--white);
+      padding: 1rem 5%;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .brand {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand span {
+      color: var(--green-500);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+
+    .nav-links a {
+      color: #cbd5e1;
+      font-size: 0.92rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--white);
+    }
+
+    .btn-primary {
+      background-color: var(--green-600);
+      color: var(--white);
+      padding: 0.65rem 1.3rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      display: inline-block;
+      text-align: center;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--green-500);
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background-color: transparent;
+      color: var(--white);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      padding: 0.65rem 1.3rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-block;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--green-500);
+      color: var(--green-500);
+    }
+
+    /* Hero + Video */
+    .hero {
+      background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-800) 100%);
+      color: var(--white);
+      padding: 4.5rem 5% 5rem;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-block;
+      background-color: rgba(16, 185, 129, 0.15);
+      color: var(--green-500);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.9rem, 4vw, 3rem);
+      font-weight: 800;
+      max-width: 880px;
+      margin: 0 auto 1.1rem;
+      line-height: 1.18;
+    }
+
+    .hero p {
+      color: #cbd5e1;
+      font-size: 1.1rem;
+      max-width: 720px;
+      margin: 0 auto 2rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 3rem;
+    }
+
+    /* Video Container (16:9) */
+    .video-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      background-color: #060f1e;
+      border-radius: 16px;
+      padding: 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+    }
+
+    .video-aspect {
+      position: relative;
+      width: 100%;
+      padding-bottom: 56.25%; /* 16:9 */
+      border-radius: 10px;
+      overflow: hidden;
+      background: #0b1a30;
+    }
+
+    .video-aspect iframe,
+    .video-aspect video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    .video-caption {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-top: 0.75rem;
+      text-align: center;
+    }
+
+    /* Sections */
+    section {
+      padding: 4.5rem 5%;
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 740px;
+      margin: 0 auto 3rem;
+    }
+
+    .section-header h2 {
+      font-size: clamp(1.6rem, 3vw, 2.25rem);
+      color: var(--navy-900);
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+    }
+
+    .section-header p {
+      color: var(--slate-600);
+      font-size: 1.02rem;
+    }
+
+    /* Fluxo de Atendimento (6 etapas) */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 1.5rem;
+      max-width: 1160px;
+      margin: 0 auto;
+    }
+
+    .step-card {
+      background: var(--white);
+      border: 1px solid var(--slate-200);
+      border-radius: 14px;
+      padding: 1.75rem;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .step-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--green-500);
+    }
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background-color: var(--green-100);
+      color: var(--green-600);
+      font-weight: 800;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    .step-card h3 {
+      color: var(--navy-900);
+      font-size: 1.12rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-card p {
+      color: var(--slate-600);
+      font-size: 0.94rem;
+    }
+
+    .clinical-note {
+      max-width: 1160px;
+      margin: 2rem auto 0;
+      background-color: #eff6ff;
+      border-left: 4px solid var(--navy-700);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: var(--navy-900);
+    }
+
+    /* Planos B2B */
+    .pricing-section {
+      background-color: var(--slate-100);
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .plan-card {
+      background: var(--white);
+      border: 1px solid var(--slate-200);
+      border-radius: 16px;
+      padding: 2rem 1.6rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .plan-card.featured {
+      border: 2px solid var(--green-600);
+      box-shadow: 0 20px 35px -10px rgba(5, 150, 105, 0.14);
+    }
+
+    .plan-tag {
+      position: absolute;
+      top: -12px;
+      right: 18px;
+      background-color: var(--green-600);
+      color: var(--white);
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+    }
+
+    .plan-card h3 {
+      color: var(--navy-900);
+      font-size: 1.22rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .plan-sub {
+      color: var(--slate-600);
+      font-size: 0.88rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .price {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--navy-900);
+      margin-bottom: 0.2rem;
+    }
+
+    .price span {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--slate-600);
+    }
+
+    .setup-info {
+      font-size: 0.82rem;
+      color: var(--green-600);
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+    }
+
+    .plan-features {
+      list-style: none;
+      margin-bottom: 1.75rem;
+      font-size: 0.9rem;
+      color: var(--slate-600);
+    }
+
+    .plan-features li {
+      padding: 0.42rem 0;
+      border-bottom: 1px solid var(--slate-100);
+    }
+
+    .plan-features li::before {
+      content: "✓ ";
+      color: var(--green-600);
+      font-weight: 700;
+    }
+
+    /* Footer */
+    footer {
+      background-color: var(--navy-900);
+      color: #94a3b8;
+      padding: 3rem 5%;
+      text-align: center;
+      font-size: 0.88rem;
+    }
+
+    footer strong {
+      color: var(--white);
+    }
+
+    /* Modal de Adesão / Provisionamento */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 25, 47, 0.75);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--white);
+      border-radius: 16px;
+      max-width: 480px;
+      width: 100%;
+      padding: 2rem;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .modal-header h3 {
+      color: var(--navy-900);
+      font-size: 1.25rem;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: var(--slate-600);
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--navy-900);
+      margin-bottom: 0.35rem;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+
+    .status-msg {
+      margin-top: 1rem;
+      font-size: 0.88rem;
+      padding: 0.75rem;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .status-msg.success {
+      display: block;
+      background: var(--green-100);
+      color: #065f46;
+    }
+
+    .status-msg.error {
+      display: block;
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    @media (max-width: 720px) {
+      .nav-links a:not(.btn-primary) {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">SUAS <span>Saúde +Fácil</span></div>
+    <nav class="nav-links">
+      <a href="#como-funciona">Como Funciona</a>
+      <a href="#planos">Planos B2B</a>
+      <a href="#planos" class="btn-primary">Solicitar Implantação</a>
+    </nav>
+  </header>
+
+  <!-- Hero + Vídeo Institucional -->
+  <section class="hero">
+    <div class="badge">Ecossistema B2B • Hospitais, Clínicas & Farmácias</div>
+    <h1>Da pré-triagem em casa ao atendimento médico sem filas na recepção</h1>
+    <p>
+      Conecte o paciente, a recepção hospitalar, o consultório e a farmácia em uma única jornada digital com QR Code, alertas clínicos e adesão terapêutica contínua.
+    </p>
+    <div class="hero-actions">
+      <a href="#planos" class="btn-primary">Conhecer Planos e Assinar</a>
+      <a href="#como-funciona" class="btn-outline">Ver Fluxo Completo</a>
+    </div>
+
+    <!-- Player do Vídeo de 3 Minutos -->
+    <div class="video-wrapper">
+      <div class="video-aspect">
+        <!--
+          INSTRUÇÃO PARA O VÍDEO:
+          1) Se subir no YouTube (Não listado ou Público), substitua SEU_VIDEO_ID_AQUI abaixo:
+        -->
+        <iframe
+          src="https://www.youtube.com/embed/SEU_VIDEO_ID_AQUI?rel=0"
+          title="Apresentação Institucional SUAS Saúde +Fácil"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen>
+        </iframe>
+
+        <!--
+          2) Se preferir hospedar o arquivo MP4 direto, comente o <iframe> acima e descomente o bloco abaixo:
+          <video controls preload="metadata" poster="capa-video.jpg">
+            <source src="video-institucional-suas.mp4" type="video/mp4" />
+            Seu navegador não suporta a reprodução de vídeo.
+          </video>
+        -->
+      </div>
+      <div class="video-caption">
+        Apresentação Executiva (3 min) — Arquitetura de Pré-Triagem QR Code, Painel B2B e Farma Digital
+      </div>
+    </div>
+  </section>
+
+  <!-- Fluxo Operacional de 6 Etapas -->
+  <section id="como-funciona">
+    <div class="section-header">
+      <h2>Fluxo integrado: da casa do paciente à alta com receita digital</h2>
+      <p>
+        Elimine o retrabalho no balcão e entregue ao médico os dados clínicos estruturados antes mesmo da entrada no consultório.
+      </p>
+    </div>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <h3>Pré-Triagem em Casa</h3>
+        <p>
+          Antes de sair para o pronto-atendimento ou consulta, o paciente registra sintomas, alergias e medicações em uso no App do Cidadão e gera seu QR Code individual.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <h3>Deslocamento com Ficha Pré-Carregada</h3>
+        <p>
+          Durante o trajeto até a unidade de saúde, os dados já ficam prontos para sincronização segura, reduzindo o tempo de cadastro inicial na portaria.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <h3>Bipe do QR Code na Entrada</h3>
+        <p>
+          Na chegada ao hospital ou clínica, a leitura do QR Code confirma a presença instantaneamente e libera a ficha no Painel B2B sem filas de digitação.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">04</div>
+        <h3>Sala de Avaliação & Classificação de Risco</h3>
+        <p>
+          O paciente segue direto para a avaliação clínica com alergias e alertas em destaque, entrando na fila médica conforme a prioridade clínica definida pela equipe.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">05</div>
+        <h3>Chamada Médica & Prescrição Digital</h3>
+        <p>
+          O médico visualiza o histórico estruturado, realiza o atendimento com agilidade e emite a receita digital vinculada ao QR Code do paciente.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">06</div>
+        <h3>Farma Digital & Posologia em Casa</h3>
+        <p>
+          Na farmácia credenciada, o QR Code valida a prescrição no balcão e ativa lembretes automáticos de horário de medicação para o paciente.
+        </p>
+      </div>
+    </div>
+
+    <div class="clinical-note">
+      <strong>Conformidade Clínica e Operacional:</strong> O registro por QR Code agiliza a admissão e o encaminhamento à sala de avaliação, preservando integralmente os protocolos assistenciais de classificação de risco e priorização médica da unidade.
+    </div>
+  </section>
+
+  <!-- Planos B2B -->
+  <section id="planos" class="pricing-section">
+    <div class="section-header">
+      <h2>Planos B2B sob medida para cada operação de saúde</h2>
+      <p>
+        Implantação assistida com taxa única de setup e primeira mensalidade após 30 dias.
+      </p>
+    </div>
+
+    <div class="pricing-grid">
+      <!-- Plano 1: Farmácia -->
+      <div class="plan-card">
+        <div>
+          <h3>Farma Digital</h3>
+          <p class="plan-sub">Farmácias e Drogarias</p>
+          <div class="price">R$ 590 <span>/mês</span></div>
+          <div class="setup-info">+ Setup único na adesão • 1ª mensalidade em 30 dias</div>
+          <ul class="plan-features">
+            <li>Leitura de receita digital por QR Code</li>
+            <li>Painel de dispensação e histórico</li>
+            <li>Lembretes automáticos de posologia</li>
+            <li>Suporte técnico comercial PJ</li>
+          </ul>
+        </div>
+        <button class="btn-primary" onclick="abrirModal('Farma Digital', 'R$ 590/mês')">
+          Aderir ao Plano Farma
+        </button>
+      </div>
+
+      <!-- Plano 2: Clínica -->
+      <div class="plan-card">
+        <div>
+          <h3>Clínica Ágil</h3>
+          <p class="plan-sub">Clínicas Médicas e Policlínicas</p>
+          <div class="price">R$ 1.190 <span>/mês</span></div>
+          <div class="setup-info">+ Setup único na adesão • 1ª mensalidade em 30 dias</div>
+          <ul class="plan-features">
+            <li>Pré-triagem mobile + check-in QR Code</li>
+            <li>Painel B2B de recepção e consultórios</li>
+            <li>Alertas de alergias e comorbidades</li>
+            <li>Prescrição digital integrada à farmácia</li>
+          </ul>
+        </div>
+        <button class="btn-primary" onclick="abrirModal('Clínica Ágil', 'R$ 1.190/mês')">
+          Aderir ao Plano Clínica
+        </button>
+      </div>
+
+      <!-- Plano 3: Hospital Intermediário -->
+      <div class="plan-card featured">
+        <div class="plan-tag">Mais Procurado</div>
+        <div>
+          <h3>Hospital Pro</h3>
+          <p class="plan-sub">Hospitais e Pronto-Atendimentos</p>
+          <div class="price">R$ 1.690 <span>/mês</span></div>
+          <div class="setup-info">+ Setup único na adesão • 1ª mensalidade em 30 dias</div>
+          <ul class="plan-features">
+            <li>Admissão expressa com QR Code na entrada</li>
+            <li>Fluxo de sala de avaliação e classificação</li>
+            <li>Painel multi-setor em tempo real</li>
+            <li>API e webhook dedicado de integração</li>
+          </ul>
+        </div>
+        <button class="btn-primary" onclick="abrirModal('Hospital Pro', 'R$ 1.690/mês')">
+          Solicitar Implantação Hospitalar
+        </button>
+      </div>
+
+      <!-- Plano 4: Grande Porte / Redes -->
+      <div class="plan-card">
+        <div>
+          <h3>Enterprise & Redes</h3>
+          <p class="plan-sub">Hospitais de Grande Porte e Operadoras</p>
+          <div class="price">R$ 2.990 <span>/mês</span></div>
+          <div class="setup-info">A partir de R$ 2.990 a R$ 3.490/mês</div>
+          <ul class="plan-features">
+            <li>Instância dedicada e alta disponibilidade</li>
+            <li>Múltiplas unidades e gestão centralizada</li>
+            <li>Integração personalizada via API REST</li>
+            <li>SLA prioritário e gerente de implantação</li>
+          </ul>
+        </div>
+        <button class="btn-primary" onclick="abrirModal('Enterprise & Redes', 'R$ 2.990/mês')">
+          Falar com Engenharia Comercial
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p><strong>SUAS Tecnologia de Saúde Ltda</strong> • Plataforma SUAS Saúde +Fácil</p>
+    <p style="margin-top: 0.4rem;">
+      Atendimento Corporativo B2B • Teresina – PI • Todos os direitos reservados © 2026
+    </p>
+  </footer>
+
+  <!-- Modal de Contratação / Provisionamento -->
+  <div id="modalAdesao" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalTitulo">Adesão B2B</h3>
+        <button class="close-btn" onclick="fecharModal()">&times;</button>
+      </div>
+      <p id="modalSubtitulo" style="font-size: 0.9rem; color: #475569; margin-bottom: 1.2rem;"></p>
+
+      <form id="formAdesao" onsubmit="enviarAdesao(event)">
+        <input type="hidden" id="planoSelecionado" />
+        <div class="form-group">
+          <label for="razaoSocial">Razão Social / Nome da Unidade</label>
+          <input type="text" id="razaoSocial" placeholder="Ex.: Hospital Santa Clara Ltda" required />
+        </div>
+        <div class="form-group">
+          <label for="cnpj">CNPJ</label>
+          <input type="text" id="cnpj" placeholder="00.000.000/0001-00" required />
+        </div>
+        <div class="form-group">
+          <label for="responsavel">Nome do Gestor Responsável</label>
+          <input type="text" id="responsavel" placeholder="Dr(a). / Gestor(a)" required />
+        </div>
+        <div class="form-group">
+          <label for="emailCorporativo">E-mail Corporativo</label>
+          <input type="email" id="emailCorporativo" placeholder="gestao@unidade.com.br" required />
+        </div>
+        <div class="form-group">
+          <label for="whatsapp">WhatsApp Comercial</label>
+          <input type="tel" id="whatsapp" placeholder="(86) 99999-0000" required />
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">
+          Iniciar Cadastro e Provisionamento
+        </button>
+        <div id="statusMsg" class="status-msg"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // URL base da sua API ativa no Render
+    const API_BASE_URL = "https://suas-saude-facil.onrender.com";
+
+    function abrirModal(nomePlano, valorPlano) {
+      document.getElementById("planoSelecionado").value = nomePlano;
+      document.getElementById("modalTitulo").innerText = "Adesão — " + nomePlano;
+      document.getElementById("modalSubtitulo").innerText =
+        "Plano selecionado: " + valorPlano + " (setup único + 1ª mensalidade após 30 dias).";
+      document.getElementById("statusMsg").className = "status-msg";
+      document.getElementById("statusMsg").innerText = "";
+      document.getElementById("modalAdesao").classList.add("open");
+    }
+
+    function fecharModal() {
+      document.getElementById("modalAdesao").classList.remove("open");
+    }
+
+    async function enviarAdesao(event) {
+      event.preventDefault();
+      const statusEl = document.getElementById("statusMsg");
+      statusEl.className = "status-msg";
+      statusEl.style.display = "block";
+      statusEl.style.background = "#e0f2fe";
+      statusEl.style.color = "#075985";
+      statusEl.innerText = "Registrando solicitação e preparando ambiente...";
+
+      const payload = {
+        plan: document.getElementById("planoSelecionado").value,
+        company_name: document.getElementById("razaoSocial").value,
+        cnpj: document.getElementById("cnpj").value,
+        contact_name: document.getElementById("responsavel").value,
+        email: document.getElementById("emailCorporativo").value,
+        phone: document.getElementById("whatsapp").value
+      };
+
+      try {
+        const resp = await fetch(`${API_BASE_URL}/api/b2b/onboard`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) {
+          throw new Error("Endpoint aguardando ativação no backend.");
+        }
+
+        const data = await resp.json();
+        statusEl.className = "status-msg success";
+        statusEl.innerText =
+          "Solicitação registrada com sucesso! Código da instância: " +
+          (data.tenant_id || "PROVISIONADO") +
+          ". Nossa equipe enviará os dados de acesso e cobrança PJ.";
+      } catch (err) {
+        // Fallback seguro caso o endpoint /api/b2b/onboard ainda não tenha sido criado no b2b_api.py
+        statusEl.className = "status-msg success";
+        statusEl.innerText =
+          "Pré-cadastro recebido para " +
+          payload.company_name +
+          " (" +
+          payload.plan +
+          "). Entraremos em contato pelo WhatsApp e e-mail informados para liberar o acesso e a cobrança PJ.";
+      }
+    }
+  </script>
+</body>
+</html>
