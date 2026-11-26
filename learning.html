@@ -404,10 +404,12 @@
     .modal-box {
       background: var(--white);
       border-radius: 16px;
-      max-width: 480px;
+      max-width: 500px;
       width: 100%;
       padding: 2rem;
       box-shadow: 0 25px 50px rgba(0, 0, 0, 0.35);
+      max-height: 92vh;
+      overflow-y: auto;
     }
 
     .modal-header {
@@ -454,7 +456,7 @@
     .status-msg {
       margin-top: 1rem;
       font-size: 0.88rem;
-      padding: 0.75rem;
+      padding: 0.85rem;
       border-radius: 8px;
       display: none;
     }
@@ -486,6 +488,7 @@
     <nav class="nav-links">
       <a href="#como-funciona">Como Funciona</a>
       <a href="#planos">Planos B2B</a>
+      <a href="/painel-b2b">Painel B2B</a>
       <a href="#planos" class="btn-primary">Solicitar Implantação</a>
     </nav>
   </header>
@@ -505,24 +508,12 @@
     <!-- Player do Vídeo de 3 Minutos -->
     <div class="video-wrapper">
       <div class="video-aspect">
-        <!--
-          INSTRUÇÃO PARA O VÍDEO:
-          1) Se subir no YouTube (Não listado ou Público), substitua SEU_VIDEO_ID_AQUI abaixo:
-        -->
         <iframe
           src="https://www.youtube.com/embed/SEU_VIDEO_ID_AQUI?rel=0"
           title="Apresentação Institucional SUAS Saúde +Fácil"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowfullscreen>
         </iframe>
-
-        <!--
-          2) Se preferir hospedar o arquivo MP4 direto, comente o <iframe> acima e descomente o bloco abaixo:
-          <video controls preload="metadata" poster="capa-video.jpg">
-            <source src="video-institucional-suas.mp4" type="video/mp4" />
-            Seu navegador não suporta a reprodução de vídeo.
-          </video>
-        -->
       </div>
       <div class="video-caption">
         Apresentação Executiva (3 min) — Arquitetura de Pré-Triagem QR Code, Painel B2B e Farma Digital
@@ -599,7 +590,7 @@
     <div class="section-header">
       <h2>Planos B2B sob medida para cada operação de saúde</h2>
       <p>
-        Implantação assistida com taxa única de setup e primeira mensalidade após 30 dias.
+        Adesão para setup/deslocamento e assinatura recorrente com liberação automática após confirmação do pagamento.
       </p>
     </div>
 
@@ -610,7 +601,7 @@
           <h3>Farma Digital</h3>
           <p class="plan-sub">Farmácias e Drogarias</p>
           <div class="price">R$ 590 <span>/mês</span></div>
-          <div class="setup-info">+ Setup único na adesão • 1ª mensalidade em 30 dias</div>
+          <div class="setup-info">Adesão: R$ 890 • Mensalidade: R$ 590/mês</div>
           <ul class="plan-features">
             <li>Leitura de receita digital por QR Code</li>
             <li>Painel de dispensação e histórico</li>
@@ -618,7 +609,7 @@
             <li>Suporte técnico comercial PJ</li>
           </ul>
         </div>
-        <button class="btn-primary" onclick="abrirModal('Farma Digital', 'R$ 590/mês')">
+        <button class="btn-primary" onclick="abrirModal('farma_digital', 'Farma Digital', 'Adesão R$ 890 • Mensal R$ 590/mês')">
           Aderir ao Plano Farma
         </button>
       </div>
@@ -629,7 +620,7 @@
           <h3>Clínica Ágil</h3>
           <p class="plan-sub">Clínicas Médicas e Policlínicas</p>
           <div class="price">R$ 1.190 <span>/mês</span></div>
-          <div class="setup-info">+ Setup único na adesão • 1ª mensalidade em 30 dias</div>
+          <div class="setup-info">Adesão: R$ 1.690 • Mensalidade: R$ 1.190/mês</div>
           <ul class="plan-features">
             <li>Pré-triagem mobile + check-in QR Code</li>
             <li>Painel B2B de recepção e consultórios</li>
@@ -637,7 +628,7 @@
             <li>Prescrição digital integrada à farmácia</li>
           </ul>
         </div>
-        <button class="btn-primary" onclick="abrirModal('Clínica Ágil', 'R$ 1.190/mês')">
+        <button class="btn-primary" onclick="abrirModal('clinica_agil', 'Clínica Ágil', 'Adesão R$ 1.690 • Mensal R$ 1.190/mês')">
           Aderir ao Plano Clínica
         </button>
       </div>
@@ -649,7 +640,7 @@
           <h3>Hospital Pro</h3>
           <p class="plan-sub">Hospitais e Pronto-Atendimentos</p>
           <div class="price">R$ 1.690 <span>/mês</span></div>
-          <div class="setup-info">+ Setup único na adesão • 1ª mensalidade em 30 dias</div>
+          <div class="setup-info">Adesão: R$ 2.490 • Mensalidade: R$ 1.690/mês</div>
           <ul class="plan-features">
             <li>Admissão expressa com QR Code na entrada</li>
             <li>Fluxo de sala de avaliação e classificação</li>
@@ -657,7 +648,7 @@
             <li>API e webhook dedicado de integração</li>
           </ul>
         </div>
-        <button class="btn-primary" onclick="abrirModal('Hospital Pro', 'R$ 1.690/mês')">
+        <button class="btn-primary" onclick="abrirModal('hospital_pro', 'Hospital Pro', 'Adesão R$ 2.490 • Mensal R$ 1.690/mês')">
           Solicitar Implantação Hospitalar
         </button>
       </div>
@@ -668,7 +659,7 @@
           <h3>Enterprise & Redes</h3>
           <p class="plan-sub">Hospitais de Grande Porte e Operadoras</p>
           <div class="price">R$ 2.990 <span>/mês</span></div>
-          <div class="setup-info">A partir de R$ 2.990 a R$ 3.490/mês</div>
+          <div class="setup-info">Adesão: R$ 3.990 • Mensalidade: R$ 2.990/mês</div>
           <ul class="plan-features">
             <li>Instância dedicada e alta disponibilidade</li>
             <li>Múltiplas unidades e gestão centralizada</li>
@@ -676,7 +667,7 @@
             <li>SLA prioritário e gerente de implantação</li>
           </ul>
         </div>
-        <button class="btn-primary" onclick="abrirModal('Enterprise & Redes', 'R$ 2.990/mês')">
+        <button class="btn-primary" onclick="abrirModal('enterprise_redes', 'Enterprise & Redes', 'Adesão R$ 3.990 • Mensal R$ 2.990/mês')">
           Falar com Engenharia Comercial
         </button>
       </div>
@@ -701,7 +692,11 @@
       <p id="modalSubtitulo" style="font-size: 0.9rem; color: #475569; margin-bottom: 1.2rem;"></p>
 
       <form id="formAdesao" onsubmit="enviarAdesao(event)">
-        <input type="hidden" id="planoSelecionado" />
+        <input type="hidden" id="planoCodigoSelecionado" />
+        <div class="form-group">
+          <label for="unidadeIdCustom">Identificador da Unidade (opcional)</label>
+          <input type="text" id="unidadeIdCustom" placeholder="Gerado automaticamente se deixar em branco" />
+        </div>
         <div class="form-group">
           <label for="razaoSocial">Razão Social / Nome da Unidade</label>
           <input type="text" id="razaoSocial" placeholder="Ex.: Hospital Santa Clara Ltda" required />
@@ -724,7 +719,7 @@
         </div>
 
         <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">
-          Iniciar Cadastro e Provisionamento
+          Gerar Adesão & Dados de Pagamento
         </button>
         <div id="statusMsg" class="status-msg"></div>
       </form>
@@ -732,16 +727,27 @@
   </div>
 
   <script>
-    // URL base da sua API ativa no Render
-    const API_BASE_URL = "https://suas-saude-facil.onrender.com";
+    const API_BASE_URL = window.location.origin;
 
-    function abrirModal(nomePlano, valorPlano) {
-      document.getElementById("planoSelecionado").value = nomePlano;
+    function slugifyUnidade(texto, cnpj) {
+      const base = (texto || "unidade")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 24);
+      const digitos = (cnpj || "").replace(/\D/g, "").slice(-4);
+      return digitos ? `${base}-${digitos}` : base;
+    }
+
+    function abrirModal(codigoPlano, nomePlano, resumoValores) {
+      document.getElementById("planoCodigoSelecionado").value = codigoPlano;
       document.getElementById("modalTitulo").innerText = "Adesão — " + nomePlano;
       document.getElementById("modalSubtitulo").innerText =
-        "Plano selecionado: " + valorPlano + " (setup único + 1ª mensalidade após 30 dias).";
+        "Plano selecionado: " + resumoValores + ".";
       document.getElementById("statusMsg").className = "status-msg";
-      document.getElementById("statusMsg").innerText = "";
+      document.getElementById("statusMsg").innerHTML = "";
       document.getElementById("modalAdesao").classList.add("open");
     }
 
@@ -756,43 +762,50 @@
       statusEl.style.display = "block";
       statusEl.style.background = "#e0f2fe";
       statusEl.style.color = "#075985";
-      statusEl.innerText = "Registrando solicitação e preparando ambiente...";
+      statusEl.innerHTML = "Registrando solicitação de adesão e gerando dados de cobrança...";
+
+      const nomeUnidade = document.getElementById("razaoSocial").value.trim();
+      const cnpjLimpo = document.getElementById("cnpj").value.replace(/\D/g, "");
+      const uidDigitado = document.getElementById("unidadeIdCustom").value.trim();
+      const unidadeId = uidDigitado || slugifyUnidade(nomeUnidade, cnpjLimpo);
 
       const payload = {
-        plan: document.getElementById("planoSelecionado").value,
-        company_name: document.getElementById("razaoSocial").value,
-        cnpj: document.getElementById("cnpj").value,
-        contact_name: document.getElementById("responsavel").value,
-        email: document.getElementById("emailCorporativo").value,
-        phone: document.getElementById("whatsapp").value
+        unidade_id: unidadeId,
+        cnpj_cliente: cnpjLimpo || document.getElementById("cnpj").value.trim(),
+        nome_unidade: nomeUnidade,
+        email_responsavel: document.getElementById("emailCorporativo").value.trim(),
+        plano: document.getElementById("planoCodigoSelecionado").value
       };
 
       try {
-        const resp = await fetch(`${API_BASE_URL}/api/b2b/onboard`, {
+        const resp = await fetch(`${API_BASE_URL}/api/v1/assinaturas/adesao`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
 
+        const data = await resp.json();
         if (!resp.ok) {
-          throw new Error("Endpoint aguardando ativação no backend.");
+          throw new Error(data.detail || "Não foi possível registrar a adesão.");
         }
 
-        const data = await resp.json();
+        const cob = data.cobranca || {};
         statusEl.className = "status-msg success";
-        statusEl.innerText =
-          "Solicitação registrada com sucesso! Código da instância: " +
-          (data.tenant_id || "PROVISIONADO") +
-          ". Nossa equipe enviará os dados de acesso e cobrança PJ.";
+        statusEl.innerHTML = `
+          <strong>Adesão registrada!</strong> Unidade: <code>${data.unidade_id}</code> (${data.plano})<br>
+          • Valor da Adesão: <strong>R$ ${Number(cob.valor_adesao || 0).toFixed(2)}</strong><br>
+          • Mensalidade: <strong>R$ ${Number(cob.assinatura_recorrente_mensal || 0).toFixed(2)}</strong><br>
+          • Chave Pix CNPJ: <code>${cob.chave_pix_cnpj || "CNPJ"}</code><br>
+          • Conta: <strong>${cob.conta_recebimento || "Santander PJ | Ag. 4326 | CC 130085637"}</strong><br>
+          <div style="margin-top:0.6rem;">
+            <a href="/painel-b2b" style="font-weight:700;text-decoration:underline;color:#065f46;">
+              Abrir Painel B2B para confirmar pagamento e ativar →
+            </a>
+          </div>
+        `;
       } catch (err) {
-        // Fallback seguro caso o endpoint /api/b2b/onboard ainda não tenha sido criado no b2b_api.py
-        statusEl.className = "status-msg success";
-        statusEl.innerText =
-          "Pré-cadastro recebido para " +
-          payload.company_name +
-          " (" +
-          payload.plan +
-          "). Entraremos em contato pelo WhatsApp e e-mail informados para liberar o acesso e a cobrança PJ.";
+        statusEl.className = "status-msg error";
+        statusEl.innerHTML = `Erro ao registrar adesão: ${err.message}`;
       }
     }
   </script>
