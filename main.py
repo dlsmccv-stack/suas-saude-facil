@@ -148,8 +148,9 @@ app = FastAPI(
       Endpoints comerciais, adesão/ativação de unidades e integração
       para hospitais, clínicas, farmácias e parceiros
       (/api/v1/assinaturas/adesao, /api/v1/assinaturas/confirmar-pagamento,
-      /api/v1/clinical-events, /api/v1/predict-adverse-events e
-      /api/v1/training-triggers).
+      /api/v1/clinical-events, /api/v1/predict-adverse-events,
+      /api/v1/training-triggers, /api/v1/suporte/monitoramento e
+      /api/v1/suporte/alerta-whatsapp).
     """,
     version="1.0.0",
     docs_url="/docs",
@@ -406,6 +407,40 @@ def abrir_learning():
             status_code=404,
             detail=(
                 "Interface learning.html não encontrada."
+            )
+        )
+
+    return FileResponse(
+        path=str(arquivo),
+        media_type="text/html",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff"
+        }
+    )
+
+
+# =====================================================
+# INTERFACE WEB - MONITORAMENTO & SUPORTE TI
+# =====================================================
+
+@app.get(
+    "/monitoramento-ti",
+    include_in_schema=False
+)
+@app.get(
+    "/monitoramento-ti/",
+    include_in_schema=False
+)
+def abrir_monitoramento_ti():
+    arquivo = BASE_DIR / "monitoramento-ti" / "index.html"
+
+    if not arquivo.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Interface do Monitoramento TI não encontrada. "
+                "Verifique monitoramento-ti/index.html."
             )
         )
 
