@@ -27,9 +27,10 @@
     .topbar h1 { font-size: 1.15rem; }
     .auth-box { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
     input, select, textarea {
-      padding: 0.55rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px;
+      width: 100%; padding: 0.55rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px;
       font-size: 0.9rem; background: var(--white); color: var(--text);
     }
+    .auth-box input { width: auto; }
     button {
       background: var(--green); color: var(--white); border: none;
       padding: 0.58rem 0.95rem; border-radius: 8px; font-weight: 600; cursor: pointer;
@@ -55,6 +56,9 @@
     .pill-pendente { background: #fef3c7; color: #92400e; }
     .pill-suspensa { background: #fee2e2; color: #991b1b; }
     .alerta-item { padding: 0.65rem 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+    .field-group { display: flex; flex-direction: column; gap: 0.25rem; }
+    .field-label { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+    .field-hint { font-size: 0.76rem; color: var(--muted); line-height: 1.35; }
     .msg-box { margin-top: 0.65rem; font-size: 0.86rem; color: var(--muted); }
   </style>
 </head>
@@ -105,14 +109,36 @@
       </div>
 
       <div class="card">
-        <h2 style="font-size:1rem;margin-bottom:0.75rem;">Enviar Alerta Técnico no WhatsApp</h2>
-        <div style="display:flex;flex-direction:column;gap:0.65rem;">
-          <input type="text" id="waUnidade" placeholder="ID da unidade (ex.: clinica_sul_01)" />
-          <input type="text" id="waTitulo" placeholder="Título do alerta (ex.: Instabilidade / Suporte)" />
-          <input type="text" id="waTelefone" placeholder="WhatsApp destino c/ DDI (ex.: 5586999999999) - opcional" />
-          <textarea id="waMensagem" rows="3" placeholder="Descreva o alerta ou suporte necessário..."></textarea>
+        <h2 style="font-size:1rem;margin-bottom:0.35rem;">Enviar Alerta Técnico no WhatsApp</h2>
+        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;">
+          Use para falar direto com uma unidade cliente ou enviar um aviso para o seu próprio WhatsApp de TI.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:0.7rem;">
+          <div class="field-group">
+            <label class="field-label" for="waUnidade">Unidade atendida</label>
+            <input type="text" id="waUnidade" placeholder="ID da unidade (ex.: clinica_sul_01)" />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="waTitulo">Assunto / Motivo</label>
+            <input type="text" id="waTitulo" placeholder="Título do alerta (ex.: Instabilidade / Suporte)" />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="waTelefone">WhatsApp de destino (opcional)</label>
+            <input type="text" id="waTelefone" placeholder="Ex.: 5586999999999 (DDI + DDD + número)" />
+            <span class="field-hint">
+              Informe o número da unidade para falar direto com ela, ou deixe em branco para usar o número padrão de TI configurado no sistema.
+            </span>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="waMensagem">Mensagem técnica</label>
+            <textarea id="waMensagem" rows="3" placeholder="Descreva o alerta ou suporte necessário..."></textarea>
+          </div>
+
           <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-            <button onclick="enviarAlertaWhatsApp(false)">Registrar & Gerar Link WhatsApp</button>
+            <button onclick="enviarAlertaWhatsApp(false)">Gerar Mensagem WhatsApp</button>
             <button class="secondary" id="btnAbrirWa" style="display:none;" onclick="abrirLinkWhatsApp()">Abrir no WhatsApp</button>
           </div>
           <div id="waStatus" class="msg-box"></div>
