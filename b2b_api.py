@@ -40,24 +40,24 @@ PLANOS_B2B: Dict[str, Dict[str, Any]] = {
         "nome": "Farma Digital",
         "adesao": 890.00,
         "mensalidade": 590.00,
-        "repasse_ti_perc": 0.20,  # R$ 118,00/mês para a TI | R$ 472,00/mês operação/infra
+        "repasse_ti_perc": 0.20,
     },
     "clinica_agil": {
         "nome": "Clínica Ágil",
         "adesao": 1690.00,
-        "mensalidade": 1190.00,  # R$ 238,00/mês para a TI | R$ 952,00/mês operação/infra
+        "mensalidade": 1190.00,
         "repasse_ti_perc": 0.20,
     },
     "hospital_pro": {
         "nome": "Hospital Pro",
         "adesao": 2490.00,
-        "mensalidade": 1690.00,  # R$ 338,00/mês para a TI | R$ 1.352,00/mês operação/infra
+        "mensalidade": 1690.00,
         "repasse_ti_perc": 0.20,
     },
     "enterprise_redes": {
         "nome": "Enterprise & Redes",
         "adesao": 3990.00,
-        "mensalidade": 2990.00,  # R$ 598,00/mês para a TI | R$ 2.392,00/mês operação/infra
+        "mensalidade": 2990.00,
         "repasse_ti_perc": 0.20,
     },
 }
@@ -110,7 +110,6 @@ def verificar_credenciais_b2b(
         .first()
     )
 
-    # Se a unidade já está cadastrada no fluxo de assinatura, exige adesão confirmada e mensalidade em dia
     if assinatura and not _unidade_esta_ativa(db, uid):
         raise HTTPException(
             status_code=402,
@@ -174,7 +173,9 @@ class AdesaoPacoteIn(BaseModel):
     cnpj_cliente: str = Field(..., example="12345678000199")
     nome_unidade: str = Field(..., example="Farmácia Central")
     email_responsavel: Optional[str] = Field(None, example="gestor@farmaciacentral.com.br")
-    plano: str = Field(..., example="farma_digital", description="farma_digital | clinica_agil | hospital_pro | enterprise_redes")
+    responsavel: Optional[str] = Field(None, example="Dra. Mariana")
+    whatsapp: Optional[str] = Field(None, example="(86) 99999-0000")
+    plano: str = Field(..., example="farma_digital")
     valor_adesao_custom: Optional[float] = Field(None, example=None)
 
 
@@ -195,23 +196,23 @@ class AlertaWhatsAppIn(BaseModel):
 # --- MODELOS DE ENTRADA (CONTRATOS JSON / FHIR-LIKE) ---
 
 class ClinicalEventIn(BaseModel):
-    event_type: str = Field(..., example="CHECKIN_TRIAGEM", description="CHECKIN_TRIAGEM | PRESCRICAO | DISPENSA_FARMA | ALTA_CLINICA | REACAO_ADVERSA")
+    event_type: str = Field(..., example="CHECKIN_TRIAGEM")
     patient_hash: str = Field(..., example="cns_hash_98a7f2")
     patient_name: Optional[str] = Field(None, example="Paciente Demonstração")
     gravidade: Optional[str] = Field("LEVE", example="MODERADO")
     queixa_ou_descricao: Optional[str] = Field(None, example="Febre persistente há 2 dias e dor no corpo")
-    medicamentos: Optional[List[str]] = Field(default_factory=list, example=["Dipirona 500mg", "Amoxicilina 500mg"])
-    alergias_conhecidas: Optional[List[str]] = Field(default_factory=list, example=["Dipirona"])
-    condicoes_cronicas: Optional[List[str]] = Field(default_factory=list, example=["Hipertensão"])
+    medicamentos: Optional[List[str]] = Field(default_factory=list)
+    alergias_conhecidas: Optional[List[str]] = Field(default_factory=list)
+    condicoes_cronicas: Optional[List[str]] = Field(default_factory=list)
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class PredictAdverseIn(BaseModel):
     patient_hash: str = Field(..., example="cns_hash_98a7f2")
     medicamentos_prescritos: List[str] = Field(..., example=["Dipirona 500mg", "Losartana 50mg"])
-    alergias_cadastradas: Optional[List[str]] = Field(default_factory=list, example=["Dipirona"])
-    condicoes_cronicas: Optional[List[str]] = Field(default_factory=list, example=["Hipertensão"])
-    historico_automedicacao: Optional[List[str]] = Field(default_factory=list, example=["Ibuprofeno"])
+    alergias_cadastradas: Optional[List[str]] = Field(default_factory=list)
+    condicoes_cronicas: Optional[List[str]] = Field(default_factory=list)
+    historico_automedicacao: Optional[List[str]] = Field(default_factory=list)
 
 
 class TrainingTriggerIn(BaseModel):
@@ -284,6 +285,8 @@ def criar_adesao_unidade(payload: AdesaoPacoteIn, db: Session = Depends(get_db))
         "status": reg.status,
         "unidade_id": reg.unidade_id,
         "plano": reg.plano_nome,
+        "responsavel": payload.responsavel,
+        "whatsapp": payload.whatsapp,
         "cobranca": {
             "valor_adesao": float(reg.valor_adesao),
             "custo_setup_estimado": float(reg.custo_setup_estimado),
@@ -325,7 +328,6 @@ def confirmar_pagamento_e_ativar(
     )
     db.add(pagamento)
 
-    # Mediante confirmação da adesão ou mensalidade, ativa o funcionamento e renova por 30 dias
     reg.status = "ATIVA"
     reg.instalacao_ativa = True
     reg.proximo_vencimento = proximo_venc_naive
@@ -425,7 +427,6 @@ def registrar_evento_clinico(
     now_utc = datetime.now(timezone.utc)
     now_iso = now_utc.isoformat()
 
-    # Avaliação rápida automática se houver medicamentos + alergias no evento
     alerta_imediato = None
     if payload.medicamentos and payload.alergias_conhecidas:
         alergias_lower = [a.lower() for a in payload.alergias_conhecidas]
@@ -522,7 +523,7 @@ def predizer_eventos_adversos(
 ):
     t0 = time.perf_counter()
     alertas = []
-    risk_score = 0.08  # baseline baixo
+    risk_score = 0.08
 
     alergias_l = [a.lower().strip() for a in (payload.alergias_cadastradas or []) if a.strip()]
     cronicas_l = [c.lower().strip() for c in (payload.condicoes_cronicas or []) if c.strip()]
@@ -531,7 +532,6 @@ def predizer_eventos_adversos(
     for med in payload.medicamentos_prescritos:
         med_l = med.lower()
 
-        # 1. Cruzamento direto com alergias do Cartão Vital
         for alg in alergias_l:
             if alg and alg in med_l:
                 risk_score = max(risk_score, 0.95)
@@ -543,7 +543,6 @@ def predizer_eventos_adversos(
                     "conduta_sugerida": "Suspender administração e revisar prescrição imediatamente."
                 })
 
-        # 2. Cruzamento com condições crônicas (ex.: AINEs em hipertensos/renais)
         aines = ["ibuprofeno", "diclofenaco", "nimesulida", "cetoprofeno", "naproxeno"]
         if any(a in med_l for a in aines) and any("hipertens" in c or "renal" in c for c in cronicas_l):
             risk_score = max(risk_score, 0.72)
@@ -555,7 +554,6 @@ def predizer_eventos_adversos(
                 "conduta_sugerida": "Avaliar alternativa analgésica e monitorar pressão arterial/função renal."
             })
 
-        # 3. Duplicidade com histórico recente de automedicação
         if any(med_l in a or a in med_l for a in auto_l):
             risk_score = max(risk_score, 0.65)
             alertas.append({
