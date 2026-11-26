@@ -1,10 +1,16 @@
 import os
 import uuid
 import time
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
+
 from fastapi import APIRouter, Header, HTTPException, Depends
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from database import get_db
+import models
 
 b2b_router = APIRouter(prefix="/api/v1", tags=["SUAS B2B & Interoperabilidade"])
 
@@ -43,29 +49,36 @@ PLANOS_B2B: Dict[str, Dict[str, Any]] = {
     },
 }
 
-# Armazenamento em memória (espelhar nas tabelas PostgreSQL no Render para persistência total)
-UNIDADES_ASSINATURA_DB: Dict[str, Dict[str, Any]] = {}
-CLINICAL_EVENTS_DB: List[Dict[str, Any]] = []
-TRAINING_TRIGGERS_DB: List[Dict[str, Any]] = []
-IDEMPOTENCY_CACHE: Dict[str, Dict[str, Any]] = {}
+
+def _fmt_moeda(valor: float) -> str:
+    return f"{valor:.2f}"
 
 
-def _unidade_esta_ativa(unidade_id: str) -> bool:
-    reg = UNIDADES_ASSINATURA_DB.get(unidade_id)
-    if not reg or reg.get("status") != "ATIVA":
+def _unidade_esta_ativa(db: Session, unidade_id: str) -> bool:
+    reg = (
+        db.query(models.B2BAssinaturaUnidade)
+        .filter(models.B2BAssinaturaUnidade.unidade_id == unidade_id)
+        .first()
+    )
+    if not reg or reg.status != "ATIVA":
         return False
-    venc = reg.get("proximo_vencimento")
-    if venc and datetime.now(timezone.utc) > datetime.fromisoformat(venc):
-        reg["status"] = "SUSPENSA_INADIMPLENCIA"
-        reg["instalacao_ativa"] = False
-        return False
+
+    if reg.proximo_vencimento:
+        agora_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+        if agora_naive > reg.proximo_vencimento:
+            reg.status = "SUSPENSA_INADIMPLENCIA"
+            reg.instalacao_ativa = False
+            db.commit()
+            return False
+
     return True
 
 
 def verificar_credenciais_b2b(
     authorization: Optional[str] = Header(None),
     x_api_key: Optional[str] = Header(None),
-    x_unidade_id: str = Header(..., description="Identificador da clínica, hospital ou farmácia (tenant)")
+    x_unidade_id: str = Header(..., description="Identificador da clínica, hospital ou farmácia (tenant)"),
+    db: Session = Depends(get_db),
 ):
     token = None
     if authorization and authorization.startswith("Bearer "):
@@ -78,8 +91,14 @@ def verificar_credenciais_b2b(
 
     uid = x_unidade_id.strip()
 
+    assinatura = (
+        db.query(models.B2BAssinaturaUnidade)
+        .filter(models.B2BAssinaturaUnidade.unidade_id == uid)
+        .first()
+    )
+
     # Se a unidade já está cadastrada no fluxo de assinatura, exige adesão confirmada e mensalidade em dia
-    if uid in UNIDADES_ASSINATURA_DB and not _unidade_esta_ativa(uid):
+    if assinatura and not _unidade_esta_ativa(db, uid):
         raise HTTPException(
             status_code=402,
             detail="Assinatura pendente ou vencida para esta unidade. Confirme o pagamento para ativar/renovar.",
@@ -139,7 +158,7 @@ class TrainingTriggerIn(BaseModel):
 # --- 0. ENDPOINTS: ADESÃO, INSTALAÇÃO AUTOMÁTICA E ASSINATURA RECORRENTE ---
 
 @b2b_router.post("/assinaturas/adesao")
-def criar_adesao_unidade(payload: AdesaoPacoteIn):
+def criar_adesao_unidade(payload: AdesaoPacoteIn, db: Session = Depends(get_db)):
     plano_cfg = PLANOS_B2B.get(payload.plano)
     if not plano_cfg:
         raise HTTPException(status_code=400, detail="Plano inválido.")
@@ -148,39 +167,61 @@ def criar_adesao_unidade(payload: AdesaoPacoteIn):
     valor_adesao = payload.valor_adesao_custom if payload.valor_adesao_custom is not None else plano_cfg["adesao"]
     mensalidade = plano_cfg["mensalidade"]
     repasse_ti = round(mensalidade * plano_cfg["repasse_ti_perc"], 2)
+    liquido_operacao = round(mensalidade - repasse_ti, 2)
     custo_setup_estimado = round(max(0.0, valor_adesao - mensalidade), 2)
 
-    agora_iso = datetime.now(timezone.utc).isoformat()
-    registro = {
-        "unidade_id": uid,
-        "cnpj_cliente": payload.cnpj_cliente,
-        "nome_unidade": payload.nome_unidade,
-        "email_responsavel": payload.email_responsavel,
-        "plano": payload.plano,
-        "plano_nome": plano_cfg["nome"],
-        "valor_adesao": valor_adesao,
-        "custo_setup_estimado": custo_setup_estimado,
-        "mensalidade": mensalidade,
-        "repasse_ti_mensal": repasse_ti,
-        "liquido_operacao_mensal": round(mensalidade - repasse_ti, 2),
-        "status": "AGUARDANDO_ADESAO",
-        "instalacao_ativa": False,
-        "api_key_unidade": f"suas_unit_{uuid.uuid4().hex[:16]}",
-        "proximo_vencimento": None,
-        "criado_em": agora_iso,
-        "pagamentos": [],
-    }
-    UNIDADES_ASSINATURA_DB[uid] = registro
+    existente = (
+        db.query(models.B2BAssinaturaUnidade)
+        .filter(models.B2BAssinaturaUnidade.unidade_id == uid)
+        .first()
+    )
+
+    if existente:
+        existente.cnpj_cliente = payload.cnpj_cliente
+        existente.nome_unidade = payload.nome_unidade
+        existente.email_responsavel = payload.email_responsavel
+        existente.plano = payload.plano
+        existente.plano_nome = plano_cfg["nome"]
+        existente.valor_adesao = _fmt_moeda(valor_adesao)
+        existente.custo_setup_estimado = _fmt_moeda(custo_setup_estimado)
+        existente.mensalidade = _fmt_moeda(mensalidade)
+        existente.repasse_ti_mensal = _fmt_moeda(repasse_ti)
+        existente.liquido_operacao_mensal = _fmt_moeda(liquido_operacao)
+        if not existente.instalacao_ativa:
+            existente.status = "AGUARDANDO_ADESAO"
+        reg = existente
+    else:
+        reg = models.B2BAssinaturaUnidade(
+            unidade_id=uid,
+            cnpj_cliente=payload.cnpj_cliente,
+            nome_unidade=payload.nome_unidade,
+            email_responsavel=payload.email_responsavel,
+            plano=payload.plano,
+            plano_nome=plano_cfg["nome"],
+            valor_adesao=_fmt_moeda(valor_adesao),
+            custo_setup_estimado=_fmt_moeda(custo_setup_estimado),
+            mensalidade=_fmt_moeda(mensalidade),
+            repasse_ti_mensal=_fmt_moeda(repasse_ti),
+            liquido_operacao_mensal=_fmt_moeda(liquido_operacao),
+            status="AGUARDANDO_ADESAO",
+            instalacao_ativa=False,
+            api_key_unidade=f"suas_unit_{uuid.uuid4().hex[:16]}",
+            proximo_vencimento=None,
+        )
+        db.add(reg)
+
+    db.commit()
+    db.refresh(reg)
 
     return {
-        "status": "AGUARDANDO_ADESAO",
-        "unidade_id": uid,
-        "plano": plano_cfg["nome"],
+        "status": reg.status,
+        "unidade_id": reg.unidade_id,
+        "plano": reg.plano_nome,
         "cobranca": {
-            "valor_adesao": valor_adesao,
-            "custo_setup_estimado": custo_setup_estimado,
-            "assinatura_recorrente_mensal": mensalidade,
-            "repasse_ti_20_porcento_mensal": repasse_ti,
+            "valor_adesao": float(reg.valor_adesao),
+            "custo_setup_estimado": float(reg.custo_setup_estimado),
+            "assinatura_recorrente_mensal": float(reg.mensalidade),
+            "repasse_ti_20_porcento_mensal": float(reg.repasse_ti_mensal),
             "chave_pix_cnpj": PIX_CHAVE_CNPJ or "CONFIGURAR_ENV_SUAS_PIX_CNPJ",
             "conta_recebimento": CONTA_BANCARIA_REF,
         },
@@ -189,49 +230,102 @@ def criar_adesao_unidade(payload: AdesaoPacoteIn):
 
 
 @b2b_router.post("/assinaturas/confirmar-pagamento")
-def confirmar_pagamento_e_ativar(payload: ConfirmarPagamentoIn):
+def confirmar_pagamento_e_ativar(payload: ConfirmarPagamentoIn, db: Session = Depends(get_db)):
     uid = payload.unidade_id.strip()
-    reg = UNIDADES_ASSINATURA_DB.get(uid)
+    reg = (
+        db.query(models.B2BAssinaturaUnidade)
+        .filter(models.B2BAssinaturaUnidade.unidade_id == uid)
+        .first()
+    )
     if not reg:
         raise HTTPException(status_code=404, detail="Unidade não encontrada na base de assinaturas.")
 
-    agora = datetime.now(timezone.utc)
-    reg["pagamentos"].append({
-        "tipo_pagamento": payload.tipo_pagamento.upper(),
-        "valor_pago": payload.valor_pago,
-        "comprovante_ref": payload.comprovante_ref,
-        "confirmado_em": agora.isoformat(),
-    })
+    agora_utc = datetime.now(timezone.utc)
+    agora_naive = agora_utc.replace(tzinfo=None)
+    proximo_venc_naive = (agora_utc + timedelta(days=30)).replace(tzinfo=None)
+
+    pagamento = models.B2BPagamentoLog(
+        assinatura_id=reg.id,
+        unidade_id=uid,
+        tipo_pagamento=payload.tipo_pagamento.upper(),
+        valor_pago=_fmt_moeda(payload.valor_pago),
+        comprovante_ref=payload.comprovante_ref,
+        confirmado_em=agora_naive,
+    )
+    db.add(pagamento)
 
     # Mediante confirmação da adesão ou mensalidade, ativa o funcionamento e renova por 30 dias
-    reg["status"] = "ATIVA"
-    reg["instalacao_ativa"] = True
-    reg["proximo_vencimento"] = (agora + timedelta(days=30)).isoformat()
+    reg.status = "ATIVA"
+    reg.instalacao_ativa = True
+    reg.proximo_vencimento = proximo_venc_naive
+
+    db.commit()
+    db.refresh(reg)
 
     return {
-        "status": "ATIVA",
-        "unidade_id": uid,
-        "nome_unidade": reg["nome_unidade"],
-        "instalacao_ativa": True,
-        "api_key_unidade": reg["api_key_unidade"],
-        "proximo_vencimento": reg["proximo_vencimento"],
+        "status": reg.status,
+        "unidade_id": reg.unidade_id,
+        "nome_unidade": reg.nome_unidade,
+        "instalacao_ativa": reg.instalacao_ativa,
+        "api_key_unidade": reg.api_key_unidade,
+        "proximo_vencimento": reg.proximo_vencimento.isoformat(),
         "resumo_financeiro": {
-            "mensalidade": reg["mensalidade"],
-            "repasse_ti_20_porcento": reg["repasse_ti_mensal"],
-            "sobra_operacao_infra": reg["liquido_operacao_mensal"],
+            "mensalidade": float(reg.mensalidade),
+            "repasse_ti_20_porcento": float(reg.repasse_ti_mensal),
+            "sobra_operacao_infra": float(reg.liquido_operacao_mensal),
         },
-        "timestamp": agora.isoformat()
+        "timestamp": agora_utc.isoformat()
     }
 
 
 @b2b_router.get("/assinaturas/{unidade_id}")
-def consultar_status_assinatura(unidade_id: str):
+def consultar_status_assinatura(unidade_id: str, db: Session = Depends(get_db)):
     uid = unidade_id.strip()
-    reg = UNIDADES_ASSINATURA_DB.get(uid)
+    reg = (
+        db.query(models.B2BAssinaturaUnidade)
+        .filter(models.B2BAssinaturaUnidade.unidade_id == uid)
+        .first()
+    )
     if not reg:
         raise HTTPException(status_code=404, detail="Unidade não encontrada.")
-    _unidade_esta_ativa(uid)
-    return reg
+
+    _unidade_esta_ativa(db, uid)
+    db.refresh(reg)
+
+    pagamentos = (
+        db.query(models.B2BPagamentoLog)
+        .filter(models.B2BPagamentoLog.unidade_id == uid)
+        .order_by(models.B2BPagamentoLog.id.desc())
+        .all()
+    )
+
+    return {
+        "unidade_id": reg.unidade_id,
+        "cnpj_cliente": reg.cnpj_cliente,
+        "nome_unidade": reg.nome_unidade,
+        "email_responsavel": reg.email_responsavel,
+        "plano": reg.plano,
+        "plano_nome": reg.plano_nome,
+        "valor_adesao": float(reg.valor_adesao),
+        "custo_setup_estimado": float(reg.custo_setup_estimado),
+        "mensalidade": float(reg.mensalidade),
+        "repasse_ti_mensal": float(reg.repasse_ti_mensal),
+        "liquido_operacao_mensal": float(reg.liquido_operacao_mensal),
+        "status": reg.status,
+        "instalacao_ativa": reg.instalacao_ativa,
+        "api_key_unidade": reg.api_key_unidade,
+        "proximo_vencimento": reg.proximo_vencimento.isoformat() if reg.proximo_vencimento else None,
+        "criado_em": reg.criado_em.isoformat() if reg.criado_em else None,
+        "pagamentos": [
+            {
+                "tipo_pagamento": p.tipo_pagamento,
+                "valor_pago": float(p.valor_pago),
+                "comprovante_ref": p.comprovante_ref,
+                "confirmado_em": p.confirmado_em.isoformat() if p.confirmado_em else None,
+            }
+            for p in pagamentos
+        ],
+    }
 
 
 # --- 1. ENDPOINT: INGESTÃO DE EVENTOS CLÍNICOS (PACOTES 1, 2 E 3) ---
@@ -240,16 +334,25 @@ def consultar_status_assinatura(unidade_id: str):
 def registrar_evento_clinico(
     payload: ClinicalEventIn,
     x_request_id: Optional[str] = Header(None),
-    tenant: dict = Depends(verificar_credenciais_b2b)
+    tenant: dict = Depends(verificar_credenciais_b2b),
+    db: Session = Depends(get_db),
 ):
     t0 = time.perf_counter()
-    if x_request_id and x_request_id in IDEMPOTENCY_CACHE:
-        cached = dict(IDEMPOTENCY_CACHE[x_request_id])
-        cached["idempotent_replay"] = True
-        return cached
+
+    if x_request_id:
+        cache_item = (
+            db.query(models.B2BIdempotencia)
+            .filter(models.B2BIdempotencia.request_key == x_request_id)
+            .first()
+        )
+        if cache_item:
+            cached = json.loads(cache_item.response_json)
+            cached["idempotent_replay"] = True
+            return cached
 
     event_id = f"EVT-{uuid.uuid4().hex[:10].upper()}"
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_utc = datetime.now(timezone.utc)
+    now_iso = now_utc.isoformat()
 
     # Avaliação rápida automática se houver medicamentos + alergias no evento
     alerta_imediato = None
@@ -259,23 +362,23 @@ def registrar_evento_clinico(
         if conflitos:
             alerta_imediato = f"ALERTA CRÍTICO: Possível conflito com alergia cadastrada ({', '.join(conflitos)})."
 
-    registro = {
-        "event_id": event_id,
-        "unidade_id": tenant["unidade_id"],
-        "event_type": payload.event_type,
-        "patient_hash": payload.patient_hash,
-        "patient_name": payload.patient_name or "Cidadão SUAS",
-        "gravidade": payload.gravidade,
-        "queixa_ou_descricao": payload.queixa_ou_descricao,
-        "medicamentos": payload.medicamentos,
-        "alergias_conhecidas": payload.alergias_conhecidas,
-        "condicoes_cronicas": payload.condicoes_cronicas,
-        "status_fluxo": "AGUARDANDO_ACOLHIMENTO",
-        "alerta_imediato": alerta_imediato,
-        "created_at": now_iso,
-        "metadata": payload.metadata
-    }
-    CLINICAL_EVENTS_DB.insert(0, registro)
+    evento_db = models.B2BEventoClinico(
+        event_id=event_id,
+        unidade_id=tenant["unidade_id"],
+        event_type=payload.event_type,
+        patient_hash=payload.patient_hash,
+        patient_name=payload.patient_name or "Cidadão SUAS",
+        gravidade=payload.gravidade,
+        queixa_ou_descricao=payload.queixa_ou_descricao,
+        medicamentos_json=json.dumps(payload.medicamentos or [], ensure_ascii=False),
+        alergias_json=json.dumps(payload.alergias_conhecidas or [], ensure_ascii=False),
+        condicoes_json=json.dumps(payload.condicoes_cronicas or [], ensure_ascii=False),
+        status_fluxo="AGUARDANDO_ACOLHIMENTO",
+        alerta_imediato=alerta_imediato,
+        metadata_json=json.dumps(payload.metadata or {}, ensure_ascii=False),
+        created_at=now_utc.replace(tzinfo=None),
+    )
+    db.add(evento_db)
 
     latency_ms = round((time.perf_counter() - t0) * 1000, 2)
     response = {
@@ -284,19 +387,59 @@ def registrar_evento_clinico(
         "unidade_id": tenant["unidade_id"],
         "alerta_imediato": alerta_imediato,
         "latency_ms": latency_ms,
-        "timestamp": now_iso
+        "timestamp": now_iso,
     }
+
     if x_request_id:
-        IDEMPOTENCY_CACHE[x_request_id] = response
+        db.add(
+            models.B2BIdempotencia(
+                request_key=x_request_id,
+                response_json=json.dumps(response, ensure_ascii=False),
+            )
+        )
+
+    db.commit()
     return response
 
 
 @b2b_router.get("/clinical-events")
 def listar_eventos_unidade(
-    tenant: dict = Depends(verificar_credenciais_b2b)
+    tenant: dict = Depends(verificar_credenciais_b2b),
+    db: Session = Depends(get_db),
 ):
-    itens = [e for e in CLINICAL_EVENTS_DB if e["unidade_id"] == tenant["unidade_id"]]
-    return {"unidade_id": tenant["unidade_id"], "total": len(itens), "eventos": itens[:50]}
+    itens = (
+        db.query(models.B2BEventoClinico)
+        .filter(models.B2BEventoClinico.unidade_id == tenant["unidade_id"])
+        .order_by(models.B2BEventoClinico.id.desc())
+        .limit(50)
+        .all()
+    )
+
+    eventos_formatados = [
+        {
+            "event_id": e.event_id,
+            "unidade_id": e.unidade_id,
+            "event_type": e.event_type,
+            "patient_hash": e.patient_hash,
+            "patient_name": e.patient_name,
+            "gravidade": e.gravidade,
+            "queixa_ou_descricao": e.queixa_ou_descricao,
+            "medicamentos": json.loads(e.medicamentos_json) if e.medicamentos_json else [],
+            "alergias_conhecidas": json.loads(e.alergias_json) if e.alergias_json else [],
+            "condicoes_cronicas": json.loads(e.condicoes_json) if e.condicoes_json else [],
+            "status_fluxo": e.status_fluxo,
+            "alerta_imediato": e.alerta_imediato,
+            "created_at": e.created_at.isoformat() if e.created_at else None,
+            "metadata": json.loads(e.metadata_json) if e.metadata_json else {},
+        }
+        for e in itens
+    ]
+
+    return {
+        "unidade_id": tenant["unidade_id"],
+        "total": len(eventos_formatados),
+        "eventos": eventos_formatados,
+    }
 
 
 # --- 2. ENDPOINT: PREDIÇÃO DE EVENTOS ADVERSOS (PACOTES 2 E 3) ---
@@ -373,23 +516,26 @@ def predizer_eventos_adversos(
 @b2b_router.post("/training-triggers")
 def acionar_gatilho_treinamento(
     payload: TrainingTriggerIn,
-    tenant: dict = Depends(verificar_credenciais_b2b)
+    tenant: dict = Depends(verificar_credenciais_b2b),
+    db: Session = Depends(get_db),
 ):
     trigger_id = f"TRG-{uuid.uuid4().hex[:8].upper()}"
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_utc = datetime.now(timezone.utc)
+    now_iso = now_utc.isoformat()
 
-    item = {
-        "trigger_id": trigger_id,
-        "unidade_id": tenant["unidade_id"],
-        "setor": payload.setor,
-        "motivo_gatilho": payload.motivo_gatilho,
-        "gravidade": payload.gravidade,
-        "protocolo_recomendado": payload.protocolo_recomendado,
-        "equipe_alvo": payload.equipe_alvo,
-        "status": "DISPARADO",
-        "created_at": now_iso
-    }
-    TRAINING_TRIGGERS_DB.insert(0, item)
+    item_db = models.B2BGatilhoTreinamento(
+        trigger_id=trigger_id,
+        unidade_id=tenant["unidade_id"],
+        setor=payload.setor,
+        motivo_gatilho=payload.motivo_gatilho,
+        gravidade=payload.gravidade,
+        protocolo_recomendado=payload.protocolo_recomendado,
+        equipe_alvo=payload.equipe_alvo,
+        status="DISPARADO",
+        created_at=now_utc.replace(tzinfo=None),
+    )
+    db.add(item_db)
+    db.commit()
 
     return {
         "status": "TRIGGERED",
@@ -402,7 +548,34 @@ def acionar_gatilho_treinamento(
 
 @b2b_router.get("/training-triggers")
 def listar_gatilhos_unidade(
-    tenant: dict = Depends(verificar_credenciais_b2b)
+    tenant: dict = Depends(verificar_credenciais_b2b),
+    db: Session = Depends(get_db),
 ):
-    itens = [t for t in TRAINING_TRIGGERS_DB if t["unidade_id"] == tenant["unidade_id"]]
-    return {"unidade_id": tenant["unidade_id"], "total": len(itens), "gatilhos": itens[:30]}
+    itens = (
+        db.query(models.B2BGatilhoTreinamento)
+        .filter(models.B2BGatilhoTreinamento.unidade_id == tenant["unidade_id"])
+        .order_by(models.B2BGatilhoTreinamento.id.desc())
+        .limit(30)
+        .all()
+    )
+
+    gatilhos_formatados = [
+        {
+            "trigger_id": t.trigger_id,
+            "unidade_id": t.unidade_id,
+            "setor": t.setor,
+            "motivo_gatilho": t.motivo_gatilho,
+            "gravidade": t.gravidade,
+            "protocolo_recomendado": t.protocolo_recomendado,
+            "equipe_alvo": t.equipe_alvo,
+            "status": t.status,
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+        }
+        for t in itens
+    ]
+
+    return {
+        "unidade_id": tenant["unidade_id"],
+        "total": len(gatilhos_formatados),
+        "gatilhos": gatilhos_formatados,
+    }
