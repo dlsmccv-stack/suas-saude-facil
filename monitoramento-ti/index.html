@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SUAS Saúde +Fácil • Monitoramento & Suporte TI</title>
+  <style>
+    :root {
+      --navy: #0a192f;
+      --slate: #f8fafc;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #475569;
+      --green: #059669;
+      --amber: #d97706;
+      --red: #dc2626;
+      --white: #ffffff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--slate); color: var(--text); padding: 1.5rem; }
+    .container { max-width: 1120px; margin: 0 auto; }
+    .topbar {
+      background: var(--navy); color: var(--white); padding: 1rem 1.25rem;
+      border-radius: 12px; display: flex; flex-wrap: wrap; gap: 0.75rem;
+      justify-content: space-between; align-items: center; margin-bottom: 1.25rem;
+    }
+    .topbar h1 { font-size: 1.15rem; }
+    .auth-box { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    input, select, textarea {
+      padding: 0.55rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px;
+      font-size: 0.9rem; background: var(--white); color: var(--text);
+    }
+    button {
+      background: var(--green); color: var(--white); border: none;
+      padding: 0.58rem 0.95rem; border-radius: 8px; font-weight: 600; cursor: pointer;
+    }
+    button.secondary { background: #1e293b; }
+    .cards {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1rem; margin-bottom: 1.25rem;
+    }
+    .card {
+      background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 1rem;
+    }
+    .card .label { font-size: 0.8rem; color: var(--muted); }
+    .card .val { font-size: 1.5rem; font-weight: 800; margin-top: 0.25rem; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { text-align: left; padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border); }
+    .pill {
+      display: inline-block; padding: 0.2rem 0.55rem; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 700;
+    }
+    .pill-ativa { background: #dcfce7; color: #166534; }
+    .pill-pendente { background: #fef3c7; color: #92400e; }
+    .pill-suspensa { background: #fee2e2; color: #991b1b; }
+    .alerta-item { padding: 0.65rem 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+    .msg-box { margin-top: 0.65rem; font-size: 0.86rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div>
+        <h1>SUAS Saúde +Fácil • Monitoramento & Suporte TI</h1>
+        <div style="font-size:0.8rem;color:#cbd5e1;">Visão de unidades, alertas críticos e envio de alerta no WhatsApp</div>
+      </div>
+      <div class="auth-box">
+        <input type="password" id="monitorKeyInput" placeholder="Chave TI (SUAS_TI_MONITOR_KEY)" />
+        <button onclick="carregarMonitoramento()">Atualizar Painel</button>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card"><div class="label">Unidades Cadastradas</div><div class="val" id="kpiTotal">-</div></div>
+      <div class="card"><div class="label">Unidades Ativas</div><div class="val" id="kpiAtivas">-</div></div>
+      <div class="card"><div class="label">Alertas Críticos Recentes</div><div class="val" id="kpiAlertas">-</div></div>
+      <div class="card"><div class="label">Repasse TI Mensal (Ativas)</div><div class="val" id="kpiRepasse">R$ 0,00</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:1.25rem;">
+      <h2 style="font-size:1rem;margin-bottom:0.75rem;">Unidades & Status Operacional</h2>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Unidade</th>
+              <th>Plano</th>
+              <th>Status</th>
+              <th>Repasse TI</th>
+              <th>Último Evento</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaUnidades">
+            <tr><td colspan="5">Informe a chave de monitoramento e clique em Atualizar Painel.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2 style="font-size:1rem;margin-bottom:0.75rem;">Alertas Críticos & Gatilhos Recentes</h2>
+        <div id="listaAlertas">Nenhum alerta carregado ainda.</div>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size:1rem;margin-bottom:0.75rem;">Enviar Alerta Técnico no WhatsApp</h2>
+        <div style="display:flex;flex-direction:column;gap:0.65rem;">
+          <input type="text" id="waUnidade" placeholder="ID da unidade (ex.: clinica_sul_01)" />
+          <input type="text" id="waTitulo" placeholder="Título do alerta (ex.: Instabilidade / Suporte)" />
+          <input type="text" id="waTelefone" placeholder="WhatsApp destino c/ DDI (ex.: 5586999999999) - opcional" />
+          <textarea id="waMensagem" rows="3" placeholder="Descreva o alerta ou suporte necessário..."></textarea>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <button onclick="enviarAlertaWhatsApp(false)">Registrar & Gerar Link WhatsApp</button>
+            <button class="secondary" id="btnAbrirWa" style="display:none;" onclick="abrirLinkWhatsApp()">Abrir no WhatsApp</button>
+          </div>
+          <div id="waStatus" class="msg-box"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let ultimoLinkWa = "";
+
+    function getKey() {
+      const input = document.getElementById("monitorKeyInput");
+      if (input.value.trim()) {
+        sessionStorage.setItem("SUAS_TI_MONITOR_KEY", input.value.trim());
+      }
+      return sessionStorage.getItem("SUAS_TI_MONITOR_KEY") || "";
+    }
+
+    function badgeStatus(st) {
+      if (st === "ATIVA") return `<span class="pill pill-ativa">ATIVA</span>`;
+      if (st === "SUSPENSA_INADIMPLENCIA") return `<span class="pill pill-suspensa">SUSPENSA</span>`;
+      return `<span class="pill pill-pendente">${st || "PENDENTE"}</span>`;
+    }
+
+    async function carregarMonitoramento() {
+      const key = getKey();
+      if (!key) {
+        alert("Informe a chave SUAS_TI_MONITOR_KEY.");
+        return;
+      }
+
+      const resp = await fetch(`${API_BASE}/api/v1/suporte/monitoramento`, {
+        headers: { "X-Monitor-Key": key }
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        alert(data.detail || "Erro ao carregar monitoramento.");
+        return;
+      }
+
+      const r = data.resumo || {};
+      document.getElementById("kpiTotal").innerText = r.total_unidades ?? 0;
+      document.getElementById("kpiAtivas").innerText = r.unidades_ativas ?? 0;
+      document.getElementById("kpiAlertas").innerText = r.alertas_criticos_recentes ?? 0;
+      document.getElementById("kpiRepasse").innerText =
+        `R$ ${Number(r.repasse_ti_mensal_previsto || 0).toFixed(2).replace(".", ",")}`;
+
+      const tbody = document.getElementById("tabelaUnidades");
+      if (!data.unidades || !data.unidades.length) {
+        tbody.innerHTML = `<tr><td colspan="5">Nenhuma unidade cadastrada até o momento.</td></tr>`;
+      } else {
+        tbody.innerHTML = data.unidades.map(u => `
+          <tr>
+            <td><strong>${u.nome_unidade}</strong><br><span style="font-size:0.78rem;color:#64748b;">${u.unidade_id}</span></td>
+            <td>${u.plano_nome || "-"}</td>
+            <td>${badgeStatus(u.status)}</td>
+            <td>R$ ${Number(u.repasse_ti_mensal || 0).toFixed(2).replace(".", ",")}</td>
+            <td>${u.ultimo_evento_tipo ? `${u.ultimo_evento_tipo} (${(u.ultimo_evento_em || "").slice(0, 16)})` : "Sem eventos"}</td>
+          </tr>
+        `).join("");
+      }
+
+      const alertasDiv = document.getElementById("listaAlertas");
+      const alertas = data.alertas_criticos || [];
+      const gatilhos = data.gatilhos_treinamento || [];
+      if (!alertas.length && !gatilhos.length) {
+        alertasDiv.innerHTML = "Nenhum alerta crítico ou gatilho registrado.";
+      } else {
+        const htmlAlertas = alertas.map(a => `
+          <div class="alerta-item">
+            <strong>[${a.gravidade || "ALERTA"}] ${a.unidade_id}</strong> — ${a.alerta_imediato || a.event_type}
+          </div>
+        `).join("");
+        const htmlGatilhos = gatilhos.map(g => `
+          <div class="alerta-item">
+            <strong>[TREINAMENTO] ${g.unidade_id} (${g.setor})</strong> — ${g.motivo_gatilho}
+          </div>
+        `).join("");
+        alertasDiv.innerHTML = htmlAlertas + htmlGatilhos;
+      }
+    }
+
+    async function enviarAlertaWhatsApp() {
+      const key = getKey();
+      if (!key) {
+        alert("Informe a chave SUAS_TI_MONITOR_KEY.");
+        return;
+      }
+
+      const payload = {
+        unidade_id: document.getElementById("waUnidade").value.trim() || "geral",
+        titulo: document.getElementById("waTitulo").value.trim() || "Alerta Operacional TI",
+        telefone_destino: document.getElementById("waTelefone").value.trim() || null,
+        mensagem: document.getElementById("waMensagem").value.trim() || "Solicitação de atenção técnica."
+      };
+
+      const resp = await fetch(`${API_BASE}/api/v1/suporte/alerta-whatsapp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Monitor-Key": key
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      const statusEl = document.getElementById("waStatus");
+      if (!resp.ok) {
+        statusEl.innerText = data.detail || "Falha ao preparar alerta.";
+        return;
+      }
+
+      ultimoLinkWa = data.whatsapp_link || "";
+      document.getElementById("btnAbrirWa").style.display = ultimoLinkWa ? "inline-block" : "none";
+      statusEl.innerText = `${data.detalhe_webhook} Link WhatsApp pronto.`;
+    }
+
+    function abrirLinkWhatsApp() {
+      if (ultimoLinkWa) {
+        window.open(ultimoLinkWa, "_blank", "noopener,noreferrer");
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const saved = sessionStorage.getItem("SUAS_TI_MONITOR_KEY");
+      if (saved) {
+        document.getElementById("monitorKeyInput").value = saved;
+        carregarMonitoramento();
+      }
+    });
+  </script>
+</body>
+</html>
