@@ -399,6 +399,10 @@ def abrir_painel_b2b():
     "/learning/",
     include_in_schema=False
 )
+@app.get(
+    "/learning.html",
+    include_in_schema=False
+)
 def abrir_learning():
     arquivo = BASE_DIR / "learning.html"
 
