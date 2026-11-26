@@ -68,24 +68,20 @@ with database.engine.begin() as conn:
 
     inspector = inspect(conn)
 
-    if not inspector.has_table("regulacao_itens"):
-        raise RuntimeError(
-            "A tabela regulacao_itens não foi encontrada."
-        )
+    if inspector.has_table("regulacao_itens"):
+        colunas_existentes = {
+            coluna["name"]
+            for coluna in inspector.get_columns("regulacao_itens")
+        }
 
-    colunas_existentes = {
-        coluna["name"]
-        for coluna in inspector.get_columns("regulacao_itens")
-    }
-
-    for col_nome, col_tipo in colunas_novas:
-        if col_nome not in colunas_existentes:
-            conn.execute(
-                text(
-                    f"ALTER TABLE regulacao_itens "
-                    f"ADD COLUMN {col_nome} {col_tipo}"
+        for col_nome, col_tipo in colunas_novas:
+            if col_nome not in colunas_existentes:
+                conn.execute(
+                    text(
+                        f"ALTER TABLE regulacao_itens "
+                        f"ADD COLUMN {col_nome} {col_tipo}"
+                    )
                 )
-            )
 
 
 # =====================================================
@@ -149,9 +145,11 @@ app = FastAPI(
       regulação e gestão de ocorrências.
 
     * **SUAS B2B & Interoperabilidade**:
-      Endpoints comerciais e de integração para hospitais,
-      clínicas, farmácias e parceiros (/api/v1/clinical-events,
-      /api/v1/predict-adverse-events e /api/v1/training-triggers).
+      Endpoints comerciais, adesão/ativação de unidades e integração
+      para hospitais, clínicas, farmácias e parceiros
+      (/api/v1/assinaturas/adesao, /api/v1/assinaturas/confirmar-pagamento,
+      /api/v1/clinical-events, /api/v1/predict-adverse-events e
+      /api/v1/training-triggers).
     """,
     version="1.0.0",
     docs_url="/docs",
@@ -375,6 +373,39 @@ def abrir_painel_b2b():
             detail=(
                 "Interface do Painel B2B não encontrada. "
                 "Verifique painel-b2b/index.html."
+            )
+        )
+
+    return FileResponse(
+        path=str(arquivo),
+        media_type="text/html",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff"
+        }
+    )
+
+
+# =====================================================
+# INTERFACE WEB - LEARNING / ADESÃO B2B
+# =====================================================
+
+@app.get(
+    "/learning",
+    include_in_schema=False
+)
+@app.get(
+    "/learning/",
+    include_in_schema=False
+)
+def abrir_learning():
+    arquivo = BASE_DIR / "learning.html"
+
+    if not arquivo.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Interface learning.html não encontrada."
             )
         )
 
