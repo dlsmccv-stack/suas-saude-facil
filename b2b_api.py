@@ -19,6 +19,9 @@ b2b_router = APIRouter(prefix="/api/v1", tags=["SUAS B2B & Interoperabilidade"])
 # Chave master de sandbox/produção (configure SUAS_B2B_API_KEY no Render)
 DEFAULT_B2B_KEY = os.getenv("SUAS_B2B_API_KEY", "suas_b2b_sandbox_2026")
 
+# Chave administrativa exclusiva para confirmar pagamento e ativar unidades (configure SUAS_ADMIN_API_KEY no Render)
+ADMIN_API_KEY = os.getenv("SUAS_ADMIN_API_KEY", "")
+
 # Chave exclusiva de monitoramento para o parceiro de TI (configure SUAS_TI_MONITOR_KEY no Render)
 TI_MONITOR_KEY = os.getenv("SUAS_TI_MONITOR_KEY", "")
 
@@ -115,6 +118,28 @@ def verificar_credenciais_b2b(
         )
 
     return {"unidade_id": uid}
+
+
+def verificar_credencial_admin(
+    authorization: Optional[str] = Header(None),
+    x_admin_key: Optional[str] = Header(None),
+):
+    if not ADMIN_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="SUAS_ADMIN_API_KEY não configurada no servidor."
+        )
+
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.replace("Bearer ", "").strip()
+    elif x_admin_key:
+        token = x_admin_key.strip()
+
+    if not token or token != ADMIN_API_KEY:
+        raise HTTPException(status_code=401, detail="Chave administrativa inválida ou ausente.")
+
+    return {"perfil": "admin_financeiro"}
 
 
 def verificar_credencial_monitoramento_ti(
@@ -272,7 +297,11 @@ def criar_adesao_unidade(payload: AdesaoPacoteIn, db: Session = Depends(get_db))
 
 
 @b2b_router.post("/assinaturas/confirmar-pagamento")
-def confirmar_pagamento_e_ativar(payload: ConfirmarPagamentoIn, db: Session = Depends(get_db)):
+def confirmar_pagamento_e_ativar(
+    payload: ConfirmarPagamentoIn,
+    _auth: dict = Depends(verificar_credencial_admin),
+    db: Session = Depends(get_db),
+):
     uid = payload.unidade_id.strip()
     reg = (
         db.query(models.B2BAssinaturaUnidade)
