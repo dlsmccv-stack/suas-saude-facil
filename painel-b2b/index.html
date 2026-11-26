@@ -71,7 +71,12 @@
       border-radius: 999px;
       font-weight: 600;
     }
+    .status-pill.pendente {
+      background: rgba(245, 158, 11, 0.22);
+      color: #FDE68A;
+    }
     .dot { width: 8px; height: 8px; border-radius: 50%; background: #34D399; }
+    .status-pill.pendente .dot { background: #FBBF24; }
 
     /* Container */
     .container { max-width: 1280px; margin: 24px auto; padding: 0 20px; }
@@ -235,7 +240,7 @@
 
     <div class="tenant-bar">
       <label for="unidadeSelect">Unidade (Tenant):</label>
-      <select id="unidadeSelect" onchange="carregarEventosUnidade()">
+      <select id="unidadeSelect" onchange="aoTrocarUnidade()">
         <option value="hsm-the">Hospital São Marcos — Teresina</option>
         <option value="prontomed-the">Hospital Prontomed — Teresina</option>
         <option value="unimed-cis">Centro Integrado de Saúde — Unimed</option>
@@ -247,7 +252,7 @@
       <label for="apiKeyInput">API Key:</label>
       <input type="password" id="apiKeyInput" value="suas_b2b_sandbox_2026" style="width: 175px;" />
 
-      <span class="status-pill"><span class="dot"></span> API v1 Ativa</span>
+      <span id="statusAssinaturaPill" class="status-pill"><span class="dot"></span> API v1 Ativa</span>
     </div>
   </header>
 
@@ -276,11 +281,12 @@
       </div>
     </div>
 
-    <!-- Navegação dos 3 Pacotes B2B -->
+    <!-- Navegação dos 3 Pacotes B2B + Adesão/Ativação -->
     <div class="tabs">
       <button class="tab-btn active" onclick="trocarAba('pacote1', this)">Pacote 1: Check-in &amp; Triagem (Recepção)</button>
       <button class="tab-btn" onclick="trocarAba('pacote2', this)">Pacote 2: Farma &amp; Segurança Clínica</button>
       <button class="tab-btn" onclick="trocarAba('pacote3', this)">Pacote 3: APIs REST &amp; Gatilhos Operacionais</button>
+      <button class="tab-btn" onclick="trocarAba('adesao', this)">Adesão &amp; Ativação (Planos B2B)</button>
     </div>
 
     <!-- ===================================================== -->
@@ -448,6 +454,9 @@
           </div>
 
           <pre class="json-view">Endpoints B2B Ativos (Base URL: mesma origem do servidor):
+POST /api/v1/assinaturas/adesao
+POST /api/v1/assinaturas/confirmar-pagamento
+GET  /api/v1/assinaturas/{unidade_id}
 POST /api/v1/clinical-events
 GET  /api/v1/clinical-events
 POST /api/v1/predict-adverse-events
@@ -460,6 +469,90 @@ X-Unidade-ID: &lt;id-do-hospital-ou-clinica&gt;</pre>
         </div>
       </div>
     </section>
+
+    <!-- ===================================================== -->
+    <!-- ABA 4: ADESÃO & ATIVAÇÃO AUTOMÁTICA (PLANOS B2B)      -->
+    <!-- ===================================================== -->
+    <section id="adesao" class="panel-section">
+      <div class="grid-2">
+        <div class="card">
+          <h2>1. Iniciar Adesão do Pacote</h2>
+          <p class="desc">Endpoint <code>POST /api/v1/assinaturas/adesao</code>: gera a cobrança de adesão (setup/deslocamento) e mensalidade recorrente com 20% de repasse para a TI.</p>
+
+          <div class="form-group">
+            <label>ID da Unidade (Unidade ID)</label>
+            <input type="text" id="adUnidadeId" value="hsm-the" />
+          </div>
+
+          <div class="form-group">
+            <label>CNPJ do Cliente</label>
+            <input type="text" id="adCnpj" value="12345678000199" />
+          </div>
+
+          <div class="form-group">
+            <label>Nome da Unidade / Instituição</label>
+            <input type="text" id="adNomeUnidade" value="Hospital São Marcos — Teresina" />
+          </div>
+
+          <div class="form-group">
+            <label>E-mail do Responsável (opcional)</label>
+            <input type="email" id="adEmail" placeholder="gestor@instituicao.com.br" />
+          </div>
+
+          <div class="form-group">
+            <label>Plano Contratado</label>
+            <select id="adPlano" onchange="atualizarResumoPlano()">
+              <option value="farma_digital">Farma Digital — Adesão R$ 890,00 | Mensal R$ 590,00 (TI 20%: R$ 118,00)</option>
+              <option value="clinica_agil">Clínica Ágil — Adesão R$ 1.690,00 | Mensal R$ 1.190,00 (TI 20%: R$ 238,00)</option>
+              <option value="hospital_pro" selected>Hospital Pro — Adesão R$ 2.490,00 | Mensal R$ 1.690,00 (TI 20%: R$ 338,00)</option>
+              <option value="enterprise_redes">Enterprise &amp; Redes — Adesão R$ 3.990,00 | Mensal R$ 2.990,00 (TI 20%: R$ 598,00)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Valor de Adesão Customizado (opcional — deixe em branco para usar o valor padrão do plano)</label>
+            <input type="number" step="0.01" id="adValorCustom" placeholder="Ex.: 2490.00" />
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="iniciarAdesao()">Gerar Adesão &amp; Dados Pix</button>
+            <button class="btn btn-outline" onclick="consultarAssinaturaAtual()">Consultar Status da Unidade</button>
+          </div>
+
+          <div id="adResumoCobranca" class="result-box"></div>
+        </div>
+
+        <div class="card">
+          <h2>2. Confirmar Pagamento &amp; Ativar Instalação</h2>
+          <p class="desc">Endpoint <code>POST /api/v1/assinaturas/confirmar-pagamento</code>: confirma o pagamento via Pix CNPJ (Santander Ag. 4326 | CC 130085637) e libera a instalação/funcionamento por 30 dias.</p>
+
+          <div class="form-group">
+            <label>Tipo de Pagamento</label>
+            <select id="pgTipo">
+              <option value="ADESAO" selected>ADESAO (Setup + Liberação Inicial)</option>
+              <option value="MENSALIDADE">MENSALIDADE (Renovação Recorrente +30 dias)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Referência do Comprovante / TXID Pix</label>
+            <input type="text" id="pgComprovante" value="PIX-CNPJ-SANTANDER-001" />
+          </div>
+
+          <div class="form-group">
+            <label>Valor Pago (R$)</label>
+            <input type="number" step="0.01" id="pgValor" value="2490.00" />
+          </div>
+
+          <button class="btn btn-accent" onclick="confirmarPagamento()">Confirmar Pagamento &amp; Ativar Unidade</button>
+
+          <div id="pgResultado" class="result-box" style="margin-top:14px;">
+            Aguardando registro de adesão ou confirmação de pagamento.
+          </div>
+          <pre id="adJson" class="json-view">{ "status": "aguardando_acao_assinatura" }</pre>
+        </div>
+      </div>
+    </section>
   </div>
 
   <footer>
@@ -469,6 +562,13 @@ X-Unidade-ID: &lt;id-do-hospital-ou-clinica&gt;</pre>
   <script>
     const API_BASE = window.location.origin;
     let eventosLocais = [];
+
+    const PLANOS_INFO = {
+      farma_digital: { nome: "Farma Digital", adesao: 890.00, mensalidade: 590.00, ti: 118.00, sobra: 472.00 },
+      clinica_agil: { nome: "Clínica Ágil", adesao: 1690.00, mensalidade: 1190.00, ti: 238.00, sobra: 952.00 },
+      hospital_pro: { nome: "Hospital Pro", adesao: 2490.00, mensalidade: 1690.00, ti: 338.00, sobra: 1352.00 },
+      enterprise_redes: { nome: "Enterprise & Redes", adesao: 3990.00, mensalidade: 2990.00, ti: 598.00, sobra: 2392.00 }
+    };
 
     function getHeaders() {
       return {
@@ -484,6 +584,154 @@ X-Unidade-ID: &lt;id-do-hospital-ou-clinica&gt;</pre>
       document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
       document.getElementById(id).classList.add("active");
       btn.classList.add("active");
+      if (id === "adesao") {
+        sincronizarCamposAdesaoComUnidade();
+        atualizarResumoPlano();
+        consultarAssinaturaAtual();
+      }
+    }
+
+    function sincronizarCamposAdesaoComUnidade() {
+      const sel = document.getElementById("unidadeSelect");
+      const uid = sel.value;
+      const nomeTexto = sel.options[sel.selectedIndex]?.text || uid;
+      document.getElementById("adUnidadeId").value = uid;
+      document.getElementById("adNomeUnidade").value = nomeTexto;
+    }
+
+    function atualizarResumoPlano() {
+      const planoKey = document.getElementById("adPlano").value;
+      const p = PLANOS_INFO[planoKey];
+      const customVal = parseFloat(document.getElementById("adValorCustom").value);
+      const adesaoVal = !isNaN(customVal) && customVal >= 0 ? customVal : p.adesao;
+
+      document.getElementById("pgValor").value = adesaoVal.toFixed(2);
+      document.getElementById("adResumoCobranca").innerHTML = `
+        <strong>Resumo do Plano (${p.nome}):</strong><br>
+        • Adesão / Setup: <strong>R$ ${adesaoVal.toFixed(2)}</strong><br>
+        • Assinatura Mensal: <strong>R$ ${p.mensalidade.toFixed(2)}</strong><br>
+        • Repasse TI (20% na recorrência): <strong>R$ ${p.ti.toFixed(2)}/mês</strong> | Sobra Operação/Infra: <strong>R$ ${p.sobra.toFixed(2)}/mês</strong><br>
+        • Conta: <strong>Santander PJ | Ag. 4326 | CC 130085637</strong> (Chave Pix: CNPJ)
+      `;
+    }
+
+    function atualizarPillAssinatura(status, planoNome) {
+      const pill = document.getElementById("statusAssinaturaPill");
+      if (!status) {
+        pill.className = "status-pill";
+        pill.innerHTML = `<span class="dot"></span> API v1 Ativa`;
+        return;
+      }
+      if (status === "ATIVA") {
+        pill.className = "status-pill";
+        pill.innerHTML = `<span class="dot"></span> ATIVA${planoNome ? " • " + planoNome : ""}`;
+      } else {
+        pill.className = "status-pill pendente";
+        pill.innerHTML = `<span class="dot"></span> ${status}`;
+      }
+    }
+
+    async function aoTrocarUnidade() {
+      sincronizarCamposAdesaoComUnidade();
+      await consultarAssinaturaAtual();
+      await carregarEventosUnidade();
+    }
+
+    async function consultarAssinaturaAtual() {
+      const uid = (document.getElementById("adUnidadeId").value || document.getElementById("unidadeSelect").value).trim();
+      if (!uid) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/assinaturas/${encodeURIComponent(uid)}`);
+        if (res.status === 404) {
+          atualizarPillAssinatura(null);
+          return;
+        }
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Erro ao consultar assinatura");
+
+        atualizarPillAssinatura(data.status, data.plano_nome);
+        document.getElementById("adJson").textContent = JSON.stringify(data, null, 2);
+        document.getElementById("pgResultado").innerHTML = `
+          <strong>Unidade:</strong> ${data.nome_unidade} (<code>${data.unidade_id}</code>)<br>
+          <strong>Status:</strong> <span class="badge ${data.status === "ATIVA" ? "b-ok" : "b-moderado"}">${data.status}</span>
+          • <strong>Instalação Ativa:</strong> ${data.instalacao_ativa ? "Sim" : "Não"}<br>
+          <strong>Próximo Vencimento:</strong> ${data.proximo_vencimento || "Aguardando confirmação da adesão"}<br>
+          <strong>API Key da Unidade:</strong> <code>${data.api_key_unidade}</code>
+        `;
+      } catch (err) {
+        atualizarPillAssinatura(null);
+      }
+    }
+
+    async function iniciarAdesao() {
+      const uid = document.getElementById("adUnidadeId").value.trim();
+      const customRaw = document.getElementById("adValorCustom").value.trim();
+      const payload = {
+        unidade_id: uid,
+        cnpj_cliente: document.getElementById("adCnpj").value.trim(),
+        nome_unidade: document.getElementById("adNomeUnidade").value.trim(),
+        email_responsavel: document.getElementById("adEmail").value.trim() || null,
+        plano: document.getElementById("adPlano").value,
+        valor_adesao_custom: customRaw !== "" ? parseFloat(customRaw) : null
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/assinaturas/adesao`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Erro ao criar adesão");
+
+        document.getElementById("adJson").textContent = JSON.stringify(data, null, 2);
+        document.getElementById("pgValor").value = Number(data.cobranca.valor_adesao).toFixed(2);
+        atualizarPillAssinatura(data.status, data.plano);
+
+        document.getElementById("pgResultado").innerHTML = `
+          <strong>Adesão gerada para <code>${data.unidade_id}</code> (${data.plano})!</strong><br>
+          • Valor da Adesão: <strong>R$ ${Number(data.cobranca.valor_adesao).toFixed(2)}</strong><br>
+          • Mensalidade Recorrente: <strong>R$ ${Number(data.cobranca.assinatura_recorrente_mensal).toFixed(2)}</strong> (Repasse TI 20%: <strong>R$ ${Number(data.cobranca.repasse_ti_20_porcento_mensal).toFixed(2)}</strong>)<br>
+          • Chave Pix CNPJ: <code>${data.cobranca.chave_pix_cnpj}</code> | <strong>${data.cobranca.conta_recebimento}</strong>
+        `;
+      } catch (err) {
+        document.getElementById("pgResultado").innerHTML = `<span style="color:var(--danger);">Erro: ${err.message}</span>`;
+      }
+    }
+
+    async function confirmarPagamento() {
+      const uid = document.getElementById("adUnidadeId").value.trim();
+      const payload = {
+        unidade_id: uid,
+        tipo_pagamento: document.getElementById("pgTipo").value,
+        comprovante_ref: document.getElementById("pgComprovante").value.trim(),
+        valor_pago: parseFloat(document.getElementById("pgValor").value)
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/assinaturas/confirmar-pagamento`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Erro ao confirmar pagamento");
+
+        document.getElementById("adJson").textContent = JSON.stringify(data, null, 2);
+        atualizarPillAssinatura(data.status, null);
+
+        document.getElementById("pgResultado").innerHTML = `
+          <span class="badge b-ok">INSTALAÇÃO E FUNCIONAMENTO ATIVOS</span><br>
+          <strong>Unidade:</strong> ${data.nome_unidade} (<code>${data.unidade_id}</code>)<br>
+          <strong>API Key da Unidade:</strong> <code>${data.api_key_unidade}</code><br>
+          <strong>Válido até:</strong> ${data.proximo_vencimento}<br>
+          <strong>Repasse TI (20%):</strong> R$ ${Number(data.resumo_financeiro.repasse_ti_20_porcento).toFixed(2)}/mês
+          | <strong>Sobra Operação/Infra:</strong> R$ ${Number(data.resumo_financeiro.sobra_operacao_infra).toFixed(2)}/mês
+        `;
+        carregarEventosUnidade();
+      } catch (err) {
+        document.getElementById("pgResultado").innerHTML = `<span style="color:var(--danger);">Erro: ${err.message}</span>`;
+      }
     }
 
     function preencherDemoUrgencia() {
@@ -522,7 +770,10 @@ X-Unidade-ID: &lt;id-do-hospital-ou-clinica&gt;</pre>
           (data.alerta_imediato ? `<br><span style="color:var(--danger);font-weight:700;">${data.alerta_imediato}</span>` : "");
         carregarEventosUnidade();
       } catch (err) {
-        // Fallback de demonstração offline caso abra o HTML localmente sem servidor
+        if (err.message.toLowerCase().includes("assinatura") || err.message.toLowerCase().includes("vencida")) {
+          fb.innerHTML = `<span style="color:var(--danger);font-weight:700;">${err.message}</span>`;
+          return;
+        }
         const fakeEvt = {
           event_id: "EVT-DEMO-" + Math.floor(1000 + Math.random() * 9000),
           unidade_id: document.getElementById("unidadeSelect").value,
@@ -542,7 +793,15 @@ X-Unidade-ID: &lt;id-do-hospital-ou-clinica&gt;</pre>
       try {
         const res = await fetch(`${API_BASE}/api/v1/clinical-events`, { headers: getHeaders() });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || "Erro ao carregar fila");
+        if (!res.ok) {
+          if (res.status === 402) {
+            atualizarPillAssinatura("PENDENTE_PAGAMENTO", null);
+            document.getElementById("tabelaFilaBody").innerHTML =
+              `<tr><td colspan="5" style="color:var(--danger);font-weight:600;">${data.detail}</td></tr>`;
+            return;
+          }
+          throw new Error(data.detail || "Erro ao carregar fila");
+        }
         eventosLocais = data.eventos || [];
         renderizarFila(eventosLocais);
       } catch (err) {
@@ -647,8 +906,9 @@ X-Unidade-ID: &lt;id-do-hospital-ou-clinica&gt;</pre>
     }
 
     // Carrega dados ao abrir
+    atualizarResumoPlano();
+    consultarAssinaturaAtual();
     carregarEventosUnidade();
   </script>
 </body>
 </html>
-
