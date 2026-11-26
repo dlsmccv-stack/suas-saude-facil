@@ -1,7 +1,7 @@
 import os
 import uuid
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Header, HTTPException, Depends
 from pydantic import BaseModel, Field
@@ -11,10 +11,55 @@ b2b_router = APIRouter(prefix="/api/v1", tags=["SUAS B2B & Interoperabilidade"])
 # Chave master de sandbox/produção (configure SUAS_B2B_API_KEY no Render)
 DEFAULT_B2B_KEY = os.getenv("SUAS_B2B_API_KEY", "suas_b2b_sandbox_2026")
 
-# Armazenamento em memória para resposta imediata (substitua ou espelhe nas tabelas PostgreSQL)
+# Dados bancários e chave Pix CNPJ para recebimento (Santander PJ - Ag. 4326 / CC 130085637)
+PIX_CHAVE_CNPJ = os.getenv("SUAS_PIX_CNPJ", "")
+CONTA_BANCARIA_REF = "Santander PJ | Ag. 4326 | CC 130085637"
+
+# Catálogo base: adesão maior que mensalidade (cobre setup/deslocamento) + 20% na recorrência
+PLANOS_B2B: Dict[str, Dict[str, Any]] = {
+    "farma_digital": {
+        "nome": "Farma Digital",
+        "adesao": 890.00,
+        "mensalidade": 590.00,
+        "repasse_ti_perc": 0.20,  # R$ 118,00/mês para a TI | R$ 472,00/mês operação/infra
+    },
+    "clinica_agil": {
+        "nome": "Clínica Ágil",
+        "adesao": 1690.00,
+        "mensalidade": 1190.00,  # R$ 238,00/mês para a TI | R$ 952,00/mês operação/infra
+        "repasse_ti_perc": 0.20,
+    },
+    "hospital_pro": {
+        "nome": "Hospital Pro",
+        "adesao": 2490.00,
+        "mensalidade": 1690.00,  # R$ 338,00/mês para a TI | R$ 1.352,00/mês operação/infra
+        "repasse_ti_perc": 0.20,
+    },
+    "enterprise_redes": {
+        "nome": "Enterprise & Redes",
+        "adesao": 3990.00,
+        "mensalidade": 2990.00,  # R$ 598,00/mês para a TI | R$ 2.392,00/mês operação/infra
+        "repasse_ti_perc": 0.20,
+    },
+}
+
+# Armazenamento em memória (espelhar nas tabelas PostgreSQL no Render para persistência total)
+UNIDADES_ASSINATURA_DB: Dict[str, Dict[str, Any]] = {}
 CLINICAL_EVENTS_DB: List[Dict[str, Any]] = []
 TRAINING_TRIGGERS_DB: List[Dict[str, Any]] = []
 IDEMPOTENCY_CACHE: Dict[str, Dict[str, Any]] = {}
+
+
+def _unidade_esta_ativa(unidade_id: str) -> bool:
+    reg = UNIDADES_ASSINATURA_DB.get(unidade_id)
+    if not reg or reg.get("status") != "ATIVA":
+        return False
+    venc = reg.get("proximo_vencimento")
+    if venc and datetime.now(timezone.utc) > datetime.fromisoformat(venc):
+        reg["status"] = "SUSPENSA_INADIMPLENCIA"
+        reg["instalacao_ativa"] = False
+        return False
+    return True
 
 
 def verificar_credenciais_b2b(
@@ -31,7 +76,34 @@ def verificar_credenciais_b2b(
     if not token or token != DEFAULT_B2B_KEY:
         raise HTTPException(status_code=401, detail="Chave de API B2B inválida ou ausente.")
 
-    return {"unidade_id": x_unidade_id.strip()}
+    uid = x_unidade_id.strip()
+
+    # Se a unidade já está cadastrada no fluxo de assinatura, exige adesão confirmada e mensalidade em dia
+    if uid in UNIDADES_ASSINATURA_DB and not _unidade_esta_ativa(uid):
+        raise HTTPException(
+            status_code=402,
+            detail="Assinatura pendente ou vencida para esta unidade. Confirme o pagamento para ativar/renovar.",
+        )
+
+    return {"unidade_id": uid}
+
+
+# --- MODELOS DE ASSINATURA, ADESÃO E ATIVAÇÃO ---
+
+class AdesaoPacoteIn(BaseModel):
+    unidade_id: str = Field(..., example="farma_centro_01")
+    cnpj_cliente: str = Field(..., example="12345678000199")
+    nome_unidade: str = Field(..., example="Farmácia Central")
+    email_responsavel: Optional[str] = Field(None, example="gestor@farmaciacentral.com.br")
+    plano: str = Field(..., example="farma_digital", description="farma_digital | clinica_agil | hospital_pro | enterprise_redes")
+    valor_adesao_custom: Optional[float] = Field(None, example=None)
+
+
+class ConfirmarPagamentoIn(BaseModel):
+    unidade_id: str = Field(..., example="farma_centro_01")
+    tipo_pagamento: str = Field(..., example="ADESAO", description="ADESAO ou MENSALIDADE")
+    comprovante_ref: str = Field(..., example="PIX-CNPJ-SANTANDER-001")
+    valor_pago: float = Field(..., example=890.00)
 
 
 # --- MODELOS DE ENTRADA (CONTRATOS JSON / FHIR-LIKE) ---
@@ -64,6 +136,104 @@ class TrainingTriggerIn(BaseModel):
     equipe_alvo: Optional[str] = Field("Enfermagem e Corpo Clínico")
 
 
+# --- 0. ENDPOINTS: ADESÃO, INSTALAÇÃO AUTOMÁTICA E ASSINATURA RECORRENTE ---
+
+@b2b_router.post("/assinaturas/adesao")
+def criar_adesao_unidade(payload: AdesaoPacoteIn):
+    plano_cfg = PLANOS_B2B.get(payload.plano)
+    if not plano_cfg:
+        raise HTTPException(status_code=400, detail="Plano inválido.")
+
+    uid = payload.unidade_id.strip()
+    valor_adesao = payload.valor_adesao_custom if payload.valor_adesao_custom is not None else plano_cfg["adesao"]
+    mensalidade = plano_cfg["mensalidade"]
+    repasse_ti = round(mensalidade * plano_cfg["repasse_ti_perc"], 2)
+    custo_setup_estimado = round(max(0.0, valor_adesao - mensalidade), 2)
+
+    agora_iso = datetime.now(timezone.utc).isoformat()
+    registro = {
+        "unidade_id": uid,
+        "cnpj_cliente": payload.cnpj_cliente,
+        "nome_unidade": payload.nome_unidade,
+        "email_responsavel": payload.email_responsavel,
+        "plano": payload.plano,
+        "plano_nome": plano_cfg["nome"],
+        "valor_adesao": valor_adesao,
+        "custo_setup_estimado": custo_setup_estimado,
+        "mensalidade": mensalidade,
+        "repasse_ti_mensal": repasse_ti,
+        "liquido_operacao_mensal": round(mensalidade - repasse_ti, 2),
+        "status": "AGUARDANDO_ADESAO",
+        "instalacao_ativa": False,
+        "api_key_unidade": f"suas_unit_{uuid.uuid4().hex[:16]}",
+        "proximo_vencimento": None,
+        "criado_em": agora_iso,
+        "pagamentos": [],
+    }
+    UNIDADES_ASSINATURA_DB[uid] = registro
+
+    return {
+        "status": "AGUARDANDO_ADESAO",
+        "unidade_id": uid,
+        "plano": plano_cfg["nome"],
+        "cobranca": {
+            "valor_adesao": valor_adesao,
+            "custo_setup_estimado": custo_setup_estimado,
+            "assinatura_recorrente_mensal": mensalidade,
+            "repasse_ti_20_porcento_mensal": repasse_ti,
+            "chave_pix_cnpj": PIX_CHAVE_CNPJ or "CONFIGURAR_ENV_SUAS_PIX_CNPJ",
+            "conta_recebimento": CONTA_BANCARIA_REF,
+        },
+        "proximo_passo": "Após o pagamento da adesão, confirme via POST /api/v1/assinaturas/confirmar-pagamento para liberar a instalação e o funcionamento."
+    }
+
+
+@b2b_router.post("/assinaturas/confirmar-pagamento")
+def confirmar_pagamento_e_ativar(payload: ConfirmarPagamentoIn):
+    uid = payload.unidade_id.strip()
+    reg = UNIDADES_ASSINATURA_DB.get(uid)
+    if not reg:
+        raise HTTPException(status_code=404, detail="Unidade não encontrada na base de assinaturas.")
+
+    agora = datetime.now(timezone.utc)
+    reg["pagamentos"].append({
+        "tipo_pagamento": payload.tipo_pagamento.upper(),
+        "valor_pago": payload.valor_pago,
+        "comprovante_ref": payload.comprovante_ref,
+        "confirmado_em": agora.isoformat(),
+    })
+
+    # Mediante confirmação da adesão ou mensalidade, ativa o funcionamento e renova por 30 dias
+    reg["status"] = "ATIVA"
+    reg["instalacao_ativa"] = True
+    reg["proximo_vencimento"] = (agora + timedelta(days=30)).isoformat()
+
+    return {
+        "status": "ATIVA",
+        "unidade_id": uid,
+        "nome_unidade": reg["nome_unidade"],
+        "instalacao_ativa": True,
+        "api_key_unidade": reg["api_key_unidade"],
+        "proximo_vencimento": reg["proximo_vencimento"],
+        "resumo_financeiro": {
+            "mensalidade": reg["mensalidade"],
+            "repasse_ti_20_porcento": reg["repasse_ti_mensal"],
+            "sobra_operacao_infra": reg["liquido_operacao_mensal"],
+        },
+        "timestamp": agora.isoformat()
+    }
+
+
+@b2b_router.get("/assinaturas/{unidade_id}")
+def consultar_status_assinatura(unidade_id: str):
+    uid = unidade_id.strip()
+    reg = UNIDADES_ASSINATURA_DB.get(uid)
+    if not reg:
+        raise HTTPException(status_code=404, detail="Unidade não encontrada.")
+    _unidade_esta_ativa(uid)
+    return reg
+
+
 # --- 1. ENDPOINT: INGESTÃO DE EVENTOS CLÍNICOS (PACOTES 1, 2 E 3) ---
 
 @b2b_router.post("/clinical-events")
@@ -74,7 +244,7 @@ def registrar_evento_clinico(
 ):
     t0 = time.perf_counter()
     if x_request_id and x_request_id in IDEMPOTENCY_CACHE:
-        cached = IDEMPOTENCY_CACHE[x_request_id]
+        cached = dict(IDEMPOTENCY_CACHE[x_request_id])
         cached["idempotent_replay"] = True
         return cached
 
