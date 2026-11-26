@@ -1,9 +1,10 @@
 """API Integrada e 100% Ativa do App do Cidadão — SUAS Saúde +Fácil.
 Compatível com main.py, models.py e database.py existentes sem alterá-los.
 Inclui: Cadastro/Login flexível (CPF ou CNS), gatilho estratégico de CNS no
-acompanhamento de medicação, Cartão Vital com QR Code, SOS Geolocalizado,
-Pré-Triagem Inteligente com direcionamento por Hospital e Convênio livre
-com sugestão dinâmica, Farmácia Digital e Despertador de Posologia.
+acompanhamento de medicação, Cartão Vital com QR Code, Alerta de Emergência
+com GPS e contato familiar, Pré-Triagem Inteligente com direcionamento por
+Unidade e Convênio livre com sugestão dinâmica, Farmácia Digital e
+Despertador de Posologia.
 """
 import os
 import re
@@ -82,7 +83,7 @@ class CitizenEmergencyLog(models.Base):
     latitude = Column(String(40), nullable=True)
     longitude = Column(String(40), nullable=True)
     observacao = Column(String(300), nullable=True)
-    status = Column(String(60), default="Alerta SOS registrado · Geolocalização ativa")
+    status = Column(String(80), default="Alerta registrado no sistema · Geolocalização capturada")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -205,7 +206,7 @@ def _registrar_ocorrencia_samu(
     if "gps_atualizado_em" in colunas:
         valores["gps_atualizado_em"] = agora_utc
     if "status" in colunas:
-        valores["status"] = "recebida"
+        valores["status"] = "registrada_local"
     if "recebida_em" in colunas:
         valores["recebida_em"] = agora_utc
     if "atualizada_em" in colunas:
@@ -226,12 +227,17 @@ def _registrar_ocorrencia_samu(
         if "ocorrencia_id" in ev_cols:
             ev_vals["ocorrencia_id"] = ocorrencia_id
         if "tipo" in ev_cols:
-            ev_vals["tipo"] = "SOS_RECEBIDO"
+            ev_vals["tipo"] = "ALERTA_REGISTRADO"
         if "profissional" in ev_cols:
             ev_vals["profissional"] = "APP_CIDADAO"
         if "detalhes" in ev_cols:
             ev_vals["detalhes"] = json.dumps(
-                {"origem": "app_cidadao", "cidadao_id": cidadao_id, "protocolo": protocolo},
+                {
+                    "origem": "app_cidadao",
+                    "cidadao_id": cidadao_id,
+                    "protocolo": protocolo,
+                    "integracao_externa_ativa": False,
+                },
                 ensure_ascii=False,
             )
         if "criado_em" in ev_cols:
@@ -243,7 +249,7 @@ def _registrar_ocorrencia_samu(
             db.execute(text(f"INSERT INTO samu_eventos ({ev_cols_sql}) VALUES ({ev_params_sql})"), ev_vals)
 
     alerta_ws = {
-        "tipo": "NOVO_SOS",
+        "tipo": "NOVO_ALERTA_EMERGENCIA",
         "protocolo": protocolo,
         "ocorrencia_id": ocorrencia_id,
         "latitude": lat_f,
@@ -251,7 +257,7 @@ def _registrar_ocorrencia_samu(
         "horario": agora_utc.isoformat(),
         "alerta_visual": True,
         "alerta_sonoro": True,
-        "status": "recebida",
+        "status": "registrada_local",
     }
     return True, ocorrencia_id, alerta_ws
 
@@ -355,7 +361,7 @@ class TriageIn(BaseModel):
     gravidade: str
     unidade_id: str | None = Field(default=None, max_length=80)
     unidade_nome: str | None = Field(default=None, max_length=180)
-    modalidade_atendimento: str = Field(default="SUS", description="SUS | PLANO_SAUDE | PARTICULAR")
+    modalidade_atendimento: str = Field(default="PLANO_SAUDE", description="PLANO_SAUDE | SUS | PARTICULAR")
     operadora_plano: str | None = Field(default=None, max_length=100)
     numero_carteira: str | None = Field(default=None, max_length=60)
 
@@ -392,7 +398,7 @@ class QrSamuAcionarIn(BaseModel):
     qr_code: str = Field(min_length=1, max_length=160)
     latitude: float | None = None
     longitude: float | None = None
-    observacao: str | None = Field(default="Acionamento SAMU via leitura de QR Code", max_length=300)
+    observacao: str | None = Field(default="Alerta de emergência registrado via leitura de QR Code", max_length=300)
 
 
 # --- Autenticação ---
@@ -418,19 +424,20 @@ def resolver_qr_emergencia(qr_code: str, db: Session = Depends(get_db)):
         "valido": bool(cidadao_id or telefone_familiar),
         "tem_familiar_cadastrado": bool(telefone_familiar),
         "telefone_familiar": telefone_familiar,
+        "despacho_externo_ativo": False,
     }
 
 
 @router.post("/qr-emergencia/acionar", status_code=201)
 async def acionar_samu_por_qr(payload: QrSamuAcionarIn, db: Session = Depends(get_db)):
     cidadao_id, nome_cidadao, telefone_familiar = _resolver_familiar_por_qr(db, payload.qr_code)
-    protocolo = f"SAMU-{datetime.utcnow().strftime('%Y%m%d')}-{secrets.token_hex(2).upper()}"
+    protocolo = f"EMG-{datetime.utcnow().strftime('%Y%m%d')}-{secrets.token_hex(2).upper()}"
     lat_str = str(payload.latitude) if payload.latitude is not None else None
     lon_str = str(payload.longitude) if payload.longitude is not None else None
-    obs = payload.observacao or f"Acionamento SAMU via QR ({_extrair_codigo_qr(payload.qr_code)})"
+    obs = payload.observacao or f"Alerta de emergência via QR ({_extrair_codigo_qr(payload.qr_code)})"
 
     alerta_ws = None
-    registrado_samu = False
+    registrado_no_sistema = False
     ocorrencia_id = None
 
     if cidadao_id:
@@ -442,7 +449,7 @@ async def acionar_samu_por_qr(payload: QrSamuAcionarIn, db: Session = Depends(ge
             observacao=obs,
         )
         db.add(log)
-        registrado_samu, ocorrencia_id, alerta_ws = _registrar_ocorrencia_samu(
+        registrado_no_sistema, ocorrencia_id, alerta_ws = _registrar_ocorrencia_samu(
             db=db,
             protocolo=protocolo,
             cidadao_id=cidadao_id,
@@ -465,9 +472,10 @@ async def acionar_samu_por_qr(payload: QrSamuAcionarIn, db: Session = Depends(ge
         else f"55{telefone_familiar}"
     )
     mensagem = (
-        f"🚨 ALERTA DE EMERGÊNCIA (SAMU) — Protocolo {protocolo}. "
-        f"Emergência registrada via QR."
+        f"🚨 ALERTA DE EMERGÊNCIA — Protocolo {protocolo}. "
+        f"Ficha de primeiros socorros acessada via QR."
         + (f" Localização: {maps_url}" if maps_url else "")
+        + " Se necessário, acione o serviço público 192 ou a cobertura do plano."
     )
     wa_url = (
         f"https://wa.me/{ddd_phone}?text={url_quote(mensagem)}"
@@ -477,7 +485,8 @@ async def acionar_samu_por_qr(payload: QrSamuAcionarIn, db: Session = Depends(ge
 
     return {
         "protocolo": protocolo,
-        "registrado_samu": registrado_samu,
+        "registrado_samu": registrado_no_sistema,
+        "despacho_externo_ativo": False,
         "ocorrencia_samu_id": ocorrencia_id,
         "maps_url": maps_url,
         "telefone_familiar": telefone_familiar,
@@ -756,7 +765,7 @@ def listar_operadoras_sugeridas(db: Session = Depends(get_db)):
 @router.post("/sos", status_code=201)
 async def acionar_sos(data: SosIn, c=Depends(current_citizen), db: Session = Depends(get_db)):
     protocolo = f"SOS-{datetime.utcnow().strftime('%Y%m%d')}-{secrets.token_hex(2).upper()}"
-    observacao = data.observacao or "Acionamento via App do Cidadão"
+    observacao = data.observacao or "Alerta de emergência registrado via App do Cidadão"
     log = CitizenEmergencyLog(
         cidadao_id=c.id,
         protocolo=protocolo,
@@ -766,7 +775,7 @@ async def acionar_sos(data: SosIn, c=Depends(current_citizen), db: Session = Dep
     )
     db.add(log)
 
-    registrado_samu, ocorrencia_samu_id, alerta_ws = _registrar_ocorrencia_samu(
+    registrado_no_sistema, ocorrencia_id, alerta_ws = _registrar_ocorrencia_samu(
         db=db,
         protocolo=protocolo,
         cidadao_id=c.id,
@@ -787,12 +796,13 @@ async def acionar_sos(data: SosIn, c=Depends(current_citizen), db: Session = Dep
     )
     return {
         "protocolo": protocolo,
-        "ocorrencia_samu_id": ocorrencia_samu_id,
-        "registrado_samu": registrado_samu,
+        "ocorrencia_samu_id": ocorrencia_id,
+        "registrado_samu": registrado_no_sistema,
+        "despacho_externo_ativo": False,
         "status": log.status,
         "maps_url": maps_url,
         "contato_emergencia": getattr(c, "contacto_responsavel", None),
-        "mensagem": "Alerta SOS registrado permanentemente no SAMU com sua geolocalização.",
+        "mensagem": "Alerta e geolocalização salvos no sistema. Se precisar de despacho público, ligue 192 ou use a cobertura do seu plano.",
     }
 
 
@@ -802,5 +812,299 @@ def criar_triagem(data: TriageIn, c=Depends(current_citizen), db: Session = Depe
     if grav not in ("LEVE", "MODERADO", "GRAVE"):
         raise HTTPException(422, "Gravidade inválida. Use LEVE, MODERADO ou GRAVE.")
 
-    modalidade = (data.modalidade_atendimento or "SUS").upper().strip()
+    modalidade = (data.modalidade_atendimento or "PLANO_SAUDE").upper().strip()
     if modalidade not in ("SUS", "PLANO_SAUDE", "PARTICULAR"):
+        modalidade = "PLANO_SAUDE"
+
+    operadora = _normalizar_operadora(data.operadora_plano)
+    carteira = (data.numero_carteira or "").strip() or None
+
+    if modalidade == "PLANO_SAUDE":
+        if not operadora or not carteira:
+            raise HTTPException(422, "Para atendimento por Plano de Saúde, informe a operadora e o número da carteirinha.")
+        if hasattr(c, "possui_plano_saude"):
+            c.possui_plano_saude = True
+        if hasattr(c, "operadora_plano"):
+            c.operadora_plano = operadora
+        if hasattr(c, "numero_carteira"):
+            c.numero_carteira = carteira
+
+    if data.unidade_nome and data.unidade_nome.strip():
+        unidade = data.unidade_nome.strip()
+        tempo_min = 12 if grav == "GRAVE" else (25 if grav == "MODERADO" else 35)
+    elif grav == "GRAVE":
+        unidade = "Pronto Atendimento / Unidade de Urgência Referenciada"
+        tempo_min = 12
+    elif grav == "MODERADO":
+        unidade = "Hospital / Centro Médico Referenciado"
+        tempo_min = 30
+    else:
+        unidade = "Unidade / Clínica de Referência"
+        tempo_min = 45
+
+    protocolo = f"TRI-{datetime.utcnow().strftime('%Y%m%d')}-{secrets.token_hex(2).upper()}"
+    id_ref = only_digits(getattr(c, "cns", ""))[-4:] or only_digits(getattr(c, "cpf", ""))[-4:] or str(c.id)
+
+    if modalidade == "PLANO_SAUDE":
+        tag_mod = f"CONV:{operadora}|CART:{carteira}"
+        status_fluxo = "PRE_TRIAGEM_AGUARDANDO_CONVENIO"
+        status_legivel = f"Pré-triagem enviada · Aguardando autorização do convênio ({operadora})"
+    elif modalidade == "PARTICULAR":
+        tag_mod = "MOD:PARTICULAR"
+        status_fluxo = "PRE_TRIAGEM_PARTICULAR"
+        status_legivel = "Pré-triagem concluída · Check-in Particular liberado"
+    else:
+        tag_mod = "MOD:SUS"
+        status_fluxo = "PRE_TRIAGEM_SUS"
+        status_legivel = "Pré-triagem concluída · Check-in QR SUS liberado"
+
+    qr_checkin = f"SUAS-CHECKIN|{protocolo}|UNID:{data.unidade_id or 'geral'}|ID:{id_ref}|GRAV:{grav}|{tag_mod}"
+
+    item = CitizenTriage(
+        cidadao_id=c.id,
+        protocolo=protocolo,
+        queixa_principal=data.queixa_principal.strip(),
+        gravidade_autorreferida=grav,
+        unidade_indicada=unidade,
+        tempo_estimado_min=tempo_min,
+        qr_checkin=qr_checkin,
+        status=status_legivel,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+
+    return {
+        "id": item.id,
+        "protocolo": item.protocolo,
+        "gravidade": grav,
+        "modalidade_atendimento": modalidade,
+        "operadora_plano": operadora,
+        "numero_carteira": carteira,
+        "status_fluxo": status_fluxo,
+        "unidade_indicada": item.unidade_indicada,
+        "tempo_estimado_min": item.tempo_estimado_min,
+        "qr_checkin": item.qr_checkin,
+        "status": item.status,
+    }
+
+
+@router.get("/triagens")
+def listar_triagens(c=Depends(current_citizen), db: Session = Depends(get_db)):
+    rows = (
+        db.query(CitizenTriage)
+        .filter_by(cidadao_id=c.id)
+        .order_by(CitizenTriage.id.desc())
+        .limit(20)
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "protocolo": r.protocolo or f"TRI-{r.id}",
+            "queixa_principal": r.queixa_principal,
+            "gravidade": r.gravidade_autorreferida,
+            "unidade_indicada": r.unidade_indicada,
+            "tempo_estimado_min": r.tempo_estimado_min,
+            "qr_checkin": r.qr_checkin,
+            "status": r.status,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/prescricoes")
+def prescricoes(c=Depends(current_citizen), db: Session = Depends(get_db)):
+    rows = (
+        db.query(models.MedicamentoItem)
+        .filter_by(cidadao_id=c.id)
+        .order_by(models.MedicamentoItem.id.desc())
+        .limit(100)
+        .all()
+    )
+    return [
+        {
+            "id": p.id,
+            "medicamento_nome": p.medicamento_nome,
+            "dosagem": p.dosagem,
+            "posologia": p.posologia,
+            "fornecido_pelo_sus": bool(getattr(p, "fornecido_pelo_sus", False)),
+            "dispensado": bool(p.dispensado),
+            "horarios_alarme": getattr(p, "horarios_alarme", None),
+        }
+        for p in rows
+    ]
+
+
+@router.get("/farmacia/meus-registros")
+def farmacia_meus_registros(c=Depends(current_citizen), db: Session = Depends(get_db)):
+    rows = (
+        db.query(models.MedicamentoItem)
+        .filter(models.MedicamentoItem.cidadao_id == c.id)
+        .order_by(models.MedicamentoItem.id.desc())
+        .limit(100)
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "medicamento_nome": r.medicamento_nome,
+            "dosagem": r.dosagem,
+            "posologia": r.posologia,
+            "fornecido_pelo_sus": bool(r.fornecido_pelo_sus),
+            "dispensado": bool(r.dispensado),
+            "data_dispensacao": r.data_dispensacao.isoformat() if r.data_dispensacao else None,
+            "horarios_alarme": r.horarios_alarme,
+        }
+        for r in rows
+    ]
+
+
+@router.post("/farmacia/gerar-qr")
+def farmacia_gerar_qr(data: FarmaciaQrIn, c=Depends(current_citizen)):
+    codigo = f"FARMA-{datetime.utcnow().strftime('%Y%m%d')}-{secrets.token_hex(3).upper()}"
+    modalidade_label = "SUS-RETIRADA-AGENDADA" if data.modalidade == "SUS" else "PLANO-DESCONTO-CREDENCIADA"
+    assinatura = hashlib.sha256(f"{c.id}:{codigo}:{data.medicamento_nome}".encode()).hexdigest()[:12].upper()
+    qr_payload = f"SUAS-FARMA|{modalidade_label}|{codigo}|MED:{data.medicamento_nome}|HASH:{assinatura}"
+    return {
+        "codigo_autorizacao": codigo,
+        "modalidade": data.modalidade,
+        "medicamento_nome": data.medicamento_nome,
+        "qr_payload": qr_payload,
+        "validade_horas": 48,
+        "mensagem": "QR Code gerado! Apresente no balcão da farmácia para validação e ativação automática da posologia.",
+    }
+
+
+@router.get("/alarmes-posologia")
+def listar_alarmes_posologia(c=Depends(current_citizen), db: Session = Depends(get_db)):
+    agora = datetime.utcnow()
+    rows = (
+        db.query(CitizenMedicationSchedule)
+        .filter_by(cidadao_id=c.id)
+        .order_by(CitizenMedicationSchedule.id.desc())
+        .limit(100)
+        .all()
+    )
+    resultado = []
+    alterou = False
+    for r in rows:
+        dias_restantes = None
+        if r.tipo_tratamento == "TEMPORARIO" and r.fim_em:
+            delta = (r.fim_em - agora).total_seconds()
+            if delta <= 0 and r.ativo:
+                r.ativo = False
+                alterou = True
+            dias_restantes = max(0, int((delta + 86399) // 86400))
+        resultado.append(
+            {
+                "id": r.id,
+                "nome_medicamento": r.nome_medicamento,
+                "dosagem": r.dosagem,
+                "tipo_tratamento": r.tipo_tratamento,
+                "intervalo_horas": r.intervalo_horas,
+                "duracao_dias": r.duracao_dias,
+                "dias_restantes": dias_restantes,
+                "horarios_alarme": r.horarios_alarme,
+                "origem": r.origem,
+                "ativo": bool(r.ativo),
+                "inicio_em": r.inicio_em.isoformat() if r.inicio_em else None,
+                "fim_em": r.fim_em.isoformat() if r.fim_em else None,
+            }
+        )
+    if alterou:
+        db.commit()
+    return resultado
+
+
+@router.post("/alarmes-posologia", status_code=201)
+def criar_alarme_posologia(data: AlarmePosologiaIn, c=Depends(current_citizen), db: Session = Depends(get_db)):
+    tipo = data.tipo_tratamento.upper().strip()
+    if tipo not in ("TEMPORARIO", "CONTINUO"):
+        raise HTTPException(422, "Tipo de tratamento deve ser TEMPORARIO ou CONTINUO.")
+
+    if data.horarios_personalizados and data.horarios_personalizados.strip():
+        horarios = data.horarios_personalizados.strip()
+    else:
+        horarios = calcular_horarios_intervalo(data.intervalo_horas, data.hora_inicial)
+
+    agora = datetime.utcnow()
+    fim_em = None
+    duracao = None
+    if tipo == "TEMPORARIO":
+        duracao = data.duracao_dias or 7
+        fim_em = agora + timedelta(days=duracao)
+
+    row = CitizenMedicationSchedule(
+        cidadao_id=c.id,
+        nome_medicamento=data.nome_medicamento.strip(),
+        dosagem=(data.dosagem or "").strip() or None,
+        tipo_tratamento=tipo,
+        intervalo_horas=data.intervalo_horas,
+        duracao_dias=duracao,
+        horarios_alarme=horarios,
+        origem=data.origem,
+        ativo=True,
+        inicio_em=agora,
+        fim_em=fim_em,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    return {
+        "id": row.id,
+        "nome_medicamento": row.nome_medicamento,
+        "tipo_tratamento": row.tipo_tratamento,
+        "intervalo_horas": row.intervalo_horas,
+        "duracao_dias": row.duracao_dias,
+        "horarios_alarme": row.horarios_alarme,
+        "fim_em": row.fim_em.isoformat() if row.fim_em else None,
+        "mensagem": f"Despertador ativado nos horários: {row.horarios_alarme}",
+    }
+
+
+@router.delete("/alarmes-posologia/{alarme_id}")
+def desativar_alarme_posologia(alarme_id: int, c=Depends(current_citizen), db: Session = Depends(get_db)):
+    row = db.query(CitizenMedicationSchedule).filter_by(id=alarme_id, cidadao_id=c.id).first()
+    if not row:
+        raise HTTPException(404, "Alarme não encontrado.")
+    row.ativo = False
+    db.commit()
+    return {"status": "desativado", "id": alarme_id}
+
+
+@router.get("/medicamentos-pessoais")
+def meus_medicamentos(c=Depends(current_citizen), db: Session = Depends(get_db)):
+    rows = db.query(models.MedicamentoCidadao).filter_by(cidadao_id=c.id).limit(100).all()
+    return [
+        {
+            "id": r.id,
+            "nome_medicamento": r.nome_medicamento,
+            "tipo_presricao": r.tipo_presricao,
+            "horarios_alarme": r.horarios_alarme,
+        }
+        for r in rows
+    ]
+
+
+@router.post("/automedicacoes", status_code=201)
+def registrar_automedicacao_pessoal(data: AutomedicacaoIn, c=Depends(current_citizen), db: Session = Depends(get_db)):
+    row = models.AutomedicacaoLog(cidadao_id=c.id, **data.model_dump())
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    limite = datetime.utcnow().timestamp() - 60 * 86400
+    qtd = sum(
+        1
+        for x in db.query(models.AutomedicacaoLog)
+        .filter_by(cidadao_id=c.id, nome_medicamento=data.nome_medicamento)
+        .all()
+        if x.data_registo and x.data_registo.timestamp() >= limite
+    )
+    return {
+        "id": row.id,
+        "registros_60_dias": qtd,
+        "alerta": "Atenção: uso repetido registrado nos últimos 60 dias. Procure avaliação médica." if qtd >= 3 else None,
+    }
