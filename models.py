@@ -223,3 +223,86 @@ class EducacaoMedicaItem(Base):
         default=datetime.datetime.utcnow,
         nullable=False
     )
+
+# ==========================================
+# ASSINATURAS, ATIVAÇÃO E EVENTOS B2B
+# ==========================================
+
+class B2BAssinaturaUnidade(Base):
+    __tablename__ = "b2b_assinaturas_unidades"
+
+    id = Column(Integer, primary_key=True, index=True)
+    unidade_id = Column(String, unique=True, index=True, nullable=False)
+    cnpj_cliente = Column(String, index=True, nullable=False)
+    nome_unidade = Column(String, nullable=False)
+    email_responsavel = Column(String, nullable=True)
+
+    plano = Column(String, nullable=False)
+    plano_nome = Column(String, nullable=False)
+    valor_adesao = Column(String, nullable=False)
+    custo_setup_estimado = Column(String, nullable=False)
+    mensalidade = Column(String, nullable=False)
+    repasse_ti_mensal = Column(String, nullable=False)
+    liquido_operacao_mensal = Column(String, nullable=False)
+
+    status = Column(String, default="AGUARDANDO_ADESAO", index=True)
+    instalacao_ativa = Column(Boolean, default=False)
+    api_key_unidade = Column(String, unique=True, index=True, nullable=False)
+    proximo_vencimento = Column(DateTime, nullable=True)
+    criado_em = Column(DateTime, default=datetime.datetime.utcnow)
+
+    pagamentos = relationship("B2BPagamentoLog", back_populates="assinatura")
+
+class B2BPagamentoLog(Base):
+    __tablename__ = "b2b_pagamentos_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    assinatura_id = Column(Integer, ForeignKey("b2b_assinaturas_unidades.id"), nullable=False)
+    unidade_id = Column(String, index=True, nullable=False)
+    tipo_pagamento = Column(String, nullable=False)  # ADESAO ou MENSALIDADE
+    valor_pago = Column(String, nullable=False)
+    comprovante_ref = Column(String, nullable=False)
+    confirmado_em = Column(DateTime, default=datetime.datetime.utcnow)
+
+    assinatura = relationship("B2BAssinaturaUnidade", back_populates="pagamentos")
+
+class B2BEventoClinico(Base):
+    __tablename__ = "b2b_eventos_clinicos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(String, unique=True, index=True, nullable=False)
+    unidade_id = Column(String, index=True, nullable=False)
+    event_type = Column(String, index=True, nullable=False)
+    patient_hash = Column(String, index=True, nullable=False)
+    patient_name = Column(String, nullable=True)
+    gravidade = Column(String, default="LEVE")
+    queixa_ou_descricao = Column(Text, nullable=True)
+    medicamentos_json = Column(Text, nullable=True)
+    alergias_json = Column(Text, nullable=True)
+    condicoes_json = Column(Text, nullable=True)
+    status_fluxo = Column(String, default="AGUARDANDO_ACOLHIMENTO")
+    alerta_imediato = Column(Text, nullable=True)
+    metadata_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class B2BGatilhoTreinamento(Base):
+    __tablename__ = "b2b_gatilhos_treinamento"
+
+    id = Column(Integer, primary_key=True, index=True)
+    trigger_id = Column(String, unique=True, index=True, nullable=False)
+    unidade_id = Column(String, index=True, nullable=False)
+    setor = Column(String, nullable=False)
+    motivo_gatilho = Column(String, nullable=False)
+    gravidade = Column(String, default="MODERADA")
+    protocolo_recomendado = Column(Text, nullable=False)
+    equipe_alvo = Column(String, nullable=True)
+    status = Column(String, default="DISPARADO")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class B2BIdempotencia(Base):
+    __tablename__ = "b2b_idempotencia"
+
+    id = Column(Integer, primary_key=True, index=True)
+    request_key = Column(String, unique=True, index=True, nullable=False)
+    response_json = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
