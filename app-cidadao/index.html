@@ -83,7 +83,7 @@ function fecharBoxesAuth() {
   <div class="top">
     <div>
       <h1>✚ SUA Saúde +Fácil</h1>
-      <p>App do Cidadão · Rede Pública & Hospitais Conveniados</p>
+      <p>App do Cidadão · Planos de Saúde, Unidades Parceiras & SUS</p>
     </div>
     <span class="badge-live" id="status-pill">● 100% ATIVO</span>
   </div>
@@ -101,16 +101,16 @@ function fecharBoxesAuth() {
 <main class="wrap">
   <div id="message" class="notice hidden" role="status"></div>
 
-  <!-- BANNER DE DIRECIONAMENTO POR UNIDADE (QUANDO VEM DO QR CODE DO HOSPITAL) -->
+  <!-- BANNER DE DIRECIONAMENTO POR UNIDADE (QUANDO VEM DO QR CODE DA UNIDADE) -->
   <div id="unit-redirect-banner" class="notice ok hidden"></div>
 
-  <!-- FLUXO DIRETO DE EMERGÊNCIA VIA QR CODE -->
+  <!-- FLUXO DIRETO DE PRIMEIROS SOCORROS & ALERTA VIA QR CODE -->
   <section id="third-party-qr-card" class="card">
     <div class="row">
-      <h2 style="margin:0">🆘 Emergência via QR Code</h2>
+      <h2 style="margin:0">🆘 Primeiros Socorros & Alerta via QR</h2>
       <button class="secondary btn-sm" id="toggle-qr-scanner-btn" type="button" style="flex:0;white-space:nowrap">📷 Ler QR Code</button>
     </div>
-    <p class="muted">Aponte a câmera do celular para o QR Code. Após a leitura, o botão para acionar o SAMU e notificar o familiar cadastrado aparecerá na tela.</p>
+    <p class="muted">Aponte a câmera para o QR Code de primeiros socorros para registrar o alerta com localização e notificar o contato cadastrado. Para atendimento público urgente, ligue <strong>192</strong> ou use a cobertura do plano.</p>
 
     <div id="qr-scanner-box" class="hidden">
       <video id="qr-video" playsinline muted></video>
@@ -122,13 +122,13 @@ function fecharBoxesAuth() {
     <div id="qr-ready-badge" class="notice ok hidden"></div>
 
     <button class="danger hidden" id="third-party-samu-btn" type="button" style="margin-top:12px">
-      🚨 ACIONAR SAMU E NOTIFICAR FAMILIAR
+      🚨 REGISTRAR ALERTA E NOTIFICAR CONTATO
     </button>
 
     <div id="third-party-result" class="notice ok hidden"></div>
     <div class="row hidden" id="third-party-actions" style="margin-top:8px">
-      <a href="tel:192" style="flex:1"><button class="danger btn-sm" type="button" style="width:100%">📞 Ligar SAMU 192</button></a>
-      <button class="gold btn-sm" id="third-party-wa-btn" type="button">📲 Notificar Familiar no WhatsApp</button>
+      <a href="tel:192" style="flex:1"><button class="outline btn-sm" type="button" style="width:100%">📞 Ligar 192 (Emergência Pública)</button></a>
+      <button class="gold btn-sm" id="third-party-wa-btn" type="button">📲 Notificar Contato no WhatsApp</button>
     </div>
   </section>
 
@@ -136,7 +136,7 @@ function fecharBoxesAuth() {
   <section id="auth">
     <div class="card">
       <h2>Entrar no aplicativo</h2>
-      <p class="muted">Acesse sua jornada digital de saúde, Cartão Vital com QR Code, pré-triagem para hospitais conveniados ou SUS e despertador de medicamentos.</p>
+      <p class="muted">Acesse sua jornada digital de saúde, Cartão Vital com QR Code, pré-triagem para planos de saúde e unidades parceiras ou SUS e despertador de medicamentos.</p>
       <form id="login-form">
         <label for="login-cns">CPF (11 dígitos) ou Cartão SUS (15 dígitos)</label>
         <input id="login-cns" inputmode="numeric" autocomplete="username" placeholder="Digite seu CPF ou Cartão SUS" maxlength="18" required>
@@ -247,12 +247,14 @@ function fecharBoxesAuth() {
     <!-- ABA 1: EMERGÊNCIA E CARTÃO VITAL -->
     <section id="tab-emergencia" class="tab active">
       <div class="card">
-        <h2>🚨 Emergência SOS & Ambulância</h2>
-        <p class="muted">Acionamento rápido com geolocalização GPS para central de regulação (CCO/SAMU) e familiares.</p>
-        <a href="tel:192"><button class="danger" type="button">📞 Ligar Agora para SAMU 192</button></a>
+        <h2>🚨 Alerta de Emergência & Cartão Vital</h2>
+        <p class="muted">Registre sua localização GPS no sistema e avise seu contato de emergência. Para emergência pública imediata, ligue <strong>192</strong> ou acione o canal de urgência/remoção do seu plano de saúde.</p>
         <div class="row" style="margin-top:10px">
-          <button class="secondary" id="gps" type="button">📍 Acionar SOS + GPS</button>
-          <button class="gold hidden" id="whatsapp-sos" type="button">📲 Avisar Familiar</button>
+          <button class="danger" id="gps" type="button">📍 Registrar Alerta + GPS</button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <a href="tel:192" style="flex:1"><button class="outline" type="button" style="width:100%">📞 Ligar 192</button></a>
+          <button class="gold hidden" id="whatsapp-sos" type="button">📲 Avisar Contato</button>
         </div>
         <div id="gps-result" class="notice ok hidden"></div>
       </div>
@@ -262,12 +264,12 @@ function fecharBoxesAuth() {
           <h2 style="margin:0">🪪 Cartão Vital de Emergência</h2>
           <button class="outline btn-sm" id="download-vital-qr" type="button" style="flex:0;white-space:nowrap">⬇️ Baixar QR</button>
         </div>
-        <p class="muted">Compatível com pulseiras infantis/idosos, chaveiros adultos e adesivos escolares.</p>
+        <p class="muted">Compatível com pulseiras infantis/idosos, chaveiros adultos e adesivos escolares com dados rápidos de primeiros socorros.</p>
         <div id="vital">Carregando...</div>
         <div class="qr-box">
           <canvas id="vital-qr-canvas" width="200" height="200"></canvas>
           <div style="margin-top:8px"><span class="pill" id="vital-code-label">SUAS-VITAL</span></div>
-          <small style="display:block;margin-top:4px">Escaneie com a câmera do celular para abrir o acionamento rápido</small>
+          <small style="display:block;margin-top:4px">Escaneie com a câmera do celular para abrir a ficha de primeiros socorros</small>
         </div>
       </div>
     </section>
@@ -297,27 +299,25 @@ function fecharBoxesAuth() {
     <section id="tab-triagem" class="tab">
       <div class="card">
         <h2>🩺 Pré-triagem Digital (Sem Ficha Física)</h2>
-        <p class="muted">Informe seus sintomas e a modalidade de atendimento (Plano de Saúde, SUS ou Particular) antes de sair de casa para agilizar a recepção e a autorização.</p>
+        <p class="muted">Informe seus sintomas, a unidade de destino e a modalidade de atendimento (Plano de Saúde, Particular ou SUS) antes de sair de casa para agilizar a recepção e a conciliação do plano.</p>
         <form id="triage-form">
-          <label for="triage-unidade">Hospital / Unidade de destino</label>
+          <label for="triage-unidade">Unidade / Hospital de destino</label>
           <select id="triage-unidade" name="unidade_destino">
-            <option value="hsm-the">Hospital São Marcos — Teresina</option>
-            <option value="prontomed-the">Hospital Prontomed — Teresina</option>
-            <option value="unimed-cis">Centro Integrado de Saúde — Unimed</option>
-            <option value="neoclinica-the">Neoclínica Teresina</option>
-            <option value="santa-maria-the">Hospital Santa Maria</option>
-            <option value="sesapi-sandbox">SESAPI / Rede Pública SUS</option>
+            <option value="unidade-parceira-01">Unidade / Hospital Parceiro 01</option>
+            <option value="clinica-conveniada-02">Clínica / Centro Médico Conveniado 02</option>
+            <option value="pronto-atendimento-03">Pronto Atendimento Referenciado 03</option>
+            <option value="rede-sus-referencia">Unidade da Rede Pública (SUS)</option>
           </select>
 
           <label for="triage-modalidade">Modalidade de Atendimento</label>
           <select id="triage-modalidade" name="modalidade_atendimento">
             <option value="PLANO_SAUDE">🏥 Plano de Saúde / Convênio</option>
-            <option value="SUS">🇧🇷 Rede Pública (SUS)</option>
             <option value="PARTICULAR">💳 Atendimento Particular</option>
+            <option value="SUS">🇧🇷 Rede Pública (SUS)</option>
           </select>
 
           <div id="convenio-fields-wrap" class="convenio-box">
-            <div style="font-size:12.5px;font-weight:700;color:#072B59;margin-bottom:4px">🪪 Dados da Carteirinha para Conciliação no Hospital</div>
+            <div style="font-size:12.5px;font-weight:700;color:#072B59;margin-bottom:4px">🪪 Dados da Carteirinha para Conciliação no Plano / Unidade</div>
             <label for="triage-operadora" style="margin-top:6px">Operadora do Plano de Saúde</label>
             <input id="triage-operadora" name="operadora_plano" type="text" list="operadoras-datalist" autocomplete="organization" placeholder="Digite o nome do seu plano de saúde">
             <datalist id="operadoras-datalist"></datalist>
@@ -347,7 +347,7 @@ function fecharBoxesAuth() {
         <div id="triage-qr-box" class="qr-box hidden">
           <strong>QR Code de Pré-Triagem / Check-in</strong>
           <div style="margin:8px 0"><canvas id="triage-qr-canvas" width="190" height="190"></canvas></div>
-          <small id="triage-qr-caption">Apresente este código na recepção do hospital.</small>
+          <small id="triage-qr-caption">Apresente este código na recepção da unidade.</small>
         </div>
       </div>
 
@@ -359,7 +359,6 @@ function fecharBoxesAuth() {
 
     <!-- ABA 4: MEDICAMENTOS (CONTÍNUO / TEMPORÁRIO), AGENDAMENTO E FARMACOVIGILÂNCIA -->
     <section id="tab-meds" class="tab">
-      <!-- GATILHO ESTRATÉGICO DE CADASTRO DO CARTÃO SUS APÓS CONFIRMAÇÃO DE DOSE -->
       <div id="cns-strategic-card" class="cns-prompt-box hidden">
         <div class="row">
           <strong style="color:#072B59;font-size:15px">🪪 Unifique seu Histórico Clínico (Cartão SUS)</strong>
@@ -445,13 +444,13 @@ function fecharBoxesAuth() {
             <div>
               <label>Modalidade</label>
               <select name="modalidade">
-                <option value="SUS">Rede Pública (SUS)</option>
                 <option value="PLANO_DESCONTO">Farmácia Credenciada / Plano</option>
+                <option value="SUS">Rede Pública (SUS)</option>
               </select>
             </div>
             <div>
               <label>Unidade / Farmácia</label>
-              <input name="unidade_retirada" placeholder="Ex: UBS / Farmácia Popular" required>
+              <input name="unidade_retirada" placeholder="Ex: Farmácia Credenciada / UBS" required>
             </div>
           </div>
 
@@ -477,7 +476,7 @@ function fecharBoxesAuth() {
           <h2 style="margin:0">💊 Receitas & QR Code da Farmácia</h2>
           <button id="refresh-meds" class="secondary btn-sm" type="button" style="flex:0">Atualizar</button>
         </div>
-        <p class="muted">Gere seu QR Code para retirada agendada no SUS ou desconto nas farmácias credenciadas do plano.</p>
+        <p class="muted">Gere seu QR Code para desconto nas farmácias credenciadas do plano ou retirada agendada no SUS.</p>
         <div id="med-list" class="notice">Consultando prescrições...</div>
 
         <div style="border-top:1px solid #e2e8f0;padding-top:12px;margin-top:12px">
@@ -487,8 +486,8 @@ function fecharBoxesAuth() {
             <input name="medicamento_nome" placeholder="Ex: Losartana 50mg ou Insulina NPH" required>
             <label>Modalidade de atendimento</label>
             <select name="modalidade">
-              <option value="SUS">Rede Pública (SUS — Retirada Agendada)</option>
               <option value="PLANO_DESCONTO">Plano de Saúde (Desconto Farmácia Credenciada)</option>
+              <option value="SUS">Rede Pública (SUS — Retirada Agendada)</option>
             </select>
             <button type="submit" style="width:100%;margin-top:10px">Gerar QR Code da Farmácia</button>
           </form>
@@ -535,13 +534,9 @@ function fecharBoxesAuth() {
       </div>
 
       <div class="card">
-        <h2>✏️ Atualizar Cartão Vital, SUS e Convênio</h2>
-        <p class="muted">Mantenha seus dados clínicos, Cartão SUS e carteirinha do plano atualizados para agilizar emergências e pré-triagens.</p>
+        <h2>✏️ Atualizar Cartão Vital, Convênio e SUS</h2>
+        <p class="muted">Mantenha seus dados clínicos, carteirinha do plano de saúde e contato de emergência atualizados para agilizar primeiros socorros e pré-triagens.</p>
         <form id="update-vital-form">
-          <label>Cartão Nacional de Saúde (CNS — 15 dígitos)</label>
-          <input id="upd-cns" name="cns" inputmode="numeric" maxlength="18" placeholder="15 dígitos numéricos">
-          <label>Telefone / WhatsApp</label>
-          <input id="upd-tel" name="telefone" type="tel">
           <div class="row">
             <div>
               <label>Operadora do Plano (se tiver)</label>
@@ -552,6 +547,10 @@ function fecharBoxesAuth() {
               <input id="upd-carteira" name="numero_carteira" placeholder="Número da carteira">
             </div>
           </div>
+          <label>Cartão Nacional de Saúde (CNS — 15 dígitos, opcional)</label>
+          <input id="upd-cns" name="cns" inputmode="numeric" maxlength="18" placeholder="15 dígitos numéricos">
+          <label>Telefone / WhatsApp</label>
+          <input id="upd-tel" name="telefone" type="tel">
           <label>Tipo sanguíneo</label>
           <select id="upd-blood" name="tipo_sanguineo">
             <option value="">Não informado</option>
@@ -572,7 +571,7 @@ function fecharBoxesAuth() {
     </section>
 
     <nav aria-label="Navegação principal">
-      <button data-tab="emergencia" class="active" type="button">🚨<br>SOS</button>
+      <button data-tab="emergencia" class="active" type="button">🚨<br>Alerta</button>
       <button data-tab="avisos" type="button">🔔<br>Avisos</button>
       <button data-tab="triagem" type="button">🩺<br>Triagem</button>
       <button data-tab="meds" type="button">💊<br>Remédios</button>
@@ -906,7 +905,7 @@ async function publicarCheckinNaEngrenagemB2b({
     : ((user && user.cpf) ? `cpf_${digits(user.cpf).slice(-6)}` : `cid_${(user && user.id) || 'anon'}`);
 
   const item = {
-    unidadeId: unidadeId || 'hsm-the',
+    unidadeId: unidadeId || 'unidade-parceira-01',
     requestId: `req-cidadao-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     payload: {
       event_type: 'CHECKIN_TRIAGEM',
@@ -919,10 +918,10 @@ async function publicarCheckinNaEngrenagemB2b({
       metadata: {
         origem: 'APP_CIDADAO_PRE_TRIAGEM',
         protocolo_origem: protocoloLocal || null,
-        modalidade_atendimento: modalidadeAtendimento || 'SUS',
+        modalidade_atendimento: modalidadeAtendimento || 'PLANO_SAUDE',
         operadora_plano: modalidadeAtendimento === 'PLANO_SAUDE' ? (operadoraPlano || null) : null,
         numero_carteira: modalidadeAtendimento === 'PLANO_SAUDE' ? (numeroCarteira || null) : null,
-        status_autorizacao_convenio: modalidadeAtendimento === 'PLANO_SAUDE' ? 'AGUARDANDO_AUTORIZACAO_HOSPITAL' : 'NAO_APLICAVEL',
+        status_autorizacao_convenio: modalidadeAtendimento === 'PLANO_SAUDE' ? 'AGUARDANDO_AUTORIZACAO_UNIDADE' : 'NAO_APLICAVEL',
         status_fluxo_origem: statusFluxo || 'PRE_TRIAGEM_GERADA',
         offline_first: !navigator.onLine
       }
@@ -1049,16 +1048,16 @@ async function prepararQrParaSamu(rawValue) {
   resolvedFamilyPhone = '';
   show('qr-ready-badge', true);
   show('third-party-samu-btn', true);
-  $('qr-ready-badge').textContent = '✅ QR Code lido. Localizando familiar cadastrado...';
+  $('qr-ready-badge').textContent = '✅ QR Code lido. Localizando contato cadastrado...';
 
   try {
     const info = await request(`/app-cidadao/qr-emergencia/resolver?qr_code=${encodeURIComponent(code)}`, { auth: false });
     if (info.telefone_familiar) resolvedFamilyPhone = digits(info.telefone_familiar);
     $('qr-ready-badge').textContent = info.tem_familiar_cadastrado
-      ? '✅ QR Code lido. Botão ACIONAR SAMU liberado com familiar cadastrado.'
-      : '✅ QR Code lido. Botão ACIONAR SAMU liberado.';
+      ? '✅ QR Code lido. Botão de alerta liberado com contato cadastrado.'
+      : '✅ QR Code lido. Botão de alerta liberado.';
   } catch {
-    $('qr-ready-badge').textContent = '✅ QR Code lido. Botão ACIONAR SAMU liberado.';
+    $('qr-ready-badge').textContent = '✅ QR Code lido. Botão de alerta liberado.';
   }
 }
 
@@ -1099,17 +1098,17 @@ $('toggle-qr-scanner-btn').onclick = async () => {
 
 $('third-party-samu-btn').onclick = () => {
   if (!detectedQrCode) {
-    notice('Leia o QR Code primeiro para liberar o acionamento do SAMU.', 'warning');
+    notice('Leia o QR Code primeiro para registrar o alerta.', 'warning');
     return;
   }
   const resBox = $('third-party-result');
   show('third-party-result', true);
-  resBox.textContent = 'Obtendo GPS, registrando SAMU e preparando mensagem para o familiar...';
+  resBox.textContent = 'Obtendo GPS, registrando alerta e preparando mensagem para o contato...';
 
   const enviarChamado = async (lat = null, lon = null) => {
     const mapsUrl = (lat !== null && lon !== null) ? `https://www.google.com/maps?q=${lat},${lon}` : null;
-    const protocol = 'SAMU-' + Date.now().toString().slice(-6);
-    const fallbackMsg = `🚨 ALERTA DE EMERGÊNCIA (SAMU) — Protocolo ${protocol}. Ocorrência via QR.${mapsUrl ? ' Localização: ' + mapsUrl : ''}`;
+    const protocol = 'EMG-' + Date.now().toString().slice(-6);
+    const fallbackMsg = `🚨 ALERTA DE EMERGÊNCIA — Protocolo ${protocol}. Ficha via QR.${mapsUrl ? ' Localização: ' + mapsUrl : ''} Em caso de emergência pública, ligue 192 ou acione o plano.`;
     const ddd = resolvedFamilyPhone ? (resolvedFamilyPhone.startsWith('55') ? resolvedFamilyPhone : '55' + resolvedFamilyPhone) : '';
     let waUrl = ddd
       ? `https://wa.me/${ddd}?text=${encodeURIComponent(fallbackMsg)}`
@@ -1124,7 +1123,7 @@ $('third-party-samu-btn').onclick = () => {
           qr_code: detectedQrCode,
           latitude: lat,
           longitude: lon,
-          observacao: 'Acionamento SAMU via QR Code'
+          observacao: 'Alerta de emergência registrado via QR Code'
         }
       });
       if (r.protocolo) finalProtocol = r.protocolo;
@@ -1132,9 +1131,9 @@ $('third-party-samu-btn').onclick = () => {
     } catch {}
 
     lastThirdPartyWaUrl = waUrl;
-    resBox.innerHTML = `🚨 <strong>SAMU acionado (${finalProtocol})</strong>` +
+    resBox.innerHTML = `🚨 <strong>Alerta registrado (${finalProtocol})</strong>` +
       (mapsUrl ? `<br>📍 Localização: <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Abrir no Google Maps</a>` : '<br>📍 GPS não disponível.') +
-      `<br>📲 Mensagem pronta para o familiar cadastrado.`;
+      `<br>📲 Mensagem pronta para o contato cadastrado. Se precisar de emergência pública, ligue 192.`;
     show('third-party-actions', true);
     playBeep();
     window.open(lastThirdPartyWaUrl, '_blank', 'noopener,noreferrer');
@@ -1206,9 +1205,9 @@ function fillProfile(p) {
     ['profile', [
       ['ID do Cidadão', p.id],
       ['Nome completo', p.nome_completo],
+      ['Convênio / Carteirinha', convenioResumo],
       ['Cartão SUS (CNS)', p.cns || 'Ainda não vinculado'],
       ['CPF', p.cpf ? ('***.***.***-' + p.cpf.slice(-2)) : null],
-      ['Convênio / Carteirinha', convenioResumo],
       ['Telefone', p.telefone],
       ['Tipo sanguíneo', p.tipo_sanguineo],
       ['Contato de emergência', p.contacto_responsavel]
@@ -1476,7 +1475,7 @@ $('speak-screen').onclick = () => {
     const unread = $('unread-badge') ? $('unread-badge').textContent : '';
     texto = `Aba de notificações e exames. Você tem ${unread}.`;
   } else if (currentTab === 'triagem') {
-    texto = 'Aba de pré-triagem digital. Selecione o hospital, a modalidade de atendimento e descreva seus sintomas para gerar o QR Code.';
+    texto = 'Aba de pré-triagem digital. Selecione a unidade, a modalidade de atendimento e descreva seus sintomas para gerar o QR Code.';
   } else if (currentTab === 'meds') {
     texto = `Aba de medicamentos. Você possui ${activeAlarms.length} alarmes de posologia ativos.`;
   } else {
@@ -1496,21 +1495,21 @@ $('download-vital-qr').onclick = () => {
 
 $('gps').onclick = () => {
   if (!navigator.geolocation) { notice('Geolocalização não suportada neste aparelho.', 'warning'); return; }
-  setText('gps-result', 'Obtendo coordenadas GPS e registrando alerta SOS...');
+  setText('gps-result', 'Obtendo coordenadas GPS e registrando alerta...');
   show('gps-result', true);
   navigator.geolocation.getCurrentPosition(async pos => {
     const { latitude, longitude } = pos.coords;
     try {
       const r = await request('/app-cidadao/sos', {
         method: 'POST',
-        body: { latitude: String(latitude), longitude: String(longitude), observacao: 'SOS acionado pelo App do Cidadão' }
+        body: { latitude: String(latitude), longitude: String(longitude), observacao: 'Alerta de emergência registrado pelo App do Cidadão' }
       });
       lastMapsUrl = r.maps_url || `https://www.google.com/maps?q=${latitude},${longitude}`;
       const el = $('gps-result');
-      el.replaceChildren(document.createTextNode(`🚨 Protocolo ${r.protocolo} registrado! Localização pronta: `));
+      el.replaceChildren(document.createTextNode(`🚨 Protocolo ${r.protocolo} registrado no sistema. Localização: `));
       const a = document.createElement('a');
       a.href = lastMapsUrl; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = 'Abrir no Google Maps';
-      el.append(a);
+      el.append(a, document.createTextNode(' · Para emergência pública imediata, ligue 192 ou acione seu plano.'));
       show('whatsapp-sos', true);
       playBeep();
     } catch (err) {
@@ -1522,7 +1521,7 @@ $('gps').onclick = () => {
 $('whatsapp-sos').onclick = () => {
   const famDigits = digits(user && user.contacto_responsavel);
   const ddd = famDigits ? (famDigits.startsWith('55') ? famDigits : '55' + famDigits) : '';
-  const msg = encodeURIComponent(`🚨 ALERTA DE EMERGÊNCIA SUAS SAÚDE +FÁCIL! Preciso de ajuda. Minha localização exata: ${lastMapsUrl || ''}`);
+  const msg = encodeURIComponent(`🚨 ALERTA DE EMERGÊNCIA SUAS SAÚDE +FÁCIL! Localização exata: ${lastMapsUrl || 'Não informada'}. Em caso de emergência pública, ligue 192 ou acione o plano.`);
   const target = ddd ? `https://wa.me/${ddd}?text=${msg}` : `https://wa.me/?text=${msg}`;
   window.open(target, '_blank', 'noopener,noreferrer');
 };
@@ -1550,12 +1549,12 @@ $('triage-form').onsubmit = async e => {
   }
 
   const unidadeSelect = $('triage-unidade');
-  const unidadeId = unidadeSelect ? unidadeSelect.value : 'hsm-the';
-  const unidadeLabel = unidadeSelect ? unidadeSelect.options[unidadeSelect.selectedIndex].text : 'Hospital / Unidade';
+  const unidadeId = unidadeSelect ? unidadeSelect.value : 'unidade-parceira-01';
+  const unidadeLabel = unidadeSelect ? unidadeSelect.options[unidadeSelect.selectedIndex].text : 'Unidade / Hospital';
 
   const result = $('triage-result');
   show('triage-result', true);
-  result.textContent = 'Processando pré-triagem e enviando ao hospital...';
+  result.textContent = 'Processando pré-triagem e enviando à unidade...';
   try {
     const r = await request('/app-cidadao/triagens', {
       method: 'POST',
@@ -1582,11 +1581,11 @@ $('triage-form').onsubmit = async e => {
     });
 
     const b2bStatusTexto = b2bSync.synced
-      ? `📡 Recebido pelo hospital (${unidadeLabel}) · Evento: ${b2bSync.eventId}`
+      ? `📡 Recebido pela unidade (${unidadeLabel}) · Evento: ${b2bSync.eventId}`
       : `📥 Salvo em fila offline-first (${unidadeLabel}) para sincronização automática`;
 
     const convenioLinha = modalidade === 'PLANO_SAUDE'
-      ? `\n🪪 Convênio: ${operadora} · Carteirinha: ${carteira} (Aguardando autorização do hospital)`
+      ? `\n🪪 Convênio: ${operadora} · Carteirinha: ${carteira} (Aguardando autorização do convênio)`
       : (modalidade === 'PARTICULAR' ? '\n💳 Modalidade: Atendimento Particular' : '\n🇧🇷 Modalidade: Rede Pública SUS');
 
     result.textContent = `✅ Protocolo: ${r.protocolo}
@@ -1913,7 +1912,7 @@ $('update-vital-form').onsubmit = async e => {
   try {
     await request('/app-cidadao/me', { method: 'PUT', body: payload });
     await loadProfile();
-    notice('✅ Cartão Vital, SUS e convênio atualizados com sucesso!', 'ok');
+    notice('✅ Cartão Vital, convênio e dados atualizados com sucesso!', 'ok');
   } catch (err) { notice(err.message, 'warning'); }
 };
 
