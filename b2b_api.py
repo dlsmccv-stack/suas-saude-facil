@@ -1,11 +1,13 @@
-import os
-import uuid
-import time
 import json
+import os
+import time
+import urllib.parse
+import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Depends
+from fastapi import APIRouter, Depends, Header, HTTPException
+import httpx
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -16,6 +18,14 @@ b2b_router = APIRouter(prefix="/api/v1", tags=["SUAS B2B & Interoperabilidade"])
 
 # Chave master de sandbox/produção (configure SUAS_B2B_API_KEY no Render)
 DEFAULT_B2B_KEY = os.getenv("SUAS_B2B_API_KEY", "suas_b2b_sandbox_2026")
+
+# Chave exclusiva de monitoramento para o parceiro de TI (configure SUAS_TI_MONITOR_KEY no Render)
+TI_MONITOR_KEY = os.getenv("SUAS_TI_MONITOR_KEY", "")
+
+# Configuração opcional de alerta automático via Webhook para WhatsApp (Evolution API, Z-API, n8n, etc.)
+TI_WHATSAPP_PHONE = os.getenv("SUAS_TI_WHATSAPP_PHONE", "")
+TI_WHATSAPP_WEBHOOK_URL = os.getenv("SUAS_TI_WHATSAPP_WEBHOOK_URL", "")
+TI_WHATSAPP_WEBHOOK_TOKEN = os.getenv("SUAS_TI_WHATSAPP_WEBHOOK_TOKEN", "")
 
 # Dados bancários e chave Pix CNPJ para recebimento (Santander PJ - Ag. 4326 / CC 130085637)
 PIX_CHAVE_CNPJ = os.getenv("SUAS_PIX_CNPJ", "")
@@ -107,6 +117,31 @@ def verificar_credenciais_b2b(
     return {"unidade_id": uid}
 
 
+def verificar_credencial_monitoramento_ti(
+    authorization: Optional[str] = Header(None),
+    x_monitor_key: Optional[str] = Header(None),
+    x_api_key: Optional[str] = Header(None),
+):
+    if not TI_MONITOR_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="SUAS_TI_MONITOR_KEY não configurada no servidor."
+        )
+
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.replace("Bearer ", "").strip()
+    elif x_monitor_key:
+        token = x_monitor_key.strip()
+    elif x_api_key:
+        token = x_api_key.strip()
+
+    if not token or token != TI_MONITOR_KEY:
+        raise HTTPException(status_code=401, detail="Chave de monitoramento de TI inválida ou ausente.")
+
+    return {"perfil": "suporte_ti"}
+
+
 # --- MODELOS DE ASSINATURA, ADESÃO E ATIVAÇÃO ---
 
 class AdesaoPacoteIn(BaseModel):
@@ -123,6 +158,13 @@ class ConfirmarPagamentoIn(BaseModel):
     tipo_pagamento: str = Field(..., example="ADESAO", description="ADESAO ou MENSALIDADE")
     comprovante_ref: str = Field(..., example="PIX-CNPJ-SANTANDER-001")
     valor_pago: float = Field(..., example=890.00)
+
+
+class AlertaWhatsAppIn(BaseModel):
+    unidade_id: str = Field(..., example="farma_centro_01")
+    titulo: str = Field(..., example="Alerta Clínico / Suporte Técnico")
+    mensagem: str = Field(..., example="Unidade requer atenção técnica imediata.")
+    telefone_destino: Optional[str] = Field(None, example="5586999999999")
 
 
 # --- MODELOS DE ENTRADA (CONTRATOS JSON / FHIR-LIKE) ---
@@ -578,4 +620,157 @@ def listar_gatilhos_unidade(
         "unidade_id": tenant["unidade_id"],
         "total": len(gatilhos_formatados),
         "gatilhos": gatilhos_formatados,
+    }
+
+
+# --- 4. ENDPOINTS: MONITORAMENTO E ALERTAS WHATSAPP PARA PARCEIRO DE TI ---
+
+@b2b_router.get("/suporte/monitoramento")
+def obter_monitoramento_ti(
+    _auth: dict = Depends(verificar_credencial_monitoramento_ti),
+    db: Session = Depends(get_db),
+):
+    unidades = (
+        db.query(models.B2BAssinaturaUnidade)
+        .order_by(models.B2BAssinaturaUnidade.id.desc())
+        .all()
+    )
+
+    unidades_resumo = []
+    total_repasse_ti_ativo = 0.0
+    ativas_count = 0
+
+    for u in unidades:
+        _unidade_esta_ativa(db, u.unidade_id)
+        db.refresh(u)
+
+        repasse = float(u.repasse_ti_mensal or 0.0)
+        if u.status == "ATIVA":
+            ativas_count += 1
+            total_repasse_ti_ativo += repasse
+
+        ult_evento = (
+            db.query(models.B2BEventoClinico)
+            .filter(models.B2BEventoClinico.unidade_id == u.unidade_id)
+            .order_by(models.B2BEventoClinico.id.desc())
+            .first()
+        )
+
+        unidades_resumo.append({
+            "unidade_id": u.unidade_id,
+            "nome_unidade": u.nome_unidade,
+            "cnpj_cliente": u.cnpj_cliente,
+            "plano_nome": u.plano_nome,
+            "status": u.status,
+            "instalacao_ativa": u.instalacao_ativa,
+            "proximo_vencimento": u.proximo_vencimento.isoformat() if u.proximo_vencimento else None,
+            "repasse_ti_mensal": repasse,
+            "ultimo_evento_em": ult_evento.created_at.isoformat() if ult_evento and ult_evento.created_at else None,
+            "ultimo_evento_tipo": ult_evento.event_type if ult_evento else None,
+        })
+
+    eventos_recentes = (
+        db.query(models.B2BEventoClinico)
+        .order_by(models.B2BEventoClinico.id.desc())
+        .limit(40)
+        .all()
+    )
+
+    alertas_criticos = []
+    for e in eventos_recentes:
+        grav = (e.gravidade or "").upper()
+        if e.alerta_imediato or grav in {"ALTO", "CRITICO", "CRÍTICO", "GRAVE"}:
+            alertas_criticos.append({
+                "event_id": e.event_id,
+                "unidade_id": e.unidade_id,
+                "event_type": e.event_type,
+                "gravidade": e.gravidade,
+                "alerta_imediato": e.alerta_imediato or e.queixa_ou_descricao,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            })
+
+    gatilhos_recentes = (
+        db.query(models.B2BGatilhoTreinamento)
+        .order_by(models.B2BGatilhoTreinamento.id.desc())
+        .limit(20)
+        .all()
+    )
+
+    return {
+        "resumo": {
+            "total_unidades": len(unidades_resumo),
+            "unidades_ativas": ativas_count,
+            "alertas_criticos_recentes": len(alertas_criticos),
+            "repasse_ti_mensal_previsto": round(total_repasse_ti_ativo, 2),
+            "webhook_whatsapp_configurado": bool(TI_WHATSAPP_WEBHOOK_URL),
+            "whatsapp_suporte_configurado": bool(TI_WHATSAPP_PHONE),
+        },
+        "unidades": unidades_resumo,
+        "alertas_criticos": alertas_criticos,
+        "gatilhos_treinamento": [
+            {
+                "trigger_id": g.trigger_id,
+                "unidade_id": g.unidade_id,
+                "setor": g.setor,
+                "motivo_gatilho": g.motivo_gatilho,
+                "gravidade": g.gravidade,
+                "status": g.status,
+                "created_at": g.created_at.isoformat() if g.created_at else None,
+            }
+            for g in gatilhos_recentes
+        ],
+    }
+
+
+@b2b_router.post("/suporte/alerta-whatsapp")
+def disparar_alerta_whatsapp_ti(
+    payload: AlertaWhatsAppIn,
+    _auth: dict = Depends(verificar_credencial_monitoramento_ti),
+):
+    telefone = "".join(ch for ch in (payload.telefone_destino or TI_WHATSAPP_PHONE) if ch.isdigit())
+    texto_formatado = (
+        f"[SUAS Saúde +Fácil • Suporte TI]\n"
+        f"Unidade: {payload.unidade_id}\n"
+        f"Assunto: {payload.titulo}\n"
+        f"Detalhe: {payload.mensagem}"
+    )
+
+    wa_link = (
+        f"https://wa.me/{telefone}?text={urllib.parse.quote(texto_formatado)}"
+        if telefone
+        else f"https://wa.me/?text={urllib.parse.quote(texto_formatado)}"
+    )
+
+    enviado_webhook = False
+    detalhe_webhook = "Webhook não configurado (use o link wa.me ou configure SUAS_TI_WHATSAPP_WEBHOOK_URL)."
+
+    if TI_WHATSAPP_WEBHOOK_URL:
+        headers = {"Content-Type": "application/json"}
+        if TI_WHATSAPP_WEBHOOK_TOKEN:
+            headers["Authorization"] = f"Bearer {TI_WHATSAPP_WEBHOOK_TOKEN}"
+
+        try:
+            with httpx.Client(timeout=8.0) as client:
+                resp = client.post(
+                    TI_WHATSAPP_WEBHOOK_URL,
+                    headers=headers,
+                    json={
+                        "phone": telefone,
+                        "unidade_id": payload.unidade_id,
+                        "title": payload.titulo,
+                        "message": texto_formatado,
+                    },
+                )
+            enviado_webhook = 200 <= resp.status_code < 300
+            detalhe_webhook = f"Webhook respondeu HTTP {resp.status_code}."
+        except Exception as exc:
+            detalhe_webhook = f"Falha ao chamar webhook: {exc}"
+
+    return {
+        "status": "OK",
+        "unidade_id": payload.unidade_id,
+        "enviado_webhook": enviado_webhook,
+        "detalhe_webhook": detalhe_webhook,
+        "whatsapp_link": wa_link,
+        "mensagem_formatada": texto_formatado,
     }
