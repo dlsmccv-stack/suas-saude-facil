@@ -3,12 +3,14 @@ Preserva integralmente o main.py original e registra:
 - App do Cidadão + Farmácia Digital
 - Central SAMU 192 / CCO e Integração QR Code SOS
 - Landing Page Institucional na rota raiz (/)
+- Integração Pix / Sandbox Santander
 """
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from main import app
 from app_cidadao_api_farmacia_integrada import router as cidadao_router
+from santander_pix import router as santander_pix_router
 import database
 import models
 import suas_samu
@@ -54,6 +56,7 @@ app.add_middleware(
 app.include_router(cidadao_router)
 app.include_router(suas_samu.router)
 app.include_router(samu_integracoes.router)
+app.include_router(santander_pix_router)
 
 # Cria todas as tabelas (App do Cidadão + SAMU 192) no banco
 models.Base.metadata.create_all(bind=database.engine)
